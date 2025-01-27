@@ -49,3 +49,31 @@ class UnfollowingSchemaFactory {
 	schemaInstance = new Schema(this.schema)
 }
 export const UnfollowingSchema = new UnfollowingSchemaFactory()
+
+/**
+ * 用户创建的动态分组
+ */
+class FeedGroupSchemaFactory {
+	/** MongoDB Schema */
+	schema = {
+		/** 动态分组的 UUID - 非空 */
+		feedGroupUuid: { type: String, required: true },
+		/** 动态分组的名称 - 非空 */
+		feedGroupName: { type: String, required: true },
+		/** 动态分组创建者 UUID */
+		feedGroupCreatorUuid: { type: String, required: true },
+		/** 动态分组中的用户 - 非空 */
+		uuidList: { type: [String], required: true },
+		/** 动态分组的自定义封面 */
+		customCover: { type: String },
+		/** 系统专用字段-最后编辑时间 - 非空 */
+		editDateTime: { type: Number, required: true },
+		/** 系统专用字段-创建时间 - 非空 */
+		createDateTime: { type: Number, required: true },
+	}
+	/** MongoDB 集合名 */
+	collectionName = 'unfollowing'
+	/** Mongoose Schema 实例 */
+	schemaInstance = new Schema(this.schema)
+}
+export const FeedGroupSchema = new FeedGroupSchemaFactory()

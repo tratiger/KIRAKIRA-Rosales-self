@@ -1,3 +1,7 @@
+// marker.ts
+const ONLY_IN_TS_FILE = Symbol("ONLY_IN_TS_FILE"); // WARN: DO NOT RENAME ME AS `*.d.ts`
+ONLY_IN_TS_FILE
+
 /** 关注的类型 */
 export enum FOLLOWING_TYPE {
 	/** 通过视频页面或者用户页面等页面的关注按钮正常关注 */
@@ -44,4 +48,98 @@ export type UnfollowingUploaderResponseDto = {
 	success: boolean;
 	/** 附加的文本消息 */
 	message?: string;
+};
+
+/**
+ * 动态分组
+ */
+type FeedGroup = {
+	/** 动态分组的 UUID - 非空 */
+	feedGroupUuid: string,
+	/** 动态分组的名称 - 非空 */
+	feedGroupName: string,
+	/** 动态分组创建者 UUID */
+	feedGroupCreatorUuid: string,
+	/** 动态分组中的用户 - 非空 */
+	uuidList: string[],
+	/** 动态分组的自定义封面 */
+	customCover?: string,
+	/** 系统专用字段-最后编辑时间 - 非空 */
+	editDateTime: number,
+	/** 系统专用字段-创建时间 - 非空 */
+	createDateTime: number,
+}
+
+/**
+ * 创建动态分组的请求载荷
+ */
+export type CreateFeedGroupRequestDto = {
+	/** 动态分组的名字 */
+	feedGroupName: string;
+	/** 创建动态分组时包含 UID 列表 */
+	withUidList?: number[];
+	/** 创建动态分组时包含自定义动态分组封面 */
+	withCustomCoverUrl?: string;
+};
+
+/**
+ * 创建动态分组的请求响应
+ */
+export type CreateFeedGroupResponseDto = {
+	/** 执行结果 */
+	success: boolean;
+	/** 一次添加了太多 UID */
+	tooManyUidInOnce: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+};
+
+/**
+ * 向某一个动态分组中添加 UID 的请求载荷
+ */
+export type AddNewUid2FeedGroupRequestDto = {
+	/** 动态分组的 UUID */
+	feedGroupUuid: string;
+	/** 要新增的 UID 列表 */
+	uidList: number[];
+}
+
+/**
+ * 向某一个动态分组中添加 UID 的请求响应
+ */
+export type AddNewUid2FeedGroupResponseDto = {
+	/** 执行结果 */
+	success: boolean;
+	/** 一次添加了太多 UID */
+	tooManyUidInOnce: boolean;
+	/** 动态分组中有太多 UID */
+	isOverload: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 如果修改成功，返回动态分组 */
+	feedGroupResult?: FeedGroup
+}
+
+/**
+ * 从一个动态分组中移除 UID 的请求载荷
+ */
+export type RemoveUidFromFeedGroupRequestDto = {
+	/** 动态分组的 UUID */
+	feedGroupUuid: string;
+	/** 要移除的 UID 列表 */
+	uidList: number[];
+}
+
+/**
+ * 从一个动态分组中移除 UID 的请求响应
+ */
+export type RemoveUidFromFeedGroupResponseDto = {
+	/** 执行结果 */
+	success: boolean;
+	/** 一次添加了太多 UID */
+	tooManyUidInOnce: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 如果修改成功，返回动态分组 */
+	feedGroupResult?: FeedGroup
 };
