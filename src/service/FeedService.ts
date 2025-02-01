@@ -1,5 +1,5 @@
 import { InferSchemaType } from "mongoose";
-import { AddNewUid2FeedGroupRequestDto, AddNewUid2FeedGroupResponseDto, CreateFeedGroupRequestDto, CreateFeedGroupResponseDto, DeleteFeedGroupRequestDto, DeleteFeedGroupResponseDto, FOLLOWING_TYPE, FollowingUploaderRequestDto, FollowingUploaderResponseDto, RemoveUidFromFeedGroupRequestDto, RemoveUidFromFeedGroupResponseDto, UnfollowingUploaderRequestDto, UnfollowingUploaderResponseDto} from "../controller/FeedControllerDto.js";
+import { AddNewUid2FeedGroupRequestDto, AddNewUid2FeedGroupResponseDto, AdministratorApproveFeedGroupInfoChangeRequestDto, AdministratorApproveFeedGroupInfoChangeResponseDto, AdministratorDeleteFeedGroupRequestDto, AdministratorDeleteFeedGroupResponseDto, CreateFeedGroupRequestDto, CreateFeedGroupResponseDto, CreateOrEditFeedGroupInfoRequestDto, CreateOrEditFeedGroupInfoResponseDto, DeleteFeedGroupRequestDto, DeleteFeedGroupResponseDto, FOLLOWING_TYPE, FollowingUploaderRequestDto, FollowingUploaderResponseDto, GetFeedGroupCoverUploadSignedUrlResponseDto, RemoveUidFromFeedGroupRequestDto, RemoveUidFromFeedGroupResponseDto, UnfollowingUploaderRequestDto, UnfollowingUploaderResponseDto} from "../controller/FeedControllerDto.js";
 import { FeedGroupSchema, FollowingSchema, UnfollowingSchema } from "../dbPool/schema/FeedSchema.js";
 import { checkUserExistsByUuidService, checkUserRoleByUUIDService, checkUserTokenByUuidService, getUserUuid } from "./UserService.js";
 import { QueryType, SelectType, UpdateType } from "../dbPool/DbClusterPoolTypes.js";
@@ -7,6 +7,8 @@ import { deleteDataFromMongoDB, findOneAndUpdateData4MongoDB, insertData2MongoDB
 import { abortAndEndSession, commitAndEndSession, createAndStartSession } from "../common/MongoDBSessionTool.js";
 import { CheckUserExistsByUuidRequestDto } from "../controller/UserControllerDto.js";
 import { v4 as uuidV4 } from 'uuid'
+import { generateSecureRandomString } from "../common/RandomTool.js";
+import { createCloudflareImageUploadSignedUrl } from "../cloudflare/index.js";
 
 /**
  * 用户关注一个创作者
@@ -81,7 +83,7 @@ export const followingUploaderService = async (followingUploaderRequest: Followi
 			followerUuid,
 			followingUuid,
 			followingType: FOLLOWING_TYPE.normal,
-			isFavourity: false,
+			isFavorite: false,
 			followingEditDateTime: now,
 			followingCreateTime: now,
 		}
@@ -156,7 +158,7 @@ export const unfollowingUploaderService = async (unfollowingUploaderRequest: Unf
 			followerUuid: 1,
 			followingUuid: 1,
 			followingType: 1,
-			isFavourity: 1,
+			isFavorite: 1,
 			followingEditDateTime: 1,
 			followingCreateTime: 1,
 		}
@@ -268,6 +270,7 @@ export const createFeedGroupService = async (createFeedGroupRequest: CreateFeedG
 			feedGroupCreatorUuid: uuid,
 			uuidList: [...new Set<string>(uuidList)],
 			customCover: withCustomCoverUrl,
+			isUpdatedAfterReview: true,
 			createDateTime: now,
 			editDateTime: now,
 		}
@@ -539,6 +542,185 @@ export const deleteFeedGroupService = async (deleteFeedGroupRequest: DeleteFeedG
 }
 
 /**
+ * 获取用于上传动态分组封面图的预签名 URL
+ * @param uuid 用户的 UUID
+ * @param token 用户的 token
+ * @returns GetFeedGroupCoverUploadSignedUrlResponseDto 获取用于上传动态分组封面图的预签名 URL 的请求响应
+ */
+export const getFeedGroupCoverUploadSignedUrlService = async (uuid: string, token: string): Promise<GetFeedGroupCoverUploadSignedUrlResponseDto> => {
+	try {
+		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
+			console.error('ERROR', '获取用于上传动态分组封面图的预签名 URL 失败，用户校验未通过')
+			return { success: false, message: '获取用于上传动态分组封面图的预签名 URL 失败，用户校验未通过' }
+		}
+		const now = new Date().getTime()
+		const fileName = `feed-group-cover-${uuid}-${generateSecureRandomString(32)}-${now}`
+		try {
+			const signedUrl = await createCloudflareImageUploadSignedUrl(fileName, 660)
+			if (signedUrl) {
+				return { success: true, message: '获取用于上传动态分组封面图的预签名 URL 成功', result: { fileName, signedUrl } }
+			}
+		} catch (error) {
+			console.error('ERROR', '获取用于上传动态分组封面图的预签名 URL 失败，请求失败', error)
+			return { success: false, message: '获取用于上传动态分组封面图的预签名 URL 失败，请求失败' }
+		}
+	} catch (error) {
+		console.error('ERROR', '获取用于上传动态分组封面图的预签名 URL 时出错：', error)
+		return { success: false, message: '获取用于上传动态分组封面图的预签名 URL 时出错，未知原因' }
+	}
+}
+
+/**
+ * 创建或更新动态分组信息
+ * 更新动态分组的名称或者头像 URL 都是这个接口
+ *
+ * @param createOrEditFeedGroupInfoRequest 创建或更新动态分组信息的请求载荷
+ * @param uuid 用户的 UUID
+ * @param token 用户的 token
+ * @returns 创建或更新动态分组信息的请求响应
+ */
+export const createOrEditFeedGroupInfoService = async (createOrEditFeedGroupInfoRequest: CreateOrEditFeedGroupInfoRequestDto, uuid: string, token: string): Promise<CreateOrEditFeedGroupInfoResponseDto> => {
+	try {
+		if (!checkCreateOrEditFeedGroupInfoRequest(createOrEditFeedGroupInfoRequest)) {
+			console.error('ERROR', '创建或更新动态分组信息失败，参数不合法')
+			return { success: false, message: '创建或更新动态分组信息失败，参数不合法' }
+		}
+
+		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
+			console.error('ERROR', '创建或更新动态分组信息失败，非法用户')
+			return { success: false, message: '创建或更新动态分组信息失败，非法用户' }
+		}
+
+		if (await checkUserRoleByUUIDService(uuid, 'blocked')) {
+			console.error('ERROR', '创建或更新动态分组信息失败，用户已封禁')
+			return { success: false, message: '创建或更新动态分组信息失败，用户已封禁' }
+		}
+
+		const { feedGroupUuid, feedGroupName, feedGroupCustomCoverUrl } = createOrEditFeedGroupInfoRequest
+		const { collectionName: feedGroupCollectionName, schemaInstance: feedGroupSchemaInstance } = FeedGroupSchema
+		type FeedGroup = InferSchemaType<typeof feedGroupSchemaInstance>
+
+		const updateFeedGroupWhere: QueryType<FeedGroup> = {
+			feedGroupUuid,
+		}
+		const updateFeedGroupData: UpdateType<FeedGroup> = {
+			feedGroupName,
+			customCover: feedGroupCustomCoverUrl,
+			isUpdatedAfterReview: true,
+		}
+
+		const findOneAndUpdateFeedGroupDataResult = await findOneAndUpdateData4MongoDB<FeedGroup>(updateFeedGroupWhere, updateFeedGroupData, feedGroupSchemaInstance, feedGroupCollectionName)
+
+		if (!findOneAndUpdateFeedGroupDataResult.success && !findOneAndUpdateFeedGroupDataResult.result) {
+			console.error('ERROR', '创建或更新动态分组信息失败，更新失败')
+			return { success: false, message: '创建或更新动态分组信息失败，更新失败' }
+		}
+
+		return { success: false, message: '创建或更新动态分组信息成功', feedGroupResult: findOneAndUpdateFeedGroupDataResult.result }
+	} catch (error) {
+		console.error('ERROR', '创建或更新动态分组信息时出错：未知原因', error)
+		return { success: false, message: '创建或更新动态分组信息时出错：未知原因' }
+	}
+}
+
+/**
+ * // WARN: 仅限管理员
+ * 管理员通过动态分组信息更新审核
+ * @param administratorApproveFeedGroupInfoChangeRequest 管理员通过动态分组信息更新审核的请求载荷
+ * @param administratorUuid 管理员的 UUID
+ * @param administratorToken 管理员的 token
+ * @returns 管理员通过动态分组信息更新审核的请求响应
+ */
+export const administratorApproveFeedGroupInfoChangeService = async (administratorApproveFeedGroupInfoChangeRequest: AdministratorApproveFeedGroupInfoChangeRequestDto, administratorUuid: string, administratorToken: string): Promise<AdministratorApproveFeedGroupInfoChangeResponseDto> => {
+	try {
+		if (!checkAdministratorApproveFeedGroupInfoChangeRequest(administratorApproveFeedGroupInfoChangeRequest)) {
+			console.error('ERROR', '管理员通过动态分组信息更新审核失败，参数不合法')
+			return { success: false, message: '管理员通过动态分组信息更新审核失败，参数不合法' }
+		}
+
+		if (!(await checkUserTokenByUuidService(administratorUuid, administratorToken)).success) {
+			console.error('ERROR', '管理员通过动态分组信息更新审核失败，非法用户')
+			return { success: false, message: '管理员通过动态分组信息更新审核失败，非法用户' }
+		}
+
+		if (!await checkUserRoleByUUIDService(administratorUuid, 'admin')) {
+			console.error('ERROR', '管理员通过动态分组信息更新审核失败，用户权限不足')
+			return { success: false, message: '管理员通过动态分组信息更新审核失败，用户权限不足' }
+		}
+
+		const { feedGroupUuid } = administratorApproveFeedGroupInfoChangeRequest
+		const { collectionName: feedGroupCollectionName, schemaInstance: feedGroupSchemaInstance } = FeedGroupSchema
+		type FeedGroup = InferSchemaType<typeof feedGroupSchemaInstance>
+
+		const updateFeedGroupWhere: QueryType<FeedGroup> = {
+			feedGroupUuid,
+		}
+		const updateFeedGroupData: UpdateType<FeedGroup> = {
+			isUpdatedAfterReview: false,
+		}
+
+		const findOneAndUpdateFeedGroupDataResult = await findOneAndUpdateData4MongoDB<FeedGroup>(updateFeedGroupWhere, updateFeedGroupData, feedGroupSchemaInstance, feedGroupCollectionName)
+
+		if (!findOneAndUpdateFeedGroupDataResult.success && !findOneAndUpdateFeedGroupDataResult.result) {
+			console.error('ERROR', '管理员通过动态分组信息更新审核失败，更新失败')
+			return { success: false, message: '管理员通过动态分组信息更新审核失败，更新失败' }
+		}
+
+		return { success: false, message: '管理员通过动态分组信息更新审核成功' }
+	} catch (error) {
+		console.error('ERROR', '管理员通过动态分组信息更新审核时出错：', error)
+		return { success: false, message: '管理员通过动态分组信息更新审核时出错，未知原因' }
+	}
+}
+
+/**
+ * // WARN: 仅限管理员
+ * 管理员删除动态分组
+ * @param administratorDeleteFeedGroupRequest 管理员删除动态分组的请求载荷
+ * @param administratorUuid 管理员的 UUID
+ * @param administratorToken 管理员的 token
+ * @returns 管理员删除动态分组的请求响应
+ */
+export const administratorDeleteFeedGroupService = async (administratorDeleteFeedGroupRequest: AdministratorDeleteFeedGroupRequestDto, administratorUuid: string, administratorToken: string): Promise<AdministratorDeleteFeedGroupResponseDto> => {
+	try {
+		if (!checkAdministratorDeleteFeedGroupRequest(administratorDeleteFeedGroupRequest)) {
+			console.error('ERROR', '管理员删除动态分组失败，参数不合法')
+			return { success: false, message: '管理员删除动态分组失败，参数不合法' }
+		}
+
+		if (!(await checkUserTokenByUuidService(administratorUuid, administratorToken)).success) {
+			console.error('ERROR', '管理员删除动态分组失败，非法用户')
+			return { success: false, message: '管理员删除动态分组失败，非法用户' }
+		}
+
+		if (!await checkUserRoleByUUIDService(administratorUuid, 'admin')) {
+			console.error('ERROR', '管理员删除动态分组失败，用户权限不足')
+			return { success: false, message: '管理员删除动态分组失败，用户权限不足' }
+		}
+
+		const { feedGroupUuid } = administratorDeleteFeedGroupRequest
+		const { collectionName: feedGroupCollectionName, schemaInstance: feedGroupSchemaInstance } = FeedGroupSchema
+		type FeedGroup = InferSchemaType<typeof feedGroupSchemaInstance>
+
+		const deleteFeedGroupWhere: QueryType<FeedGroup> = {
+			feedGroupUuid,
+		}
+
+		const administratorDeleteFeedGroupResult = await deleteDataFromMongoDB<FeedGroup>(deleteFeedGroupWhere, feedGroupSchemaInstance, feedGroupCollectionName)
+
+		if (!administratorDeleteFeedGroupResult.success) {
+			console.error('ERROR', '管理员删除动态分组失败，更新失败')
+			return { success: false, message: '管理员删除动态分组失败，更新失败' }
+		}
+
+		return { success: false, message: '管理员通过动态分组信息更新审核成功' }
+	} catch (error) {
+		console.error('ERROR', '管理员删除动态分组时出错：', error)
+		return { success: false, message: '管理员删除动态分组时出错，未知原因' }
+	}
+}
+
+/**
  * 校验用户关注一个创作者的请求载荷
  * @param followingUploaderRequest 用户关注一个创作者的请求载荷
  * @returns 合法返回 true, 不合法返回 false
@@ -596,4 +778,31 @@ const checkRemoveUidFromFeedGroupRequest = (removeUidFromFeedGroupRequest: Remov
  */
 const checkDeleteFeedGroupRequest = (deleteFeedGroupRequest: DeleteFeedGroupRequestDto): boolean => {
 	return ( !!deleteFeedGroupRequest.feedGroupUuid )
+}
+
+/**
+ * 校验创建或更新动态分组信息的请求载荷
+ * @param createOrEditFeedGroupInfoRequest 创建或更新动态分组信息的请求载荷
+ * @returns 合法返回 true, 不合法返回 false
+ */
+const checkCreateOrEditFeedGroupInfoRequest = (createOrEditFeedGroupInfoRequest: CreateOrEditFeedGroupInfoRequestDto): boolean => {
+	return ( !!createOrEditFeedGroupInfoRequest.feedGroupUuid )
+}
+
+/**
+ * 校验管理员通过动态分组信息更新审核的请求载荷
+ * @param administratorApproveFeedGroupInfoChangeRequest 管理员通过动态分组信息更新审核的请求载荷
+ * @returns 合法返回 true, 不合法返回 false
+ */
+const checkAdministratorApproveFeedGroupInfoChangeRequest = (administratorApproveFeedGroupInfoChangeRequest: AdministratorApproveFeedGroupInfoChangeRequestDto): boolean => {
+	return ( !!administratorApproveFeedGroupInfoChangeRequest.feedGroupUuid )
+}
+
+/**
+ * 校验管理员通过动态分组信息更新审核的请求载荷
+ * @param administratorDeleteFeedGroupRequest 管理员通过动态分组信息更新审核的请求载荷
+ * @returns 合法返回 true, 不合法返回 false
+ */
+const checkAdministratorDeleteFeedGroupRequest = (administratorDeleteFeedGroupRequest: AdministratorDeleteFeedGroupRequestDto): boolean => {
+	return ( !!administratorDeleteFeedGroupRequest.feedGroupUuid )
 }

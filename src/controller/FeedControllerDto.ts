@@ -161,3 +161,81 @@ export type DeleteFeedGroupResponseDto = {
 	/** 附加的文本消息 */
 	message?: string;
 }
+
+/**
+* 获取用于上传动态分组封面图的预签名 URL 的请求响应
+*/
+export type GetFeedGroupCoverUploadSignedUrlResponseDto = {
+	/** 请求是否成功，成功返回 true，否则返回 false */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 请求到的视频封面图上传预签名 URL 数据 */
+	result?: {
+		/** 预签名 URL */
+		signedUrl: string;
+		/** 文件名 */
+		fileName: string;
+	};
+}
+
+/**
+ * 删除动态分组的请求载荷
+ */
+export type CreateOrEditFeedGroupInfoRequestDto = {
+	/** 要删除动态分组的 UUID */
+	feedGroupUuid: string;
+	/** 动态分组的名字 */
+	feedGroupName?: string;
+	/** 创建动态分组时包含自定义动态分组封面 */
+	feedGroupCustomCoverUrl?: string;
+}
+
+/***
+ * 创建或更新动态分组信息的请求响应
+ */
+export type CreateOrEditFeedGroupInfoResponseDto = {
+	/** 执行结果 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 如果成功，返回动态分组 */
+	feedGroupResult?: FeedGroup
+}
+
+/**
+ * 管理员通过动态分组信息更新审核的请求载荷
+ */
+export type AdministratorApproveFeedGroupInfoChangeRequestDto = {
+	/** 动态分组的 UUID */
+	feedGroupUuid: string;
+}
+
+/**
+ * 管理员通过动态分组信息更新审核的请求响应
+ */
+export type AdministratorApproveFeedGroupInfoChangeResponseDto = {
+	/** 执行结果 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+}
+
+/**
+ * 管理员删除动态分组的请求载荷
+ */
+export type AdministratorDeleteFeedGroupRequestDto = {
+	/** 动态分组的 UUID */
+	feedGroupUuid: string;
+}
+
+/**
+ * 管理员删除动态分组的请求响应
+ */
+export type AdministratorDeleteFeedGroupResponseDto = {
+	/** 执行结果 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+}
+

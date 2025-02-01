@@ -13,7 +13,7 @@ class FollingSchemaFactory {
 		/** 关注类型 - 非空 - 可选值：'normal', 'auto', 'event', 'eventAutoBatch' */
 		followingType: { type: String, enum: ['normal', 'auto', 'event', 'eventAutoBatch'],  required: true },
 		/** 是否是特别关心 - 非空 */
-		isFavourity: { type: Boolean, required: true },
+		isFavorite: { type: Boolean, required: true },
 		/** 系统专用字段-最后编辑时间 - 非空 */
 		followingEditDateTime: { type: Number, required: true },
 		/** 系统专用字段-创建时间 - 非空 */
@@ -66,6 +66,8 @@ class FeedGroupSchemaFactory {
 		uuidList: { type: [String], required: true },
 		/** 动态分组的自定义封面 */
 		customCover: { type: String },
+		/** 是否在上一次审核通过后修改了动态分组的信息 - 非空 - 当第一次创建用户信息以及发生了更新后需要设为 true，当管理员通过审核时时将其改为 false */
+		isUpdatedAfterReview: { type: Boolean, required: true },
 		/** 系统专用字段-最后编辑时间 - 非空 */
 		editDateTime: { type: Number, required: true },
 		/** 系统专用字段-创建时间 - 非空 */

@@ -98,7 +98,7 @@ class UserInfoSchemaFactory {
 		userLinkedAccounts: { type: [UserLinkedAccountsSchema], required: false },
 		/** 用户关联网站 */
 		userWebsite: { type: UserWebsiteSchema },
-		/** 是否在上一次审核通过后修改了用户信息，当第一次创建和用户信息发生更新时需要设为 ture，当管理员通过审核时时将其改为 false */
+		/** 是否在上一次审核通过后修改了用户信息，当第一次创建用户信息以及发生了更新时需要设为 true，当管理员通过审核时时将其改为 false */
 		isUpdatedAfterReview: { type: Boolean, required: true },
 		/** 系统专用字段-最后编辑时间 - 非空 */
 		editDateTime: { type: Number, required: true },
