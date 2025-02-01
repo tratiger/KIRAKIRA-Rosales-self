@@ -1,5 +1,5 @@
 import { InferSchemaType } from "mongoose";
-import { AddNewUid2FeedGroupRequestDto, AddNewUid2FeedGroupResponseDto, CreateFeedGroupRequestDto, CreateFeedGroupResponseDto, FOLLOWING_TYPE, FollowingUploaderRequestDto, FollowingUploaderResponseDto, RemoveUidFromFeedGroupRequestDto, RemoveUidFromFeedGroupResponseDto, UnfollowingUploaderRequestDto, UnfollowingUploaderResponseDto} from "../controller/FeedControllerDto.js";
+import { AddNewUid2FeedGroupRequestDto, AddNewUid2FeedGroupResponseDto, CreateFeedGroupRequestDto, CreateFeedGroupResponseDto, DeleteFeedGroupRequestDto, DeleteFeedGroupResponseDto, FOLLOWING_TYPE, FollowingUploaderRequestDto, FollowingUploaderResponseDto, RemoveUidFromFeedGroupRequestDto, RemoveUidFromFeedGroupResponseDto, UnfollowingUploaderRequestDto, UnfollowingUploaderResponseDto} from "../controller/FeedControllerDto.js";
 import { FeedGroupSchema, FollowingSchema, UnfollowingSchema } from "../dbPool/schema/FeedSchema.js";
 import { checkUserExistsByUuidService, checkUserRoleByUUIDService, checkUserTokenByUuidService, getUserUuid } from "./UserService.js";
 import { QueryType, SelectType, UpdateType } from "../dbPool/DbClusterPoolTypes.js";
@@ -398,7 +398,7 @@ export const addNewUid2FeedGroupService = async (addNewUser2FeedGroupRequest: Ad
  * @param token 用户的 token
  * @returns 从一个动态分组中移除 UID 的请求响应
  */
-export const addNewUidFeedGroupService = async (removeUidFromFeedGroupRequest: RemoveUidFromFeedGroupRequestDto, uuid: string, token: string): Promise<RemoveUidFromFeedGroupResponseDto> => {
+export const removeUidFromFeedGroupService = async (removeUidFromFeedGroupRequest: RemoveUidFromFeedGroupRequestDto, uuid: string, token: string): Promise<RemoveUidFromFeedGroupResponseDto> => {
 	try {
 		if (!checkRemoveUidFromFeedGroupRequest(removeUidFromFeedGroupRequest)) {
 			console.error('ERROR', '从一个动态分组中移除 UID 失败，参数不合法。')
@@ -492,6 +492,53 @@ export const addNewUidFeedGroupService = async (removeUidFromFeedGroupRequest: R
 }
 
 /**
+ * 删除动态分组
+ * @param deleteFeedGroupRequest 删除动态分组的请求载荷
+ * @param uuid 用户的 UUID
+ * @param token 用户的 token
+ * @returns 删除动态分组的请求响应
+ */
+export const deleteFeedGroupService = async (deleteFeedGroupRequest: DeleteFeedGroupRequestDto, uuid: string, token: string): Promise<DeleteFeedGroupResponseDto> => {
+	try {
+		if (!checkDeleteFeedGroupRequest(deleteFeedGroupRequest)) {
+			console.error('ERROR', '删除动态分组失败，参数不合法')
+			return { success: false, message: '删除动态分组失败，参数不合法' }
+		}
+
+		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
+			console.error('ERROR', '删除动态分组失败，非法用户')
+			return { success: false, message: '删除动态分组失败，非法用户' }
+		}
+
+		if (await checkUserRoleByUUIDService(uuid, 'blocked')) {
+			console.error('ERROR', '删除动态分组失败，用户已封禁')
+			return { success: false, message: '删除动态分组失败，用户已封禁' }
+		}
+
+		const { feedGroupUuid } = deleteFeedGroupRequest
+		const { collectionName: feedGroupCollectionName, schemaInstance: feedGroupSchemaInstance } = FeedGroupSchema
+		type FeedGroup = InferSchemaType<typeof feedGroupSchemaInstance>
+
+		const deleteFeedGroupWhere: QueryType<FeedGroup> = {
+			feedGroupUuid,
+			feedGroupCreatorUuid: uuid,
+		}
+
+		const deleteFeedGroupResult = await deleteDataFromMongoDB<FeedGroup>(deleteFeedGroupWhere, feedGroupSchemaInstance, feedGroupCollectionName)
+
+		if (!deleteFeedGroupResult.success) {
+			console.error('ERROR', '删除动态分组失败，删除失败')
+			return { success: false, message: '删除动态分组失败，删除失败' }
+		}
+
+		return { success: true, message: '删除动态分组成功' }
+	} catch (error) {
+		console.error('ERROR', '删除动态分组时出错：未知原因', error)
+		return { success: false, message: '删除动态分组时出错：未知原因' }
+	}
+}
+
+/**
  * 校验用户关注一个创作者的请求载荷
  * @param followingUploaderRequest 用户关注一个创作者的请求载荷
  * @returns 合法返回 true, 不合法返回 false
@@ -540,4 +587,13 @@ const checkRemoveUidFromFeedGroupRequest = (removeUidFromFeedGroupRequest: Remov
 		!!removeUidFromFeedGroupRequest.feedGroupUuid
 		&& !!removeUidFromFeedGroupRequest.uidList && removeUidFromFeedGroupRequest.uidList.every(uid => uid !== undefined && uid !== null && uid > 0)
 	)
+}
+
+/**
+ * 校验删除动态分组的请求载荷
+ * @param deleteFeedGroupRequest 删除动态分组的请求载荷
+ * @returns 合法返回 true, 不合法返回 false
+ */
+const checkDeleteFeedGroupRequest = (deleteFeedGroupRequest: DeleteFeedGroupRequestDto): boolean => {
+	return ( !!deleteFeedGroupRequest.feedGroupUuid )
 }

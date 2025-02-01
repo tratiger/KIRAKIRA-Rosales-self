@@ -143,3 +143,21 @@ export type RemoveUidFromFeedGroupResponseDto = {
 	/** 如果修改成功，返回动态分组 */
 	feedGroupResult?: FeedGroup
 };
+
+/**
+ * 删除动态分组的请求载荷
+ */
+export type DeleteFeedGroupRequestDto = {
+	/** 要删除动态分组的 UUID */
+	feedGroupUuid: string;
+}
+
+/**
+ * 删除动态分组的请求响应
+ */
+export type DeleteFeedGroupResponseDto = {
+	/** 执行结果 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+}
