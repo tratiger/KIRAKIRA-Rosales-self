@@ -72,6 +72,8 @@ import {
 	UserExistsCheckByUIDResponseDto,
 	UserEmailExistsCheckRequestDto,
 	UserEmailExistsCheckResponseDto,
+	CheckUserExistsByUuidRequestDto,
+	CheckUserExistsByUuidResponseDto,
 } from '../controller/UserControllerDto.js'
 import { findOneAndUpdateData4MongoDB, insertData2MongoDB, selectDataFromMongoDB, updateData4MongoDB, selectDataByAggregateFromMongoDB, deleteDataFromMongoDB } from '../dbPool/DbClusterPool.js'
 import { DbPoolResultsType, QueryType, SelectType, UpdateType } from '../dbPool/DbClusterPoolTypes.js'
