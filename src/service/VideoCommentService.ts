@@ -160,7 +160,7 @@ export const getVideoCommentListByKvidService = async (getVideoCommentByKvidRequ
 		}
 
 		// 获取视频的评论总数的 pipeline
-		const countVideoCommentPipeline = [
+		const countVideoCommentPipeline: PipelineStage[] = [
 			// 1. 查询评论信息
 			{
 				$match: {
@@ -290,7 +290,7 @@ export const getVideoCommentListByKvidService = async (getVideoCommentByKvidRequ
 
 		return {
 			success: true,
-			message: videoCommentsCountResult.result?.[0]?.totalCount > 0 ? '获取视频评论列表成功' : '获取视频评论列表成功，长度为空',
+			message: videoCommentsCountResult.result?.[0]?.totalCount > 0 ? '获取视频评论列表成功' : '获取视频评论列表成功，长度为零',
 			videoCommentCount: videoCommentsCountResult.result?.[0]?.totalCount,
 			videoCommentList: videoCommentsResult.result,
 		}

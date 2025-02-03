@@ -275,11 +275,19 @@ export type GetFeedContentResponseDto = {
 	success: boolean;
 	/** 附加的文本消息 */
 	message?: string;
+	/** 用户是否没有关注其他用户，或者动态分组中没有用户 */
+	isLonely: false | {
+		/** 没有关注其他用户 */
+		noFollowing: boolean;
+	} | {
+		/** 动态分组中没有用户 */
+		noUserInFeedGroup: boolean;
+	};
 	/** 请求结果 */
 	result?: {
 		/** 内容数量 */
 		count: number;
 		/** 内容 */
 		content: ThumbVideoResponseDto['videos'];
-	}
+	};
 }

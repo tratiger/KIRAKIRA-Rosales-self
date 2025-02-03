@@ -1,14 +1,15 @@
-import { InferSchemaType } from "mongoose";
-import { AddNewUid2FeedGroupRequestDto, AddNewUid2FeedGroupResponseDto, AdministratorApproveFeedGroupInfoChangeRequestDto, AdministratorApproveFeedGroupInfoChangeResponseDto, AdministratorDeleteFeedGroupRequestDto, AdministratorDeleteFeedGroupResponseDto, CreateFeedGroupRequestDto, CreateFeedGroupResponseDto, CreateOrEditFeedGroupInfoRequestDto, CreateOrEditFeedGroupInfoResponseDto, DeleteFeedGroupRequestDto, DeleteFeedGroupResponseDto, FOLLOWING_TYPE, FollowingUploaderRequestDto, FollowingUploaderResponseDto, GetFeedGroupCoverUploadSignedUrlResponseDto, GetFeedGroupListResponseDto, RemoveUidFromFeedGroupRequestDto, RemoveUidFromFeedGroupResponseDto, UnfollowingUploaderRequestDto, UnfollowingUploaderResponseDto} from "../controller/FeedControllerDto.js";
+import { InferSchemaType, PipelineStage } from "mongoose";
+import { AddNewUid2FeedGroupRequestDto, AddNewUid2FeedGroupResponseDto, AdministratorApproveFeedGroupInfoChangeRequestDto, AdministratorApproveFeedGroupInfoChangeResponseDto, AdministratorDeleteFeedGroupRequestDto, AdministratorDeleteFeedGroupResponseDto, CreateFeedGroupRequestDto, CreateFeedGroupResponseDto, CreateOrEditFeedGroupInfoRequestDto, CreateOrEditFeedGroupInfoResponseDto, DeleteFeedGroupRequestDto, DeleteFeedGroupResponseDto, FOLLOWING_TYPE, FollowingUploaderRequestDto, FollowingUploaderResponseDto, GetFeedContentRequestDto, GetFeedContentResponseDto, GetFeedGroupCoverUploadSignedUrlResponseDto, GetFeedGroupListResponseDto, RemoveUidFromFeedGroupRequestDto, RemoveUidFromFeedGroupResponseDto, UnfollowingUploaderRequestDto, UnfollowingUploaderResponseDto} from "../controller/FeedControllerDto.js";
 import { FeedGroupSchema, FollowingSchema, UnfollowingSchema } from "../dbPool/schema/FeedSchema.js";
 import { checkUserExistsByUuidService, checkUserRoleByUUIDService, checkUserTokenByUuidService, getUserUuid } from "./UserService.js";
 import { QueryType, SelectType, UpdateType } from "../dbPool/DbClusterPoolTypes.js";
-import { deleteDataFromMongoDB, findOneAndUpdateData4MongoDB, insertData2MongoDB, selectDataFromMongoDB } from "../dbPool/DbClusterPool.js";
+import { deleteDataFromMongoDB, findOneAndUpdateData4MongoDB, insertData2MongoDB, selectDataByAggregateFromMongoDB, selectDataFromMongoDB } from "../dbPool/DbClusterPool.js";
 import { abortAndEndSession, commitAndEndSession, createAndStartSession } from "../common/MongoDBSessionTool.js";
 import { CheckUserExistsByUuidRequestDto } from "../controller/UserControllerDto.js";
 import { v4 as uuidV4 } from 'uuid'
 import { generateSecureRandomString } from "../common/RandomTool.js";
 import { createCloudflareImageUploadSignedUrl } from "../cloudflare/index.js";
+import { VideoSchema } from "../dbPool/schema/VideoSchema.js";
 
 /**
  * 用户关注一个创作者
@@ -726,7 +727,7 @@ export const administratorDeleteFeedGroupService = async (administratorDeleteFee
  * @param token 用户的 token
  * @returns
  */
-export const getFeedGroupList = async (uuid: string, token: string): Promise<GetFeedGroupListResponseDto> => {
+export const getFeedGroupListService = async (uuid: string, token: string): Promise<GetFeedGroupListResponseDto> => {
 	try {
 		if (!(await checkUserTokenByUuidService(uuid, uuid)).success) {
 			console.error('ERROR', '获取动态分组失败，非法用户')
@@ -747,7 +748,7 @@ export const getFeedGroupList = async (uuid: string, token: string): Promise<Get
 			uuidList: 1, // 动态分组中的用户
 			customCover: 1, // 动态分组的自定义封面
 			editDateTime: 1, // 系统专用字段-最后编辑时间
-			createDateTime: 1, // 系统专用字段-创建时间 //
+			createDateTime: 1, // 系统专用字段-创建时间
 		}
 
 		const getFeedGroupResult = await selectDataFromMongoDB<FeedGroup>(getFeedGroupWhere, getFeedGroupSelect, feedGroupSchemaInstance, feedGroupCollectionName)
@@ -761,6 +762,178 @@ export const getFeedGroupList = async (uuid: string, token: string): Promise<Get
 	} catch (error) {
 		console.error('ERROR', '获取动态分组时出错：', error)
 		return { success: false, message: '获取动态分组时出错，未知原因' }
+	}
+}
+
+/**
+ * 获取动态内容
+ * @param getFeedContentRequest 获取动态内容的请求载荷
+ * @param uuid 用户的 UUID
+ * @param token 用户的 token
+ * @returns 获取动态内容的请求响应
+ */
+export const getFeedContentService = async (getFeedContentRequest: GetFeedContentRequestDto, uuid: string, token: string): Promise<GetFeedContentResponseDto> => {
+	try {
+		if (!checkGetFeedContentRequest(getFeedContentRequest)) {
+			console.error('ERROR', '获取动态内容失败，参数不合法')
+			return { success: false, message: '获取动态内容失败，参数不合法', isLonely: false }
+		}
+
+		if (!(await checkUserTokenByUuidService(uuid, uuid)).success) {
+			console.error('ERROR', '获取动态内容失败，非法用户')
+			return { success: false, message: '获取动态内容失败，非法用户', isLonely: false }
+		}
+
+		const { feedGroupUuid, pagination } = getFeedContentRequest
+
+		const uuidList = []
+		if (feedGroupUuid) {
+			const { collectionName: feedGroupCollectionName, schemaInstance: feedGroupSchemaInstance } = FeedGroupSchema
+			type FeedGroup = InferSchemaType<typeof feedGroupSchemaInstance>
+
+			const getFeedGroupUuidListWhere: QueryType<FeedGroup> = {
+				feedGroupUuid,
+			}
+
+			const getFeedGroupUuidListSelect: SelectType<FeedGroup> = {
+				uuidList: 1, // 动态分组中的用户
+			}
+
+			const getFeedGroupUserListResult = await selectDataFromMongoDB<FeedGroup>(getFeedGroupUuidListWhere, getFeedGroupUuidListSelect, feedGroupSchemaInstance, feedGroupCollectionName)
+			const uuidListResult = getFeedGroupUserListResult.result?.[0]?.uuidList
+
+			if (!getFeedGroupUserListResult.success) {
+				console.error('ERROR', '获取动态内容失败，查询动态分组中的用户失败')
+				return { success: false, message: '获取动态内容失败，查询动态分组中的用户失败', isLonely: { noUserInFeedGroup: true } }
+			}
+
+			if (Array.isArray(uuidListResult) && uuidList.length <= 0) {
+				console.warn('WARN', 'WARNING', '你选择动态分组中没有用户')
+				return { success: true, message: '你选择动态分组中没有用户', isLonely: { noUserInFeedGroup: true }, result: { count: 0, content: [] } }
+			}
+
+			uuidList.push(uuidListResult)
+		} else {
+			const { collectionName: followingCollectionName, schemaInstance: followingSchemaInstance } = FollowingSchema
+			type Following = InferSchemaType<typeof followingSchemaInstance>
+
+			const getFollowingUuidListWhere: QueryType<Following> = {
+				followerUuid: uuid,
+			}
+
+			const getFollowingUuidListSelect: SelectType<Following> = {
+				followingUuid: 1,
+			}
+
+			const getFollowingUserListResult = await selectDataFromMongoDB<Following>(getFollowingUuidListWhere, getFollowingUuidListSelect, followingSchemaInstance, followingCollectionName)
+			const uuidListResult = getFollowingUserListResult.result?.map(followingResult => followingResult.followingUuid)
+
+			if (!getFollowingUserListResult.success) {
+				console.error('ERROR', '获取动态内容失败，查询用户关注的用户失败')
+				return { success: false, message: '获取动态内容失败，查询用户关注的用户失败', isLonely: { noFollowing: true } }
+			}
+
+			if (Array.isArray(uuidListResult) && uuidList.length <= 0) {
+				console.warn('WARN', 'WARNING', '你没有关注任何用户')
+				return { success: true, message: '你没有关注任何用户', isLonely: { noFollowing: true }, result: { count: 0, content: [] } }
+			}
+
+			uuidList.push(uuidListResult)
+		}
+
+		// 根据 uuid 匹配视频的基础 pipeline
+		const feedContentMatchPipeline: PipelineStage[] = [
+			{
+				$match: {
+					uploaderUUID: { $in: uuidList },
+				},
+			},
+		]
+
+		// 获取动态视频总数的 pipeline
+		const countFeedContentBasePipeline: PipelineStage[] = [
+			{
+				$count: 'totalCount', // 统计总文档数
+			}
+		]
+
+		let skip = 0
+		let pageSize = undefined
+		if (pagination && pagination.page > 0 && pagination.pageSize > 0) {
+			skip = (pagination.page - 1) * pagination.pageSize
+			pageSize = pagination.pageSize
+		}
+
+		// 匹配视频信息的 pipeline
+		const getFeedContentBasePipeline: PipelineStage[] = [
+			{
+				$lookup: {
+					from: 'user-infos',
+					localField: 'uploaderUUID',
+					foreignField: 'UUID',
+					as: 'uploader_info',
+				},
+			},
+			{ $skip: skip }, // 跳过指定数量的文档
+			{ $limit: pageSize }, // 限制返回的文档数量
+			{
+				$unwind: '$uploader_info',
+			},
+			{
+				$sort: {
+					uploadDate: -1, // 按 lastUpdateDateTime 降序排序
+				},
+			},
+			{
+				$project: {
+					videoId: 1,
+					title: 1,
+					image: 1,
+					uploadDate: 1,
+					watchedCount: 1,
+					uploaderId: 1, // 上传者 UID
+					duration: 1,
+					description: 1,
+					editDateTime: 1,
+					uploader: '$uploader_info.username', // 上传者的名字
+					uploaderNickname: '$uploader_info.userNickname', // 上传者的昵称
+				}
+			}
+		]
+
+		const countFeedContentPipeline = feedContentMatchPipeline.concat(countFeedContentBasePipeline)
+		const getFeedContentPipeline = feedContentMatchPipeline.concat(getFeedContentBasePipeline)
+
+		const { collectionName: videoCollectionName, schemaInstance: videoSchemaInstance } = VideoSchema
+		type ThumbVideo = InferSchemaType<typeof videoSchemaInstance>
+
+		const feedContentCountPromise = selectDataByAggregateFromMongoDB(videoSchemaInstance, videoCollectionName, countFeedContentPipeline)
+		const videoCommentsPromise = selectDataByAggregateFromMongoDB<ThumbVideo>(videoSchemaInstance, videoCollectionName, getFeedContentPipeline)
+
+		const [ feedContentCountResult, videoCommentsResult ] = await Promise.all([feedContentCountPromise, videoCommentsPromise])
+		const count = feedContentCountResult.result?.[0].totalCount
+		const content = videoCommentsResult.result
+
+		if ( !feedContentCountResult.success || !videoCommentsResult.success
+			|| typeof count !== 'number' ||  count < 0
+			|| ( Array.isArray(content) && !content )
+		) {
+			console.error('ERROR', '获取动态内容失败，查询视频数据失败')
+			return { success: false, message: '获取动态内容失败，查询视频数据失败', isLonely: false }
+		}
+
+		return {
+			success: true,
+			message: count > 0 ? '获取动态内容成功' : '获取动态内容成功，长度为零',
+			isLonely: false,
+			result: {
+				count,
+				content,
+			},
+		}
+	} catch (error) {
+		console.error('ERROR', '获取动态内容时出错：', error)
+		return { success: false, message: '获取动态内容时出错，未知原因', isLonely: false }
 	}
 }
 
@@ -849,4 +1022,16 @@ const checkAdministratorApproveFeedGroupInfoChangeRequest = (administratorApprov
  */
 const checkAdministratorDeleteFeedGroupRequest = (administratorDeleteFeedGroupRequest: AdministratorDeleteFeedGroupRequestDto): boolean => {
 	return ( !!administratorDeleteFeedGroupRequest.feedGroupUuid )
+}
+
+/**
+ * 校验获取动态内容的请求载荷
+ * @param getFeedContentRequest 获取动态内容的请求载荷
+ * @returns 合法返回 true, 不合法返回 false
+ */
+const checkGetFeedContentRequest = (getFeedContentRequest: GetFeedContentRequestDto): boolean => {
+	return (
+		!!getFeedContentRequest.pagination
+		&& getFeedContentRequest.pagination.page >= 0 && getFeedContentRequest.pagination.pageSize > 0
+	);
 }
