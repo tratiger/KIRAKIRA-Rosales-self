@@ -1,3 +1,5 @@
+import { ThumbVideoResponseDto } from "./VideoControllerDto.js";
+
 // marker.ts
 const ONLY_IN_TS_FILE = Symbol("ONLY_IN_TS_FILE"); // WARN: DO NOT RENAME ME AS `*.d.ts`
 ONLY_IN_TS_FILE
@@ -58,7 +60,7 @@ type FeedGroup = {
 	feedGroupUuid: string,
 	/** 动态分组的名称 - 非空 */
 	feedGroupName: string,
-	/** 动态分组创建者 UUID */
+	/** 动态分组创建者 UUID - 非空 */
 	feedGroupCreatorUuid: string,
 	/** 动态分组中的用户 - 非空 */
 	uuidList: string[],
@@ -239,3 +241,45 @@ export type AdministratorDeleteFeedGroupResponseDto = {
 	message?: string;
 }
 
+/**
+ * 获取动态分组的请求响应
+ */
+export type GetFeedGroupListResponseDto = {
+	/** 执行结果 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 结果 */
+	result?: FeedGroup[];
+}
+
+/**
+ * 获取动态内容的请求载荷
+ */
+export type GetFeedContentRequestDto = {
+	feedGroupUuid?: string;
+	/** 分页查询 */
+	pagination: {
+		/** 当前在第几页 */
+		page: number;
+		/** 一页显示多少条 */
+		pageSize: number;
+	};
+}
+
+/**
+ * 获取动态内容的请求响应
+ */
+export type GetFeedContentResponseDto = {
+	/** 执行结果 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 请求结果 */
+	result?: {
+		/** 内容数量 */
+		count: number;
+		/** 内容 */
+		content: ThumbVideoResponseDto['videos'];
+	}
+}

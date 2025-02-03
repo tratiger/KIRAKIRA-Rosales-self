@@ -60,7 +60,7 @@ class FeedGroupSchemaFactory {
 		feedGroupUuid: { type: String, required: true },
 		/** 动态分组的名称 - 非空 */
 		feedGroupName: { type: String, required: true },
-		/** 动态分组创建者 UUID */
+		/** 动态分组创建者 UUID - 非空 */
 		feedGroupCreatorUuid: { type: String, required: true },
 		/** 动态分组中的用户 - 非空 */
 		uuidList: { type: [String], required: true },

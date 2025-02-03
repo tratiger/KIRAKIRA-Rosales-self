@@ -1,5 +1,5 @@
 import { InferSchemaType } from "mongoose";
-import { AddNewUid2FeedGroupRequestDto, AddNewUid2FeedGroupResponseDto, AdministratorApproveFeedGroupInfoChangeRequestDto, AdministratorApproveFeedGroupInfoChangeResponseDto, AdministratorDeleteFeedGroupRequestDto, AdministratorDeleteFeedGroupResponseDto, CreateFeedGroupRequestDto, CreateFeedGroupResponseDto, CreateOrEditFeedGroupInfoRequestDto, CreateOrEditFeedGroupInfoResponseDto, DeleteFeedGroupRequestDto, DeleteFeedGroupResponseDto, FOLLOWING_TYPE, FollowingUploaderRequestDto, FollowingUploaderResponseDto, GetFeedGroupCoverUploadSignedUrlResponseDto, RemoveUidFromFeedGroupRequestDto, RemoveUidFromFeedGroupResponseDto, UnfollowingUploaderRequestDto, UnfollowingUploaderResponseDto} from "../controller/FeedControllerDto.js";
+import { AddNewUid2FeedGroupRequestDto, AddNewUid2FeedGroupResponseDto, AdministratorApproveFeedGroupInfoChangeRequestDto, AdministratorApproveFeedGroupInfoChangeResponseDto, AdministratorDeleteFeedGroupRequestDto, AdministratorDeleteFeedGroupResponseDto, CreateFeedGroupRequestDto, CreateFeedGroupResponseDto, CreateOrEditFeedGroupInfoRequestDto, CreateOrEditFeedGroupInfoResponseDto, DeleteFeedGroupRequestDto, DeleteFeedGroupResponseDto, FOLLOWING_TYPE, FollowingUploaderRequestDto, FollowingUploaderResponseDto, GetFeedGroupCoverUploadSignedUrlResponseDto, GetFeedGroupListResponseDto, RemoveUidFromFeedGroupRequestDto, RemoveUidFromFeedGroupResponseDto, UnfollowingUploaderRequestDto, UnfollowingUploaderResponseDto} from "../controller/FeedControllerDto.js";
 import { FeedGroupSchema, FollowingSchema, UnfollowingSchema } from "../dbPool/schema/FeedSchema.js";
 import { checkUserExistsByUuidService, checkUserRoleByUUIDService, checkUserTokenByUuidService, getUserUuid } from "./UserService.js";
 import { QueryType, SelectType, UpdateType } from "../dbPool/DbClusterPoolTypes.js";
@@ -168,7 +168,7 @@ export const unfollowingUploaderService = async (unfollowingUploaderRequest: Unf
 		const selectUnfollowingDataResult = await selectDataFromMongoDB<Following>(followingWhere, followingSelect, followingSchemaInstance, followingCollectionName, { session })
 		const selectUnfollowingData = selectUnfollowingDataResult.result?.[0]
 
-		if (!selectUnfollowingDataResult.success && selectUnfollowingDataResult.result.length !== 1 && selectUnfollowingData) {
+		if (!selectUnfollowingDataResult.success || selectUnfollowingDataResult.result.length !== 1 || selectUnfollowingData) {
 			await abortAndEndSession(session)
 			console.error('ERROR', '取消关注用户失败，读取关注数据失败。')
 			return { success: false, message: '取消关注用户失败，读取关注数据失败。' }
@@ -611,7 +611,7 @@ export const createOrEditFeedGroupInfoService = async (createOrEditFeedGroupInfo
 
 		const findOneAndUpdateFeedGroupDataResult = await findOneAndUpdateData4MongoDB<FeedGroup>(updateFeedGroupWhere, updateFeedGroupData, feedGroupSchemaInstance, feedGroupCollectionName)
 
-		if (!findOneAndUpdateFeedGroupDataResult.success && !findOneAndUpdateFeedGroupDataResult.result) {
+		if (!findOneAndUpdateFeedGroupDataResult.success || !findOneAndUpdateFeedGroupDataResult.result) {
 			console.error('ERROR', '创建或更新动态分组信息失败，更新失败')
 			return { success: false, message: '创建或更新动态分组信息失败，更新失败' }
 		}
@@ -661,7 +661,7 @@ export const administratorApproveFeedGroupInfoChangeService = async (administrat
 
 		const findOneAndUpdateFeedGroupDataResult = await findOneAndUpdateData4MongoDB<FeedGroup>(updateFeedGroupWhere, updateFeedGroupData, feedGroupSchemaInstance, feedGroupCollectionName)
 
-		if (!findOneAndUpdateFeedGroupDataResult.success && !findOneAndUpdateFeedGroupDataResult.result) {
+		if (!findOneAndUpdateFeedGroupDataResult.success || !findOneAndUpdateFeedGroupDataResult.result) {
 			console.error('ERROR', '管理员通过动态分组信息更新审核失败，更新失败')
 			return { success: false, message: '管理员通过动态分组信息更新审核失败，更新失败' }
 		}
@@ -717,6 +717,50 @@ export const administratorDeleteFeedGroupService = async (administratorDeleteFee
 	} catch (error) {
 		console.error('ERROR', '管理员删除动态分组时出错：', error)
 		return { success: false, message: '管理员删除动态分组时出错，未知原因' }
+	}
+}
+
+/**
+ * 获取动态分组
+ * @param uuid 用户的 UUID
+ * @param token 用户的 token
+ * @returns
+ */
+export const getFeedGroupList = async (uuid: string, token: string): Promise<GetFeedGroupListResponseDto> => {
+	try {
+		if (!(await checkUserTokenByUuidService(uuid, uuid)).success) {
+			console.error('ERROR', '获取动态分组失败，非法用户')
+			return { success: false, message: '获取动态分组失败，非法用户' }
+		}
+
+		const { collectionName: feedGroupCollectionName, schemaInstance: feedGroupSchemaInstance } = FeedGroupSchema
+		type FeedGroup = InferSchemaType<typeof feedGroupSchemaInstance>
+
+		const getFeedGroupWhere: QueryType<FeedGroup> = {
+			feedGroupCreatorUuid: uuid,
+		}
+
+		const getFeedGroupSelect: SelectType<FeedGroup> = {
+			feedGroupUuid: 1, // 动态分组的 UUID
+			feedGroupName: 1, // 动态分组的名称
+			feedGroupCreatorUuid: 1, // 动态分组创建者 UUID
+			uuidList: 1, // 动态分组中的用户
+			customCover: 1, // 动态分组的自定义封面
+			editDateTime: 1, // 系统专用字段-最后编辑时间
+			createDateTime: 1, // 系统专用字段-创建时间 //
+		}
+
+		const getFeedGroupResult = await selectDataFromMongoDB<FeedGroup>(getFeedGroupWhere, getFeedGroupSelect, feedGroupSchemaInstance, feedGroupCollectionName)
+
+		if (!getFeedGroupResult.success || !getFeedGroupResult.result) {
+			console.error('ERROR', '获取动态分组失败，查询失败')
+			return { success: false, message: '获取动态分组失败，查询失败' }
+		}
+
+		return { success: true, message: '获取动态分组成功', result: getFeedGroupResult.result }
+	} catch (error) {
+		console.error('ERROR', '获取动态分组时出错：', error)
+		return { success: false, message: '获取动态分组时出错，未知原因' }
 	}
 }
 
