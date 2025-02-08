@@ -260,7 +260,7 @@ export const createFeedGroupService = async (createFeedGroupRequest: CreateFeedG
 		}
 
 		const now = new Date().getTime()
-		const feedGroupUuid = uuidV4();
+		const feedGroupUuid = uuidV4()
 
 		const { collectionName: feedGroupCollectionName, schemaInstance: feedGroupSchemaInstance } = FeedGroupSchema
 		type FeedGroup = InferSchemaType<typeof feedGroupSchemaInstance>
