@@ -14,7 +14,7 @@ import { Schema } from 'mongoose'
  * API 路径的列表
  * KIRAKIRA RBAC 原子化权限控制的最小单位，即精确控制每个 API 接口的访问权限
  */
-class RbacApiListSchemaFactory {
+class RbacApiSchemaFactory {
 	/** MongoDB Schema */
 	schema = {
 		/** API 路径的 UUID - 非空 - 唯一 */
@@ -41,7 +41,7 @@ class RbacApiListSchemaFactory {
 	/** Mongoose Schema 实例 */
 	schemaInstance = new Schema(this.schema)
 }
-export const RbacApiListSchema = new RbacApiListSchemaFactory()
+export const RbacApiSchema = new RbacApiSchemaFactory()
 
 /**
  * RBAC 角色

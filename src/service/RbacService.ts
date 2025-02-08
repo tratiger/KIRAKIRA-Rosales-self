@@ -1,8 +1,10 @@
 import { InferSchemaType, PipelineStage } from "mongoose";
-import { CheckUserRbacParams, CheckUserRbacResult, CreateRbacApiPathRequestDto, CreateRbacApiPathResponseDto } from "../controller/RbacControllerDto.js";
-import { getUserUuid } from "./UserService.js";
-import { selectDataByAggregateFromMongoDB } from "../dbPool/DbClusterPool.js";
+import { CheckUserRbacParams, CheckUserRbacResult, CreateRbacApiPathRequestDto, CreateRbacApiPathResponseDto, CreateRbacRoleRequestDto, CreateRbacRoleResponseDto } from "../controller/RbacControllerDto.js";
+import { checkUserTokenByUuidService, getUserUuid } from "./UserService.js";
+import { insertData2MongoDB, selectDataByAggregateFromMongoDB } from "../dbPool/DbClusterPool.js";
 import { UserAuthSchema } from "../dbPool/schema/UserSchema.js";
+import { RbacApiSchema, RbacRoleSchema } from "../dbPool/schema/RbacSchema.js";
+import { v4 as uuidV4 } from 'uuid'
 
 /**
  * 通过 RBAC 检查用户的权限
@@ -84,13 +86,129 @@ export const checkUserByRbac = async (params: CheckUserRbacParams): Promise<Chec
  * 创建 RBAC API 路径
  * @param createRbacApiPathRequest 创建 RBAC API 路径的请求载荷
  * @param uuid 用户 UUID
+ * @param token 用户 Token
  * @returns 创建 RBAC API 路径的请求响应
  */
-export const createRbacApiPathService = async (createRbacApiPathRequest: CreateRbacApiPathRequestDto, uuid: string): Promise<CreateRbacApiPathResponseDto> => {
+export const createRbacApiPathService = async (createRbacApiPathRequest: CreateRbacApiPathRequestDto, uuid: string, token: string): Promise<CreateRbacApiPathResponseDto> => {
 	try {
+		if (!checkCreateRbacApiPathRequest(createRbacApiPathRequest)) {
+			console.error('ERROR', '创建 RBAC API 路径失败，参数不合法')
+			return { success: false, message: '创建 RBAC API 路径失败，参数不合法' }
+		}
 
+		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
+			console.error('ERROR', '创建 RBAC API 路径失败，用户 Token 校验未通过')
+			return { success: false, message: '创建 RBAC API 路径失败，用户 Token 校验未通过' }
+		}
+
+		const { apiPath, apiPathType, apiPathColor, apiPathDescription } = createRbacApiPathRequest
+		const apiPathUuid = uuidV4()
+		const now = new Date().getTime()
+
+		const { collectionName: rbacApiCollectionName, schemaInstance: rbacApiSchemaInstance } = RbacApiSchema
+		type RbacApiList = InferSchemaType<typeof rbacApiSchemaInstance>
+
+		const rbacApiData: RbacApiList = {
+			apiPathUuid,
+			apiPath,
+			apiPathType,
+			apiPathColor,
+			apiPathDescription,
+			creatorUuid: uuid,
+			lastEditorUuid: uuid,
+			createDateTime: now,
+			editDateTime: now
+		}
+
+		const insertResult = await insertData2MongoDB<RbacApiList>(rbacApiData, rbacApiSchemaInstance, rbacApiCollectionName)
+		const insertResultData = insertResult?.result?.[0]
+
+		if (!insertResult.success || !insertResultData) {
+			console.error('ERROR', '创建 RBAC API 路径失败，数据插入失败')
+			return { success: false, message: '创建 RBAC API 路径失败，数据插入失败' }
+		}
+
+		return { success: true, message: '创建 RBAC API 路径成功', result: { ...insertResultData, isAssignedOnce: false } }
 	} catch (error) {
 		console.error('ERROR', '创建 RBAC API 路径时出错，未知错误：', error)
 		return { success: false, message: '创建 RBAC API 路径时出错，未知错误' }
 	}
+}
+
+/**
+ * 创建 RBAC 角色
+ * @param createRbacRoleRequest 创建 RBAC 角色的请求载荷
+ * @param uuid 用户 UUID
+ * @param token 用户 Token
+ * @returns 创建 RBAC 角色的请求响应
+ */
+export const createRbacRoleService = async (createRbacRoleRequest: CreateRbacRoleRequestDto, uuid: string, token: string): Promise<CreateRbacRoleResponseDto> => {
+	try {
+		if (!checkCreateRbacRoleRequest(createRbacRoleRequest)) {
+			console.error('ERROR', '创建 RBAC 角色失败，参数不合法')
+			return { success: false, message: '创建 RBAC 角色失败，参数不合法' }
+		}
+
+		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
+			console.error('ERROR', '创建 RBAC 角色失败，用户 Token 校验未通过')
+			return { success: false, message: '创建 RBAC 角色失败，用户 Token 校验未通过' }
+		}
+
+		const { roleName, roleType, roleColor, roleDescription } = createRbacRoleRequest
+		const roleUuid = uuidV4()
+		const now = new Date().getTime()
+
+		const { collectionName: rbacRoleCollectionName, schemaInstance: rbacRoleSchemaInstance } = RbacRoleSchema
+		type RbacRole = InferSchemaType<typeof rbacRoleSchemaInstance>
+
+		const rbacRoleData: RbacRole = {
+			roleUuid,
+			roleName,
+			apiPathPermissions: [],
+			roleType,
+			roleColor,
+			roleDescription,
+			creatorUuid: uuid,
+			lastEditorUuid: uuid,
+			createDateTime: now,
+			editDateTime: now
+		}
+
+		const insertResult = await insertData2MongoDB<RbacRole>(rbacRoleData, rbacRoleSchemaInstance, rbacRoleCollectionName)
+		const insertResultData = insertResult?.result?.[0]
+
+		if (!insertResult.success || !insertResultData) {
+			console.error('ERROR', '创建 RBAC 角色失败，数据插入失败')
+			return { success: false, message: '创建 RBAC 角色失败，数据插入失败' }
+		}
+
+		return { success: true, message: '创建 RBAC 角色成功', result: insertResultData }
+	} catch (error) {
+		console.error('ERROR', '创建 RBAC 角色时出错，未知错误：', error)
+		return { success: false, message: '创建 RBAC 角色时出错，未知错误' }
+	}
+}
+
+/**
+ * 校验创建 RBAC API 路径的请求载荷
+ * @param createRbacApiPathRequest 创建 RBAC API 路径的请求载荷
+ * @returns 合法返回 true, 不合法返回 false
+ */
+const checkCreateRbacApiPathRequest = (createRbacApiPathRequest: CreateRbacApiPathRequestDto): boolean => {
+	return (
+		!!createRbacApiPathRequest.apiPath
+		&& createRbacApiPathRequest.apiPathColor ? /^#([0-9A-Fa-f]{8})$/.test(createRbacApiPathRequest.apiPathColor) : true // 如果 apiPathColor 不为空，则测试是否符合八位 HAX 颜色代码格式（例如：#66CCFFFF），如果 apiPathColor 为空，则直接为 true
+	)
+}
+
+/**
+ * 校验创建 RBAC 角色的请求载荷
+ * @param createRbacApiPathRequest 创建 RBAC 角色的请求载荷
+ * @returns 合法返回 true, 不合法返回 false
+ */
+const checkCreateRbacRoleRequest = (createRbacRoleRequest: CreateRbacRoleRequestDto): boolean => {
+	return (
+		!!createRbacRoleRequest.roleName
+		&& createRbacRoleRequest.roleColor ? /^#([0-9A-Fa-f]{8})$/.test(createRbacRoleRequest.roleColor) : true // 如果 roleColor 不为空，则测试是否符合八位 HAX 颜色代码格式（例如：#66CCFFFF），如果 roleColor 为空，则直接为 true
+	)
 }
