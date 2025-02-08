@@ -258,7 +258,7 @@ export type GetSelfUserInfoResponseDto = {
 			/** 用户创建时间 */
 			userCreateDateTime?: number;
 			/** 用户的角色 */
-			role?: string;
+			role?: string[];
 			/** 2FA 的类型 */
 			typeOf2FA?: string;
 		}

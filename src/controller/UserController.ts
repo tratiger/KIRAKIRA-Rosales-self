@@ -3,7 +3,7 @@ import {
 	adminClearUserInfoService,
 	adminGetUserInfoService,
 	approveUserInfoService,
-	blockUserByUIDService,
+	// blockUserByUIDService,
 	changePasswordService,
 	checkInvitationCodeService,
 	checkUsernameService,
@@ -15,7 +15,7 @@ import {
 	getUserAvatarUploadSignedUrlService,
 	getUserInfoByUidService,
 	getUserSettingsService,
-	reactivateUserByUIDService,
+	// reactivateUserByUIDService,
 	requestSendChangeEmailVerificationCodeService,
 	requestSendChangePasswordVerificationCodeService,
 	RequestSendVerificationCodeService,
@@ -679,43 +679,43 @@ export const checkUsernameController = async (ctx: koaCtx, next: koaNext) => {
 	await next()
 }
 
-/**
- * 根据 UID 封禁一个用户
- * @param ctx context
- * @param next context
- * @return 封禁用户的请求响应
- */
-export const blockUserByUIDController = async (ctx: koaCtx, next: koaNext) => {
-	const data = ctx.request.body as Partial<BlockUserByUIDRequestDto>
-	const blockUserByUIDRequest: BlockUserByUIDRequestDto = {
-		criminalUid: data.criminalUid ?? -1,
-	}
-	const uid = parseInt(ctx.cookies.get('uid'), 10)
-	const token = ctx.cookies.get('token')
+// /**
+//  * 根据 UID 封禁一个用户
+//  * @param ctx context
+//  * @param next context
+//  * @return 封禁用户的请求响应
+//  */
+// export const blockUserByUIDController = async (ctx: koaCtx, next: koaNext) => {
+// 	const data = ctx.request.body as Partial<BlockUserByUIDRequestDto>
+// 	const blockUserByUIDRequest: BlockUserByUIDRequestDto = {
+// 		criminalUid: data.criminalUid ?? -1,
+// 	}
+// 	const uid = parseInt(ctx.cookies.get('uid'), 10)
+// 	const token = ctx.cookies.get('token')
 
-	const blockUserByUIDResponse = await blockUserByUIDService(blockUserByUIDRequest, uid, token)
-	ctx.body = blockUserByUIDResponse
-	await next()
-}
+// 	const blockUserByUIDResponse = await blockUserByUIDService(blockUserByUIDRequest, uid, token)
+// 	ctx.body = blockUserByUIDResponse
+// 	await next()
+// }
 
-/**
- * 根据 UID 重新激活一个用户
- * @param ctx context
- * @param next context
- * @return 重新激活用户的请求响应
- */
-export const reactivateUserByUIDController = async (ctx: koaCtx, next: koaNext) => {
-	const data = ctx.request.body as Partial<ReactivateUserByUIDRequestDto>
-	const reactivateUserByUIDRequest: ReactivateUserByUIDRequestDto = {
-		uid: data.uid ?? -1,
-	}
-	const uid = parseInt(ctx.cookies.get('uid'), 10)
-	const token = ctx.cookies.get('token')
+// /**
+//  * 根据 UID 重新激活一个用户
+//  * @param ctx context
+//  * @param next context
+//  * @return 重新激活用户的请求响应
+//  */
+// export const reactivateUserByUIDController = async (ctx: koaCtx, next: koaNext) => {
+// 	const data = ctx.request.body as Partial<ReactivateUserByUIDRequestDto>
+// 	const reactivateUserByUIDRequest: ReactivateUserByUIDRequestDto = {
+// 		uid: data.uid ?? -1,
+// 	}
+// 	const uid = parseInt(ctx.cookies.get('uid'), 10)
+// 	const token = ctx.cookies.get('token')
 
-	const reactivateUserByUIDResponse = await reactivateUserByUIDService(reactivateUserByUIDRequest, uid, token)
-	ctx.body = reactivateUserByUIDResponse
-	await next()
-}
+// 	const reactivateUserByUIDResponse = await reactivateUserByUIDService(reactivateUserByUIDRequest, uid, token)
+// 	ctx.body = reactivateUserByUIDResponse
+// 	await next()
+// }
 
 /**
  * 获取所有被封禁用户的信息

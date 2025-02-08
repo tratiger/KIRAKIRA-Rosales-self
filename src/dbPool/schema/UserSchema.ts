@@ -21,7 +21,7 @@ class UserAuthSchemaFactory {
 		/** 密码提示 */
 		passwordHint: String, // TODO: 如何确保密码提示的安全性？
 		/** 用户的角色 */
-		role: { type: String, required: true },
+		role: { type: [String], required: true },
 		/** 用户开启的 2FA 类型 - 非空 */ /* 可以为 email, totp 或 none（表示未开启） */
 		authenticatorType: { type: String, required: true },
 		/** 系统专用字段-创建时间 - 非空 */
@@ -50,7 +50,7 @@ const UserLabelSchema = {
  * 用户的关联账户
  */
 const UserLinkAccountsSchema = {
-	/** 关联账户类型 - 非空 - 例："X" */
+	/** 关联账户类型 - 非空 */
 	accountType: { type: String, required: true },
 	/** 关联账户唯一标识 - 非空 */
 	accountUniqueId: { type: String, required: true },
