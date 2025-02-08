@@ -1,10 +1,12 @@
-import { InferSchemaType, PipelineStage } from "mongoose";
-import { CheckUserRbacParams, CheckUserRbacResult, CreateRbacApiPathRequestDto, CreateRbacApiPathResponseDto, CreateRbacRoleRequestDto, CreateRbacRoleResponseDto } from "../controller/RbacControllerDto.js";
+import { InferSchemaType, PipelineStage, Query } from "mongoose";
+import { CheckUserRbacParams, CheckUserRbacResult, CreateRbacApiPathRequestDto, CreateRbacApiPathResponseDto, CreateRbacRoleRequestDto, CreateRbacRoleResponseDto, UpdateApiPathPermissionsForRoleRequestDto, UpdateApiPathPermissionsForRoleResponseDto } from "../controller/RbacControllerDto.js";
 import { checkUserTokenByUuidService, getUserUuid } from "./UserService.js";
-import { insertData2MongoDB, selectDataByAggregateFromMongoDB } from "../dbPool/DbClusterPool.js";
+import { findOneAndUpdateData4MongoDB, insertData2MongoDB, selectDataByAggregateFromMongoDB, selectDataFromMongoDB } from "../dbPool/DbClusterPool.js";
 import { UserAuthSchema } from "../dbPool/schema/UserSchema.js";
 import { RbacApiSchema, RbacRoleSchema } from "../dbPool/schema/RbacSchema.js";
 import { v4 as uuidV4 } from 'uuid'
+import { QueryType, SelectType, UpdateType } from "../dbPool/DbClusterPoolTypes.js";
+import { abortAndEndSession, createAndStartSession } from "../common/MongoDBSessionTool.js";
 
 /**
  * 通过 RBAC 检查用户的权限
@@ -190,6 +192,81 @@ export const createRbacRoleService = async (createRbacRoleRequest: CreateRbacRol
 }
 
 /**
+ * 为角色更新 API 路径权限
+ * @param updateApiPathPermissionsForRoleRequest 为角色更新 API 路径权限的请求载荷
+ * @param uuid 用户 UUID
+ * @param token 用户 Token
+ * @returns 为角色更新 API 路径权限的请求响应
+ */
+export const updateApiPathPermissionsForRoleService = async (updateApiPathPermissionsForRoleRequest: UpdateApiPathPermissionsForRoleRequestDto, uuid: string, token: string): Promise<UpdateApiPathPermissionsForRoleResponseDto> => {
+	try {
+		if (!checkUpdateApiPathPermissionsForRoleRequest(updateApiPathPermissionsForRoleRequest)) {
+			console.error('ERROR', '为角色更新 API 路径权限失败，参数不合法')
+			return { success: false, message: '为角色更新 API 路径权限失败，参数不合法' }
+		}
+
+		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
+			console.error('ERROR', '为角色更新 API 路径权限失败，用户 Token 校验未通过')
+			return { success: false, message: '为角色更新 API 路径权限失败，用户 Token 校验未通过' }
+		}
+
+		const { roleName, apiPathPermissions } = updateApiPathPermissionsForRoleRequest
+		const uniqueApiPathPermissions = [...new Set(apiPathPermissions)]
+
+		const { collectionName: rbacApiCollectionName, schemaInstance: rbacApiSchemaInstance } = RbacApiSchema
+		type RbacApiList = InferSchemaType<typeof rbacApiSchemaInstance>
+
+		const checkApiPathPermissionsCountWhere: QueryType<RbacApiList> = {
+			apiPath: { $in: uniqueApiPathPermissions },
+		}
+		
+		const checkApiPathPermissionsCountSelect: SelectType<RbacApiList> = {
+			apiPath: 1,
+		}
+
+		const session = await createAndStartSession()
+
+		const checkApiPathPermissionsCountResult = await selectDataFromMongoDB<RbacApiList>(checkApiPathPermissionsCountWhere, checkApiPathPermissionsCountSelect, rbacApiSchemaInstance, rbacApiCollectionName, { session })
+
+		if (!checkApiPathPermissionsCountResult.success) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '为角色更新 API 路径权限失败，检查 API 路径失败')
+			return { success: false, message: '为角色更新 API 路径权限失败，检查 API 路径失败' }
+		}
+
+		if (checkApiPathPermissionsCountResult.result.length !== uniqueApiPathPermissions.length) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '为角色更新 API 路径权限失败，检查 API 路径未通过，可能是因为将一个不存在的路径添加到角色中')
+			return { success: false, message: '为角色更新 API 路径权限失败，检查 API 路径未通过，可能是因为将一个不存在的路径添加到角色中' }
+		}
+
+		const { collectionName: rbacRoleCollectionName, schemaInstance: rbacRoleSchemaInstance } = RbacRoleSchema
+		type RbacRole = InferSchemaType<typeof rbacRoleSchemaInstance>
+
+		const updateApiPathPermissions4RoleWhere: QueryType<RbacRole> = {
+			roleName,
+		}
+		
+		const updateApiPathPermissions4RoleData: UpdateType<RbacRole> = {
+			apiPathPermissions: uniqueApiPathPermissions as RbacRole['apiPathPermissions'], // TODO: Mongoose issue: #12420
+		}
+
+		const updateApiPathPermissions4Role = await findOneAndUpdateData4MongoDB<RbacRole>(updateApiPathPermissions4RoleWhere, updateApiPathPermissions4RoleData, rbacRoleSchemaInstance, rbacRoleCollectionName)
+
+		if (!updateApiPathPermissions4Role.success) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '为角色更新 API 路径权限失败，更新失败')
+			return { success: false, message: '为角色更新 API 路径权限失败，更新失败' }
+		}
+
+		return { success: false, message: '为角色更新 API 路径权限成功', result: updateApiPathPermissions4Role.result }
+	} catch (error) {
+		console.error('ERROR', '为角色更新 API 路径权限时出错，未知错误：', error)
+		return { success: false, message: '为角色更新 API 路径权限时出错，未知错误' }
+	}
+}
+
+/**
  * 校验创建 RBAC API 路径的请求载荷
  * @param createRbacApiPathRequest 创建 RBAC API 路径的请求载荷
  * @returns 合法返回 true, 不合法返回 false
@@ -210,5 +287,18 @@ const checkCreateRbacRoleRequest = (createRbacRoleRequest: CreateRbacRoleRequest
 	return (
 		!!createRbacRoleRequest.roleName
 		&& createRbacRoleRequest.roleColor ? /^#([0-9A-Fa-f]{8})$/.test(createRbacRoleRequest.roleColor) : true // 如果 roleColor 不为空，则测试是否符合八位 HAX 颜色代码格式（例如：#66CCFFFF），如果 roleColor 为空，则直接为 true
+	)
+}
+
+/**
+ * 校验为角色更新 API 路径权限的请求载荷
+ * @param updateApiPathPermissionsForRoleRequest 为角色更新 API 路径权限的请求载荷
+ * @returns 合法返回 true, 不合法返回 false
+ */
+const checkUpdateApiPathPermissionsForRoleRequest = (updateApiPathPermissionsForRoleRequest: UpdateApiPathPermissionsForRoleRequestDto): boolean => {
+	return (
+		!!updateApiPathPermissionsForRoleRequest.roleName
+		&& !!updateApiPathPermissionsForRoleRequest.apiPathPermissions && Array.isArray(updateApiPathPermissionsForRoleRequest.apiPathPermissions)
+		&& updateApiPathPermissionsForRoleRequest.apiPathPermissions.every(apiPath => !!apiPath)
 	)
 }

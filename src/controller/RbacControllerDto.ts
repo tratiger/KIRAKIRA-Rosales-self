@@ -120,3 +120,25 @@ export type CreateRbacRoleResponseDto = {
 	/** 如果成功，返回创建的数据 */
 	result?: RbacRole;
 }
+
+/**
+ * 为角色更新 API 路径权限的请求载荷
+ */
+export type UpdateApiPathPermissionsForRoleRequestDto = {
+	/** 角色的名字 */
+	roleName: string;
+	/** 这个角色有哪些 API 路径的访问权 */
+	apiPathPermissions: string[];
+}
+
+/**
+ * 为角色更新 API 路径权限的请求响应
+ */
+export type UpdateApiPathPermissionsForRoleResponseDto = {
+	/** 是否请求成功 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 如果成功，返回数据 */
+	result?: RbacRole;
+}
