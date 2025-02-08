@@ -881,7 +881,7 @@ export const getFeedContentService = async (getFeedContentRequest: GetFeedConten
 			},
 			{
 				$sort: {
-					uploadDate: -1, // 按 lastUpdateDateTime 降序排序
+					uploadDate: -1, // 按 uploadDate 降序排序
 				},
 			},
 			{
