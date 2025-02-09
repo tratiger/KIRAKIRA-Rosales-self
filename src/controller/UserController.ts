@@ -1,4 +1,5 @@
 import { getCorrectCookieDomain } from '../common/UrlTool.js'
+import { isPassRbacCheck } from '../service/RbacService.js'
 import {
 	adminClearUserInfoService,
 	adminGetUserInfoService,
@@ -340,6 +341,14 @@ export const updateUserEmailController = async (ctx: koaCtx, next: koaNext) => {
  */
 export const updateOrCreateUserInfoController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<UpdateOrCreateUserInfoRequestDto>
+	const uid = parseInt(ctx.cookies.get('uid'), 10)
+	const token = ctx.cookies.get('token')
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
 	const updateOrCreateUserInfoRequest: UpdateOrCreateUserInfoRequestDto = {
 		username: data?.username,
 		userNickname: data?.userNickname,
@@ -353,8 +362,6 @@ export const updateOrCreateUserInfoController = async (ctx: koaCtx, next: koaNex
 		userLinkAccounts: data?.userLinkAccounts,
 		userWebsite: data?.userWebsite,
 	}
-	const uid = parseInt(ctx.cookies.get('uid'), 10)
-	const token = ctx.cookies.get('token')
 	ctx.body = await updateOrCreateUserInfoService(updateOrCreateUserInfoRequest, uid, token)
 	await next()
 }
@@ -727,6 +734,11 @@ export const getBlockedUserController = async (ctx: koaCtx, next: koaNext) => {
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
 
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
 	const reactivateUserByUIDResponse = await getBlockedUserService(uid, token)
 	ctx.body = reactivateUserByUIDResponse
 	await next()
@@ -741,6 +753,11 @@ export const getBlockedUserController = async (ctx: koaCtx, next: koaNext) => {
 export const adminGetUserInfoController = async (ctx: koaCtx, next: koaNext) => {
 	const adminUUID = ctx.cookies.get('uuid')
 	const adminToken = ctx.cookies.get('token')
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid: adminUUID, apiPath: ctx.path }, ctx)) {
+		return
+	}
 
 	const isOnlyShowUserInfoUpdatedAfterReviewString = ctx.query.isOnlyShowUserInfoUpdatedAfterReview as string
 	const page = ctx.query.page as string
@@ -769,6 +786,11 @@ export const approveUserInfoController = async (ctx: koaCtx, next: koaNext) => {
 	const adminUUID = ctx.cookies.get('uuid')
 	const adminToken = ctx.cookies.get('token')
 
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid: adminUUID, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
 	const data = ctx.request.body as Partial<ApproveUserInfoRequestDto>
 
 	const approveUserInfoRequest: ApproveUserInfoRequestDto = {
@@ -789,6 +811,11 @@ export const approveUserInfoController = async (ctx: koaCtx, next: koaNext) => {
 export const adminClearUserInfoController = async (ctx: koaCtx, next: koaNext) => {
 	const adminUUID = ctx.cookies.get('uuid')
 	const adminToken = ctx.cookies.get('token')
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid: adminUUID, apiPath: ctx.path }, ctx)) {
+		return
+	}
 
 	const data = ctx.request.body as Partial<AdminClearUserInfoRequestDto>
 

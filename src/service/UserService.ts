@@ -695,11 +695,6 @@ export const updateUserEmailService = async (updateUserEmailRequest: UpdateUserE
  */
 export const updateOrCreateUserInfoService = async (updateOrCreateUserInfoRequest: UpdateOrCreateUserInfoRequestDto, uid: number, token: string): Promise<UpdateOrCreateUserInfoResponseDto> => {
 	try {
-		if (await checkUserRoleService(uid, 'blocked')) {
-			console.error('ERROR', '更新或创建用户信息失败，用户已封禁')
-			return { success: false, message: '更新或创建用户信息失败，用户已封禁' }
-		}
-
 		if (await checkUserToken(uid, token)) {
 			if (checkUpdateOrCreateUserInfoRequest(updateOrCreateUserInfoRequest)) {
 				const { collectionName, schemaInstance } = UserInfoSchema
@@ -1378,26 +1373,24 @@ export const createInvitationCodeService = async (uid: number, token: string): P
 
 			try {
 				const userInvitationCodeSelectResult = await selectDataFromMongoDB<UserInvitationCode>(userInvitationCodeWhere, userInvitationCodeSelect, schemaInstance, collectionName)
-				const isAdmin = await checkUserRoleService(uid, 'admin')
 
-				/** 如果不是管理员，而且用户创建时间不在七天前 */
-				if (!isAdmin) {
-					try {
-						const getSelfUserInfoRequest: GetSelfUserInfoRequestDto = {
-							uid,
-							token,
-						}
-						const selfUserInfo = await getSelfUserInfoService(getSelfUserInfoRequest)
-						if (!selfUserInfo.success || selfUserInfo.result.userCreateDateTime > nowTime - sevenDaysInMillis) {
-							console.warn('WARN', 'WARNING', '生成邀请码失败，未超出邀请码生成期限，正在冷却中（第一次）', { uid })
-							return { success: true, isCoolingDown: true, message: '生成邀请码失败，未超出邀请码生成期限，正在冷却中（第一次）' }
-						}
-					} catch (error) {
-						console.warn('WARN', 'WARNING', '生成邀请码时出错，查询用户信息出错', { error, uid })
-						return { success: false, isCoolingDown: false, message: '生成邀请码时出错，查询用户信息出错' }
+				// 检查用户上一次创建时间是否在七天内
+				try {
+					const getSelfUserInfoRequest: GetSelfUserInfoRequestDto = {
+						uid,
+						token,
 					}
+					const selfUserInfo = await getSelfUserInfoService(getSelfUserInfoRequest)
+					if (!selfUserInfo.success || selfUserInfo.result.userCreateDateTime > nowTime - sevenDaysInMillis) {
+						console.warn('WARN', 'WARNING', '生成邀请码失败，未超出邀请码生成期限，正在冷却中（第一次）', { uid })
+						return { success: true, isCoolingDown: true, message: '生成邀请码失败，未超出邀请码生成期限，正在冷却中（第一次）' }
+					}
+				} catch (error) {
+					console.warn('WARN', 'WARNING', '生成邀请码时出错，查询用户信息出错', { error, uid })
+					return { success: false, isCoolingDown: false, message: '生成邀请码时出错，查询用户信息出错' }
 				}
-				if (isAdmin || (userInvitationCodeSelectResult.success && userInvitationCodeSelectResult.result?.length === 0)) { // 是管理员或者没有找到一天内的邀请码，则可以生成邀请码。
+
+				if (userInvitationCodeSelectResult.success && userInvitationCodeSelectResult.result?.length === 0) { // 没有找到一天内的邀请码，则可以生成邀请码。
 					try {
 						const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 						let finalInvitationCode = ''
@@ -2140,64 +2133,64 @@ export const changePasswordService = async (updateUserPasswordRequest: UpdateUse
 	}
 }
 
-/**
- * // TODO: 计划中删除
- * // DELETE ME 这是一个临时的解决方案，以后 Cookie 中直接存储 UUID
- * 根据 UID 验证某个用户是否是某个角色
- * @param uid 用户 ID, 为空时会导致校验失败
- * @param role 用户的角色
- * @returns 校验结果，如果用户是这个角色返回 true，否则返回 false
- */
-export const checkUserRoleService = async (uid: number, role: string | string[]): Promise<boolean> => {
-	// try {
-	// 	if (uid !== undefined && uid !== null && role) {
-	// 		const { collectionName, schemaInstance } = UserAuthSchema
-	// 		type UserAuth = InferSchemaType<typeof schemaInstance>
-	// 		let userTokenWhere: QueryType<UserAuth> = {
-	// 			uid: -1,
-	// 		}
-	// 		if (typeof role === 'string') {
-	// 			userTokenWhere = {
-	// 				uid,
-	// 				role,
-	// 			}
-	// 		} else {
-	// 			userTokenWhere = {
-	// 				uid,
-	// 				role: { $in: role },
-	// 			}
-	// 		}
-	// 		const userTokenSelect: SelectType<UserAuth> = {
-	// 			uid: 1,
-	// 		}
+// /**
+//  * // TODO: 计划中删除
+//  * // DELETE ME 这是一个临时的解决方案，以后 Cookie 中直接存储 UUID
+//  * 根据 UID 验证某个用户是否是某个角色
+//  * @param uid 用户 ID, 为空时会导致校验失败
+//  * @param role 用户的角色
+//  * @returns 校验结果，如果用户是这个角色返回 true，否则返回 false
+//  */
+// export const checkUserRoleService = async (uid: number, role: string | string[]): Promise<boolean> => {
+// 	// try {
+// 	// 	if (uid !== undefined && uid !== null && role) {
+// 	// 		const { collectionName, schemaInstance } = UserAuthSchema
+// 	// 		type UserAuth = InferSchemaType<typeof schemaInstance>
+// 	// 		let userTokenWhere: QueryType<UserAuth> = {
+// 	// 			uid: -1,
+// 	// 		}
+// 	// 		if (typeof role === 'string') {
+// 	// 			userTokenWhere = {
+// 	// 				uid,
+// 	// 				role,
+// 	// 			}
+// 	// 		} else {
+// 	// 			userTokenWhere = {
+// 	// 				uid,
+// 	// 				role: { $in: role },
+// 	// 			}
+// 	// 		}
+// 	// 		const userTokenSelect: SelectType<UserAuth> = {
+// 	// 			uid: 1,
+// 	// 		}
 
-	// 		try {
-	// 			const checkUserRoleResult = await selectDataFromMongoDB(userTokenWhere, userTokenSelect, schemaInstance, collectionName)
-	// 			if (checkUserRoleResult && checkUserRoleResult.success) {
-	// 				if (checkUserRoleResult.result?.length === 1) {
-	// 					return true
-	// 				} else {
-	// 					console.error('ERROR', `验证用户角色时，用户信息长度不为 1，用户uid：【${uid}】`)
-	// 					return false
-	// 				}
-	// 			} else {
-	// 				console.error('ERROR', `验证用户角色时未查询到用户信息，用户uid：【${uid}】`)
-	// 				return false
-	// 			}
-	// 		} catch (error) {
-	// 			console.error('ERROR', `验证用户角色时出错，用户uid：【${uid}】，错误信息：`, error)
-	// 			return false
-	// 		}
-	// 	} else {
-	// 		console.error('ERROR', `验证用户角色失败！用户 uid 或 role 不存在，用户 UID：${uid}`)
-	// 		return false
-	// 	}
-	// } catch (error) {
-	// 	console.error('ERROR', `验证用户角色失败！用户 UID：${uid}`, error)
-	// 	return false
-	// }
-	return role !== 'admin' && role !== 'blocked'
-}
+// 	// 		try {
+// 	// 			const checkUserRoleResult = await selectDataFromMongoDB(userTokenWhere, userTokenSelect, schemaInstance, collectionName)
+// 	// 			if (checkUserRoleResult && checkUserRoleResult.success) {
+// 	// 				if (checkUserRoleResult.result?.length === 1) {
+// 	// 					return true
+// 	// 				} else {
+// 	// 					console.error('ERROR', `验证用户角色时，用户信息长度不为 1，用户uid：【${uid}】`)
+// 	// 					return false
+// 	// 				}
+// 	// 			} else {
+// 	// 				console.error('ERROR', `验证用户角色时未查询到用户信息，用户uid：【${uid}】`)
+// 	// 				return false
+// 	// 			}
+// 	// 		} catch (error) {
+// 	// 			console.error('ERROR', `验证用户角色时出错，用户uid：【${uid}】，错误信息：`, error)
+// 	// 			return false
+// 	// 		}
+// 	// 	} else {
+// 	// 		console.error('ERROR', `验证用户角色失败！用户 uid 或 role 不存在，用户 UID：${uid}`)
+// 	// 		return false
+// 	// 	}
+// 	// } catch (error) {
+// 	// 	console.error('ERROR', `验证用户角色失败！用户 UID：${uid}`, error)
+// 	// 	return false
+// 	// }
+// 	return role !== 'admin' && role !== 'blocked'
+// }
 
 /**
  * 验证某个用户是否是某个角色
@@ -2205,56 +2198,56 @@ export const checkUserRoleService = async (uid: number, role: string | string[])
  * @param role 用户的角色
  * @returns 校验结果，如果用户是这个角色返回 true，否则返回 false
  */
-export const checkUserRoleByUUIDService = async (UUID: string, role: string | string[]): Promise<boolean> => {
-	// try {
-	// 	if (UUID !== undefined && UUID !== null && role) {
-	// 		const { collectionName, schemaInstance } = UserAuthSchema
-	// 		type UserAuth = InferSchemaType<typeof schemaInstance>
-	// 		let userTokenWhere: QueryType<UserAuth> = {
-	// 			uid: -1,
-	// 		}
-	// 		if (typeof role === 'string') {
-	// 			userTokenWhere = {
-	// 				UUID,
-	// 				role,
-	// 			}
-	// 		} else {
-	// 			userTokenWhere = {
-	// 				UUID,
-	// 				role: { $in: role },
-	// 			}
-	// 		}
-	// 		const userTokenSelect: SelectType<UserAuth> = {
-	// 			uid: 1,
-	// 		}
+// export const checkUserRoleByUUIDService = async (UUID: string, role: string | string[]): Promise<boolean> => {
+// 	// try {
+// 	// 	if (UUID !== undefined && UUID !== null && role) {
+// 	// 		const { collectionName, schemaInstance } = UserAuthSchema
+// 	// 		type UserAuth = InferSchemaType<typeof schemaInstance>
+// 	// 		let userTokenWhere: QueryType<UserAuth> = {
+// 	// 			uid: -1,
+// 	// 		}
+// 	// 		if (typeof role === 'string') {
+// 	// 			userTokenWhere = {
+// 	// 				UUID,
+// 	// 				role,
+// 	// 			}
+// 	// 		} else {
+// 	// 			userTokenWhere = {
+// 	// 				UUID,
+// 	// 				role: { $in: role },
+// 	// 			}
+// 	// 		}
+// 	// 		const userTokenSelect: SelectType<UserAuth> = {
+// 	// 			uid: 1,
+// 	// 		}
 
-	// 		try {
-	// 			const checkUserRoleResult = await selectDataFromMongoDB(userTokenWhere, userTokenSelect, schemaInstance, collectionName)
-	// 			if (checkUserRoleResult && checkUserRoleResult.success) {
-	// 				if (checkUserRoleResult.result?.length === 1) {
-	// 					return true
-	// 				} else {
-	// 					console.error('ERROR', `验证用户角色时，用户信息长度不为 1，用户 UUID: ${UUID}`)
-	// 					return false
-	// 				}
-	// 			} else {
-	// 				console.error('ERROR', `验证用户角色时未查询到用户信息，用户 UUID:${UUID}`)
-	// 				return false
-	// 			}
-	// 		} catch (error) {
-	// 			console.error('ERROR', `验证用户角色时出错，用户 UUID:${UUID}，错误信息：`, error)
-	// 			return false
-	// 		}
-	// 	} else {
-	// 		console.error('ERROR', `验证用户角色失败！用户 UUID 或 role 不存在，用户 UUID: ${UUID}`)
-	// 		return false
-	// 	}
-	// } catch (error) {
-	// 	console.error('ERROR', `验证用户角色失败！用户 UUID: ${UUID}`, error)
-	// 	return false
-	// }
-	return role !== 'admin' && role !== 'blocked'
-}
+// 	// 		try {
+// 	// 			const checkUserRoleResult = await selectDataFromMongoDB(userTokenWhere, userTokenSelect, schemaInstance, collectionName)
+// 	// 			if (checkUserRoleResult && checkUserRoleResult.success) {
+// 	// 				if (checkUserRoleResult.result?.length === 1) {
+// 	// 					return true
+// 	// 				} else {
+// 	// 					console.error('ERROR', `验证用户角色时，用户信息长度不为 1，用户 UUID: ${UUID}`)
+// 	// 					return false
+// 	// 				}
+// 	// 			} else {
+// 	// 				console.error('ERROR', `验证用户角色时未查询到用户信息，用户 UUID:${UUID}`)
+// 	// 				return false
+// 	// 			}
+// 	// 		} catch (error) {
+// 	// 			console.error('ERROR', `验证用户角色时出错，用户 UUID:${UUID}，错误信息：`, error)
+// 	// 			return false
+// 	// 		}
+// 	// 	} else {
+// 	// 		console.error('ERROR', `验证用户角色失败！用户 UUID 或 role 不存在，用户 UUID: ${UUID}`)
+// 	// 		return false
+// 	// 	}
+// 	// } catch (error) {
+// 	// 	console.error('ERROR', `验证用户角色失败！用户 UUID: ${UUID}`, error)
+// 	// 	return false
+// 	// }
+// 	return role !== 'admin' && role !== 'blocked'
+// }
 
 /**
  * 检查用户名是否可用
@@ -2419,69 +2412,63 @@ export const checkUsernameService = async (checkUsernameRequest: CheckUsernameRe
 export const getBlockedUserService = async (adminUid: number, adminToken: string): Promise<GetBlockedUserResponseDto> => {
 	try {
 		if (await checkUserToken(adminUid, adminToken)) {
-			const isAdmin = await checkUserRoleService(adminUid, 'admin')
-			if (isAdmin) {
-				const { collectionName: userAuthCollectionName, schemaInstance: userAuthSchemaInstance } = UserAuthSchema
+			const { collectionName: userAuthCollectionName, schemaInstance: userAuthSchemaInstance } = UserAuthSchema
 
-				// TODO: 下方这个 Aggregate 只适用于被封禁用户的搜索
-				const blockedUserAggregateProps: PipelineStage[] = [
-					{
-						$match: {
-							role: 'blocked',
-						},
+			// TODO: 下方这个 Aggregate 只适用于被封禁用户的搜索
+			const blockedUserAggregateProps: PipelineStage[] = [
+				{
+					$match: {
+						role: 'blocked',
 					},
-					{
-						$lookup: {
-							from: 'user-infos', // WARN: 别忘了加复数
-							localField: 'uid',
-							foreignField: 'uid',
-							as: 'user_info_data',
-						},
+				},
+				{
+					$lookup: {
+						from: 'user-infos', // WARN: 别忘了加复数
+						localField: 'uid',
+						foreignField: 'uid',
+						as: 'user_info_data',
 					},
-					{
-						$unwind: {
-							path: '$user_info_data',
-							preserveNullAndEmptyArrays: true, // 保留空数组和null值
-						},
+				},
+				{
+					$unwind: {
+						path: '$user_info_data',
+						preserveNullAndEmptyArrays: true, // 保留空数组和null值
 					},
-					{
-						$project: {
-							uid: 1,
-							UUID: 1,
-							userCreateDateTime: 1, // 用户创建日期
-							role: 1, // 用户的角色
-							username: '$user_info_data.username', // 用户名
-							userNickname: '$user_info_data.userNickname', // 用户昵称
-							avatar: '$user_info_data.avatar', // 用户头像
-							userBannerImage: '$user_info_data.userBannerImage', // 用户的背景图
-							signature: '$user_info_data.signature', // 用户的个性签名
-							gender: '$user_info_data.gender', // 用户的性别
-						},
+				},
+				{
+					$project: {
+						uid: 1,
+						UUID: 1,
+						userCreateDateTime: 1, // 用户创建日期
+						role: 1, // 用户的角色
+						username: '$user_info_data.username', // 用户名
+						userNickname: '$user_info_data.userNickname', // 用户昵称
+						avatar: '$user_info_data.avatar', // 用户头像
+						userBannerImage: '$user_info_data.userBannerImage', // 用户的背景图
+						signature: '$user_info_data.signature', // 用户的个性签名
+						gender: '$user_info_data.gender', // 用户的性别
 					},
-				]
+				},
+			]
 
-				try {
-					const userResult = await selectDataByAggregateFromMongoDB(userAuthSchemaInstance, userAuthCollectionName, blockedUserAggregateProps)
-					if (userResult && userResult.success) {
-						const userInfo = userResult?.result
-						if (userInfo?.length > 0) {
-							return { success: true, message: '获取封禁用户信息成功',
-								result: userInfo,
-							}
-						} else {
-							return { success: true, message: '没有被封禁用户', result: [] }
+			try {
+				const userResult = await selectDataByAggregateFromMongoDB(userAuthSchemaInstance, userAuthCollectionName, blockedUserAggregateProps)
+				if (userResult && userResult.success) {
+					const userInfo = userResult?.result
+					if (userInfo?.length > 0) {
+						return { success: true, message: '获取封禁用户信息成功',
+							result: userInfo,
 						}
 					} else {
-						console.error('ERROR', '获取所有被封禁用户的信息失败，获取到的结果为空')
-						return { success: false, message: '获取所有被封禁用户的信息失败，结果为空' }
+						return { success: true, message: '没有被封禁用户', result: [] }
 					}
-				} catch (error) {
-					console.error('ERROR', '获取所有被封禁用户的信息失败，查询数据时出错：0', error)
-					return { success: false, message: '获取所有被封禁用户的信息失败，查询数据时出错' }
+				} else {
+					console.error('ERROR', '获取所有被封禁用户的信息失败，获取到的结果为空')
+					return { success: false, message: '获取所有被封禁用户的信息失败，结果为空' }
 				}
-			} else {
-				console.error('ERROR', '获取所有被封禁用户的信息失败，用户权限不足')
-				return { success: false, message: '获取所有被封禁用户的信息失败，用户权限不足' }
+			} catch (error) {
+				console.error('ERROR', '获取所有被封禁用户的信息失败，查询数据时出错：0', error)
+				return { success: false, message: '获取所有被封禁用户的信息失败，查询数据时出错' }
 			}
 		} else {
 			console.error('ERROR', '获取所有被封禁用户的信息失败，用户校验失败')
@@ -2510,11 +2497,6 @@ export const adminGetUserInfoService = async (adminGetUserInfoRequest: AdminGetU
 		if (!await checkUserTokenByUUID(adminUUID, adminToken)) {
 			console.error('ERROR', '管理员获取用户信息失败，用户校验未通过')
 			return { success: false, message: '管理员获取用户信息失败，用户校验未通过', totalCount: 0 }
-		}
-
-		if (!await checkUserRoleByUUIDService(adminUUID, 'admin')) {
-			console.error('ERROR', '管理员获取用户信息失败，用户权限不足')
-			return { success: false, message: '管理员获取用户信息失败，用户权限不足', totalCount: 0 }
 		}
 
 		let pageSize = undefined
@@ -2632,11 +2614,6 @@ export const approveUserInfoService = async (approveUserInfoRequest: ApproveUser
 			return { success: false, message: '管理员通过用户信息审核失败，用户校验未通过' }
 		}
 
-		if (!await checkUserRoleByUUIDService(adminUUID, 'admin')) {
-			console.error('ERROR', '管理员通过用户信息审核失败，用户权限不足')
-			return { success: false, message: '管理员通过用户信息审核失败，用户权限不足' }
-		}
-
 		const UUID = approveUserInfoRequest.UUID
 		const { collectionName, schemaInstance } = UserInfoSchema
 		type UserInfo = InferSchemaType<typeof schemaInstance>
@@ -2683,11 +2660,6 @@ export const adminClearUserInfoService = async (adminClearUserInfoRequest: Admin
 		if (!await checkUserTokenByUUID(adminUUID, adminToken)) {
 			console.error('ERROR', '管理员清空某个用户的信息失败，用户校验未通过')
 			return { success: false, message: '管理员清空某个用户的信息失败，用户校验未通过' }
-		}
-
-		if (!await checkUserRoleByUUIDService(adminUUID, 'admin')) {
-			console.error('ERROR', '管理员清空某个用户的信息失败，用户权限不足')
-			return { success: false, message: '管理员清空某个用户的信息失败，用户权限不足' }
 		}
 
 		const uid = adminClearUserInfoRequest.uid

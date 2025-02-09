@@ -1,7 +1,5 @@
-import { createOrUpdateBrowsingHistoryService, getUserBrowsingHistoryWithFilterService } from '../service/BrowsingHistoryService.js'
-import { createRbacApiPathService, createRbacRoleService, updateApiPathPermissionsForRoleService } from '../service/RbacService.js'
+import { isPassRbacCheck, createRbacApiPathService, createRbacRoleService, updateApiPathPermissionsForRoleService } from '../service/RbacService.js'
 import { koaCtx, koaNext } from '../type/koaTypes.js'
-import { CreateOrUpdateBrowsingHistoryRequestDto, GetUserBrowsingHistoryWithFilterRequestDto } from './BrowsingHistoryControllerDto.js'
 import { CreateRbacApiPathRequestDto, CreateRbacRoleRequestDto, UpdateApiPathPermissionsForRoleRequestDto } from './RbacControllerDto.js'
 
 /**
@@ -13,11 +11,17 @@ export const createRbacApiPathController = async (ctx: koaCtx, next: koaNext) =>
 	const data = ctx.request.body as Partial<CreateRbacApiPathRequestDto>
 	const uuid = ctx.cookies.get('uuid') ?? ''
 	const token = ctx.cookies.get('token') ?? ''
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
 	const createRbacApiPathRequest: CreateRbacApiPathRequestDto = {
 		apiPath: data.apiPath ?? '',
-    apiPathType: data.apiPathType ?? 'normal',
-    apiPathColor: data.apiPathColor ?? '#f3f8feff',
-    apiPathDescription: data.apiPathDescription,
+		apiPathType: data.apiPathType,
+		apiPathColor: data.apiPathColor,
+		apiPathDescription: data.apiPathDescription,
 	}
 	const createRbacApiPathResponse = await createRbacApiPathService(createRbacApiPathRequest, uuid, token)
 	ctx.body = createRbacApiPathResponse
@@ -33,11 +37,17 @@ export const createRbacRoleController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<CreateRbacRoleRequestDto>
 	const uuid = ctx.cookies.get('uuid') ?? ''
 	const token = ctx.cookies.get('token') ?? ''
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
 	const createRbacRoleRequest: CreateRbacRoleRequestDto = {
 		roleName: data.roleName ?? '',
-    roleType: data.roleType ?? 'normal',
-    roleColor: data.roleColor ?? '#f3f8feff',
-    roleDescription: data.roleDescription,
+		roleType: data.roleType,
+		roleColor: data.roleColor,
+		roleDescription: data.roleDescription,
 	}
 	const createRbacRoleResponse = await createRbacRoleService(createRbacRoleRequest, uuid, token)
 	ctx.body = createRbacRoleResponse
@@ -53,6 +63,12 @@ export const updateApiPathPermissionsForRoleController = async (ctx: koaCtx, nex
 	const data = ctx.request.body as Partial<UpdateApiPathPermissionsForRoleRequestDto>
 	const uuid = ctx.cookies.get('uuid') ?? ''
 	const token = ctx.cookies.get('token') ?? ''
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
 	const updateApiPathPermissionsForRoleRequest: UpdateApiPathPermissionsForRoleRequestDto = {
 		roleName: data.roleName ?? '',
     apiPathPermissions: data.apiPathPermissions ?? []
