@@ -297,7 +297,7 @@ export const updateApiPathPermissionsForRoleService = async (updateApiPathPermis
 			return { success: false, message: '为角色更新 API 路径权限失败，更新失败' }
 		}
 
-		return { success: false, message: '为角色更新 API 路径权限成功', result: updateApiPathPermissions4Role.result }
+		return { success: true, message: '为角色更新 API 路径权限成功', result: updateApiPathPermissions4Role.result }
 	} catch (error) {
 		console.error('ERROR', '为角色更新 API 路径权限时出错，未知错误：', error)
 		return { success: false, message: '为角色更新 API 路径权限时出错，未知错误' }
