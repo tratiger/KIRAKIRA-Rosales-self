@@ -948,7 +948,7 @@ export const approvePendingReviewVideoService = async (approvePendingReviewVideo
 			const updatePendingReviewVideoData: UpdateType<Video> = {
 				pendingReview: false,
 			}
-			const updatePendingReviewVideoResult = await findOneAndUpdateData4MongoDB(updatePendingReviewVideoWhere, updatePendingReviewVideoData, videoSchemaInstance, videoCollectionName)
+			const updatePendingReviewVideoResult = await findOneAndUpdateData4MongoDB<Video>(updatePendingReviewVideoWhere, updatePendingReviewVideoData, videoSchemaInstance, videoCollectionName)
 
 			if (!updatePendingReviewVideoResult.success) {
 				console.error('ERROR', '通过一个待审核视频失败，更新失败')

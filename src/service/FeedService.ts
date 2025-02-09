@@ -374,8 +374,10 @@ export const addNewUid2FeedGroupService = async (addNewUser2FeedGroupRequest: Ad
 			return { success: false, tooManyUidInOnce: false, isOverload: true, message: '向一个动态分组中添加新的 UID 失败，动态分组中用户太多了' }
 		}
 
+		const now = new Date().getTime()
 		const updateFeedGroupData: UpdateType<FeedGroup> = {
 			uuidList: newUuidList,
+			editDateTime: now,
 		}
 
 		const findOneAndUpdateFeedGroupDataResult = await findOneAndUpdateData4MongoDB<FeedGroup>(feedGroupWhere, updateFeedGroupData, feedGroupSchemaInstance, feedGroupCollectionName, { session })
@@ -474,8 +476,10 @@ export const removeUidFromFeedGroupService = async (removeUidFromFeedGroupReques
 		const oldUuidList = [...new Set<string>(getFeedGroupData.uuidList ?? [])]
 		const shouldRemoveUuidList = [...new Set<string>(uuidList)]
 		const differenceUuidList = oldUuidList.filter(uuid => !shouldRemoveUuidList.includes(uuid))
+		const now = new Date().getTime()
 		const updateFeedGroupData: UpdateType<FeedGroup> = {
 			uuidList: differenceUuidList,
+			editDateTime: now,
 		}
 
 		const findOneAndUpdateFeedGroupDataResult = await findOneAndUpdateData4MongoDB<FeedGroup>(feedGroupWhere, updateFeedGroupData, feedGroupSchemaInstance, feedGroupCollectionName, { session })
@@ -601,6 +605,8 @@ export const createOrEditFeedGroupInfoService = async (createOrEditFeedGroupInfo
 		const { collectionName: feedGroupCollectionName, schemaInstance: feedGroupSchemaInstance } = FeedGroupSchema
 		type FeedGroup = InferSchemaType<typeof feedGroupSchemaInstance>
 
+		const now = new Date().getTime()
+
 		const updateFeedGroupWhere: QueryType<FeedGroup> = {
 			feedGroupUuid,
 		}
@@ -608,6 +614,7 @@ export const createOrEditFeedGroupInfoService = async (createOrEditFeedGroupInfo
 			feedGroupName,
 			customCover: feedGroupCustomCoverUrl,
 			isUpdatedAfterReview: true,
+			editDateTime: now,
 		}
 
 		const findOneAndUpdateFeedGroupDataResult = await findOneAndUpdateData4MongoDB<FeedGroup>(updateFeedGroupWhere, updateFeedGroupData, feedGroupSchemaInstance, feedGroupCollectionName)
@@ -653,11 +660,14 @@ export const administratorApproveFeedGroupInfoChangeService = async (administrat
 		const { collectionName: feedGroupCollectionName, schemaInstance: feedGroupSchemaInstance } = FeedGroupSchema
 		type FeedGroup = InferSchemaType<typeof feedGroupSchemaInstance>
 
+		const now = new Date().getTime()
+
 		const updateFeedGroupWhere: QueryType<FeedGroup> = {
 			feedGroupUuid,
 		}
 		const updateFeedGroupData: UpdateType<FeedGroup> = {
 			isUpdatedAfterReview: false,
+			editDateTime: now,
 		}
 
 		const findOneAndUpdateFeedGroupDataResult = await findOneAndUpdateData4MongoDB<FeedGroup>(updateFeedGroupWhere, updateFeedGroupData, feedGroupSchemaInstance, feedGroupCollectionName)

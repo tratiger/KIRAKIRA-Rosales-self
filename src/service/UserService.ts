@@ -3144,6 +3144,7 @@ export const deleteTotpAuthenticatorByTotpVerificationCodeService = async (delet
 			const deleteTotpAuthenticatorByTotpVerificationCodeUpdate: UpdateType<UserTotpAuthenticator> = {
 				attempts: attempts,
 				lastAttemptTime: now,
+				editDateTime: now,
 			}
 			const updateAuthenticatorResult = await findOneAndUpdateData4MongoDB<UserTotpAuthenticator>(deleteTotpAuthenticatorByTotpVerificationCodeWhere, deleteTotpAuthenticatorByTotpVerificationCodeUpdate, userTotpAuthenticatorSchemaInstance, userTotpAuthenticatorCollectionName, { session })
 
@@ -3406,6 +3407,7 @@ export const confirmUserTotpAuthenticatorService = async (confirmUserTotpAuthent
 		}
 		const userAuthUpdate: UpdateType<UserAuth> = {
 			authenticatorType: 'totp',
+			editDateTime: now,
 		}
 		const updateUserAuthResult = await findOneAndUpdateData4MongoDB<UserAuthenticator>(userAuthWhere, userAuthUpdate, userAuthSchemaInstance, userAuthCollectionName, { session })
 
