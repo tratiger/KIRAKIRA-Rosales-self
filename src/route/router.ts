@@ -45,6 +45,7 @@ import {
 import { adminDeleteVideoCommentController, cancelVideoCommentDownvoteController, cancelVideoCommentUpvoteController, deleteSelfVideoCommentController, emitVideoCommentController, emitVideoCommentDownvoteController, emitVideoCommentUpvoteController, getVideoCommentListByKvidController } from '../controller/VideoCommentController.js'
 import { approvePendingReviewVideoController, checkVideoExistController, deleteVideoByKvidController, getPendingReviewVideoController, getThumbVideoController, getVideoByKvidController, getVideoByUidController, getVideoCoverUploadSignedUrlController, getVideoFileTusEndpointController, searchVideoByKeywordController, searchVideoByVideoTagIdController, updateVideoController } from '../controller/VideoController.js'
 import { createVideoTagController, getVideoTagByTagIdController, searchVideoTagController } from '../controller/VideoTagController.js'
+import { createRbacApiPathController, createRbacRoleController, updateApiPathPermissionsForRoleController } from '../controller/RbacController.js'
 
 const router = new Router()
 
@@ -539,6 +540,48 @@ router.post('/favorites/create', createFavoritesController) // 创建收藏夹
 router.get('/favorites', getFavoritesController) // 获取当前登录用户的收藏夹列表
 // https://localhost:9999/favorites
 // cookie: uid, token
+
+
+
+
+
+
+
+
+
+
+router.post('/rbac/createRbacApiPath', createRbacApiPathController) // 创建 RBAC API 路径
+// https://localhost:9999/rbac/createRbacApiPath
+// cookie: uuid, token
+// {
+// 	"apiPath": "/luo/tian/yi",
+// 	"apiPathType": "tian-yi",
+// 	"apiPathColor": "#66CCFFFF",
+// 	"apiPathDescription": "这里是简介"
+// }
+
+router.post('/rbac/createRbacRole', createRbacRoleController) // 创建 RBAC 角色
+// https://localhost:9999/rbac/createRbacRole
+// cookie: uuid, token
+// {
+// 	"roleName": "administrator",
+// 	"apiPathType": "administrator",
+// 	"apiPathColor": "#66CCFFFF",
+// 	"apiPathDescription": "这是一个管理员角色，拥有绝大部分内容的管理权限，除了分配角色和其他 ROOT 角色专属的权限。"
+// }
+
+router.post('/rbac/updateApiPathPermissionsForRole', updateApiPathPermissionsForRoleController) // 为角色更新 API 路径权限
+// https://localhost:9999/rbac/updateApiPathPermissionsForRole
+// cookie: uuid, token
+// {
+// 	"roleName": "administrator",
+// 	"apiPathPermissions": [
+// 		"/luo/tian/yi"
+// 	]
+// }
+
+
+
 
 
 

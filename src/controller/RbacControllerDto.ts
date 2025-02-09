@@ -1,7 +1,9 @@
 /**
  * 通过 RBAC 检查用户的权限的参数
  */
-export type CheckUserRbacParams = ({ uuid: string; uid: never } | { uid: number; uuid: never }) & { apiPath: string }
+export type CheckUserRbacParams =
+	| { uuid: string; apiPath: string }
+	| { uid: number; apiPath: string };
 
 /**
  * 通过 RBAC 检查用户的权限的结果

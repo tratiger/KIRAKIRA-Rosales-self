@@ -175,7 +175,7 @@ export const userRegistrationService = async (userRegistrationRequest: UserRegis
 					passwordHashHash,
 					token,
 					passwordHint,
-					role: ['user'], // newbie will always has a user role.
+					roles: ['user'], // newbie will always has a user role.
 					authenticatorType: 'none', // 刚注册的用户默认没有开启 2FA
 					userCreateDateTime: now,
 					editDateTime: now,
@@ -816,7 +816,7 @@ export const getSelfUserInfoService = async (getSelfUserInfoRequest: GetSelfUser
 				const userAuthSelect: SelectType<UserAuth> = {
 					email: 1, // 用户邮箱
 					userCreateDateTime: 1, // 用户创建日期
-					role: 1, // 用户的角色
+					roles: 1, // 用户的角色
 					uid: 1, // 用户 UID
 					UUID: 1, // UUID
 					authenticatorType: 1, // 2FA 的类型
@@ -845,9 +845,9 @@ export const getSelfUserInfoService = async (getSelfUserInfoRequest: GetSelfUser
 						const userAuth = userAuthResult?.result
 						const userInfo = userInfoResult?.result
 						if (userAuth?.length === 0 || userInfo?.length === 0) {
-							return { success: true, message: '用户未填写用户信息', result: { uid, email: userAuth?.[0]?.email, userCreateDateTime: userAuth[0].userCreateDateTime, role: userAuth[0].role, typeOf2FA: userAuth[0].authenticatorType } }
+							return { success: true, message: '用户未填写用户信息', result: { uid, email: userAuth?.[0]?.email, userCreateDateTime: userAuth[0].userCreateDateTime, roles: userAuth[0].roles, typeOf2FA: userAuth[0].authenticatorType } }
 						} else if (userAuth?.length === 1 && userAuth?.[0] && userInfo?.length === 1 && userInfo?.[0]) {
-							return { success: true, message: '获取用户信息成功', result: { ...userInfo[0], email: userAuth[0].email, userCreateDateTime: userAuth[0].userCreateDateTime, role: userAuth[0].role, typeOf2FA: userAuth[0].authenticatorType } }
+							return { success: true, message: '获取用户信息成功', result: { ...userInfo[0], email: userAuth[0].email, userCreateDateTime: userAuth[0].userCreateDateTime, roles: userAuth[0].roles, typeOf2FA: userAuth[0].authenticatorType } }
 						} else {
 							console.error('ERROR', '获取用户信息时失败，获取到的结果长度不为 1')
 							return { success: false, message: '获取用户信息时失败，结果异常' }
@@ -903,7 +903,7 @@ export const getSelfUserInfoByUuidService = async (getSelfUserInfoByUuidRequest:
 		const userAuthSelect: SelectType<UserAuth> = {
 			email: 1, // 用户邮箱
 			userCreateDateTime: 1, // 用户创建日期
-			role: 1, // 用户的角色
+			roles: 1, // 用户的角色
 			uid: 1, // 用户 UID
 			UUID: 1, // UUID
 		}
@@ -927,9 +927,9 @@ export const getSelfUserInfoByUuidService = async (getSelfUserInfoByUuidRequest:
 				const userAuth = userAuthResult?.result
 				const userInfo = userInfoResult?.result
 				if (userAuth?.length === 0 || userInfo?.length === 0) {
-					return { success: true, message: '用户未填写用户信息', result: { uuid, email: userAuth?.[0]?.email, userCreateDateTime: userAuth[0].userCreateDateTime, role: userAuth[0].role } }
+					return { success: true, message: '用户未填写用户信息', result: { uuid, email: userAuth?.[0]?.email, userCreateDateTime: userAuth[0].userCreateDateTime, roles: userAuth[0].roles } }
 				} else if (userAuth?.length === 1 && userAuth?.[0] && userInfo?.length === 1 && userInfo?.[0]) {
-					return { success: true, message: '获取用户信息成功', result: { ...userInfo[0], email: userAuth[0].email, userCreateDateTime: userAuth[0].userCreateDateTime, role: userAuth[0].role } }
+					return { success: true, message: '获取用户信息成功', result: { ...userInfo[0], email: userAuth[0].email, userCreateDateTime: userAuth[0].userCreateDateTime, roles: userAuth[0].roles } }
 				} else {
 					console.error('ERROR', '通过 UUID 获取用户信息时失败，获取到的结果长度不为 1')
 					return { success: false, message: '通过 UUID 获取用户信息时失败，结果异常' }
@@ -963,7 +963,7 @@ export const getUserInfoByUidService = async (getUserInfoByUidRequest: GetUserIn
 			const userAuthWhere: QueryType<UserAuth> = { uid }
 			const userAuthSelect: SelectType<UserAuth> = {
 				userCreateDateTime: 1, // 用户创建日期
-				role: 1, // 用户的角色
+				roles: 1, // 用户的角色
 			}
 
 			const { collectionName: userInfoCollectionName, schemaInstance: userInfoSchemaInstance } = UserInfoSchema
@@ -987,7 +987,7 @@ export const getUserInfoByUidService = async (getUserInfoByUidRequest: GetUserIn
 					const userAuth = userAuthResult?.result
 					const userInfo = userInfoResult?.result
 					if (userInfo?.length === 1 && userInfo?.[0]) {
-						return { success: true, message: '获取用户信息成功', result: { ...userInfo[0], userCreateDateTime: userAuth[0].userCreateDateTime, role: userAuth[0].role } }
+						return { success: true, message: '获取用户信息成功', result: { ...userInfo[0], userCreateDateTime: userAuth[0].userCreateDateTime, roles: userAuth[0].roles } }
 					} else {
 						console.error('ERROR', '获取用户信息时失败，获取到的结果长度不为 1')
 						return { success: false, message: '获取用户信息时失败，结果异常' }

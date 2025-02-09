@@ -20,8 +20,10 @@ class UserAuthSchemaFactory {
 		token: { type: String, required: true },
 		/** 密码提示 */
 		passwordHint: String, // TODO: 如何确保密码提示的安全性？
+		// /** 用户的角色 */
+		// role: { type: String, required: true },
 		/** 用户的角色 */
-		role: { type: [String], required: true },
+		roles: { type: [String], required: true },
 		/** 用户开启的 2FA 类型 - 非空 */ /* 可以为 email, totp 或 none（表示未开启） */
 		authenticatorType: { type: String, required: true },
 		/** 系统专用字段-创建时间 - 非空 */

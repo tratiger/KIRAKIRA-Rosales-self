@@ -15,30 +15,28 @@ import { abortAndEndSession, createAndStartSession } from "../common/MongoDBSess
  */
 export const checkUserByRbac = async (params: CheckUserRbacParams): Promise<CheckUserRbacResult> => {
 	try {
-		const { uid, apiPath } = params
-		let   { uuid } = params
+		const apiPath = params.apiPath
+		let uuid: string | undefined = undefined
+		let uid: number | undefined = undefined
+		if ('uuid' in params) uuid = params.uuid
+		if ('uid' in params) uid = params.uid
 
-		if (
-			(!uuid && (uid === undefined || uid === null || typeof uid !== 'number' || uid <= 0))
-			|| !apiPath
-		) {
-			console.error('ERROR', `用户 ${uuid ? `UUID: ${uuid}` : `UID: ${uid}`} 在访问 ${apiPath} 并执行 RBAC 鉴权失败，参数不合法`)
-			return { status: 403, message: `用户 ${uuid ? `UUID: ${uuid}` : `UID: ${uid}`} 在访问 ${apiPath} 并执行 RBAC 鉴权失败，参数不合法` }
+		if (!uuid && uid === undefined) {
+			console.error('ERROR', '用户执行 RBAC 鉴权时失败，未提供 UUID 或 UID')
+			return { status: 500, message: `用户执行 RBAC 鉴权时失败，未提供 UUID 或 UID` }
 		}
 
-		if (!uuid) {
-			uuid = await getUserUuid(uid) || ''
-
-			if (!uuid) {
-				console.error('ERROR', `某用户在访问 ${apiPath} 并执行 RBAC 鉴权时没有提供 UUID 或 UID 转换为 UUID 失败`)
-				return { status: 403, message: `某用户在访问 ${apiPath} 并执行 RBAC 鉴权时没有提供 UUID 或 UID 转换为 UUID 失败` }
+		const match = { UUID: uuid, uid }
+		Object.keys(match).forEach(key => {
+			if (match[key] === undefined) {
+				delete match[key];
 			}
-		}
+		});
 
 		const checkUserRbacPipeline: PipelineStage[] = [
 			// 匹配用户
 			{
-				$match: { UUID: uuid }
+				$match: match,
 			},
 			// 关联 roles 集合
 			{
@@ -73,14 +71,8 @@ export const checkUserByRbac = async (params: CheckUserRbacParams): Promise<Chec
 			return { status: 403, message: `用户 ${uuid ? `UUID: ${uuid}` : `UID: ${uid}`} 在访问 ${apiPath} 的权限不足，或者用户不存在` }
 		}
 	} catch (error) {
-		try {
-			const { uuid, uid, apiPath } = params
-			console.error('ERROR', `用户 ${uuid ? `UUID: ${uuid}` : `UID: ${uid}`} 在访问 ${apiPath} 时，执行 RBAC 鉴权时出现错误：`, error)
-			return { status: 500, message: `用户 ${uuid ? `UUID: ${uuid}` : `UID: ${uid}`} 在访问 ${apiPath} 时，执行 RBAC 鉴权时出现错误` }
-		} catch {
-			console.error('ERROR', '用户执行 RBAC 鉴权时出现错误，出错后的错误处理中再次抛出了错误，可能是因为错误的对象解构')
-			return { status: 500, message: '用户执行 RBAC 鉴权时出现错误，出错后的错误处理中再次抛出了错误，可能是因为错误的对象解构' }
-		}
+		console.error('ERROR', '用户执行 RBAC 鉴权时出现错误，未知错误：', error)
+		return { status: 500, message: '用户执行 RBAC 鉴权时出现错误，未知错误' }
 	}
 }
 
@@ -130,7 +122,22 @@ export const createRbacApiPathService = async (createRbacApiPathRequest: CreateR
 			return { success: false, message: '创建 RBAC API 路径失败，数据插入失败' }
 		}
 
-		return { success: true, message: '创建 RBAC API 路径成功', result: { ...insertResultData, isAssignedOnce: false } }
+		return {
+			success: true,
+			message: '创建 RBAC API 路径成功',
+			result: {
+				apiPathUuid: insertResultData.apiPathUuid,
+				apiPath: insertResultData.apiPath,
+				apiPathType: insertResultData.apiPathType,
+				apiPathColor: insertResultData.apiPathColor,
+				apiPathDescription: insertResultData.apiPathDescription,
+				creatorUuid: insertResultData.creatorUuid,
+				lastEditorUuid: insertResultData.lastEditorUuid,
+				createDateTime: insertResultData.createDateTime,
+				editDateTime: insertResultData.editDateTime,
+				isAssignedOnce: false
+			}
+		}
 	} catch (error) {
 		console.error('ERROR', '创建 RBAC API 路径时出错，未知错误：', error)
 		return { success: false, message: '创建 RBAC API 路径时出错，未知错误' }
@@ -247,8 +254,11 @@ export const updateApiPathPermissionsForRoleService = async (updateApiPathPermis
 			roleName,
 		}
 		
+		const now = new Date().getTime()
 		const updateApiPathPermissions4RoleData: UpdateType<RbacRole> = {
+			lastEditorUuid: uuid,
 			apiPathPermissions: uniqueApiPathPermissions as RbacRole['apiPathPermissions'], // TODO: Mongoose issue: #12420
+			editDateTime: now,
 		}
 
 		const updateApiPathPermissions4Role = await findOneAndUpdateData4MongoDB<RbacRole>(updateApiPathPermissions4RoleWhere, updateApiPathPermissions4RoleData, rbacRoleSchemaInstance, rbacRoleCollectionName)
