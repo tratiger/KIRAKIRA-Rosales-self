@@ -918,13 +918,13 @@ export const getFeedContentService = async (getFeedContentRequest: GetFeedConten
 		type ThumbVideo = InferSchemaType<typeof videoSchemaInstance>
 
 		const feedContentCountPromise = selectDataByAggregateFromMongoDB(videoSchemaInstance, videoCollectionName, countFeedContentPipeline)
-		const videoCommentsPromise = selectDataByAggregateFromMongoDB<ThumbVideo>(videoSchemaInstance, videoCollectionName, getFeedContentPipeline)
+		const feedContentDataPromise = selectDataByAggregateFromMongoDB<ThumbVideo>(videoSchemaInstance, videoCollectionName, getFeedContentPipeline)
 
-		const [ feedContentCountResult, videoCommentsResult ] = await Promise.all([feedContentCountPromise, videoCommentsPromise])
+		const [ feedContentCountResult, feedContentDataResult ] = await Promise.all([feedContentCountPromise, feedContentDataPromise])
 		const count = feedContentCountResult.result?.[0].totalCount
-		const content = videoCommentsResult.result
+		const content = feedContentDataResult.result
 
-		if ( !feedContentCountResult.success || !videoCommentsResult.success
+		if ( !feedContentCountResult.success || !feedContentDataResult.success
 			|| typeof count !== 'number' ||  count < 0
 			|| ( Array.isArray(content) && !content )
 		) {
