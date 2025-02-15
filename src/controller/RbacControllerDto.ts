@@ -23,7 +23,7 @@ type RbacApiPath = {
 	apiPath: string;
 	/** API 路径的类型 */
 	apiPathType?: string;
-	/** API 路径的颜色 */
+	/** API 路径的颜色 - 例子：#66CCFFFF */
 	apiPathColor?: string;
 	/** API 路径的描述 */
 	apiPathDescription?: string;
@@ -53,14 +53,14 @@ export type CreateRbacApiPathRequestDto = {
 	apiPath: string;
 	/** API 路径的类型 */
 	apiPathType?: string;
-	/** API 路径的颜色 */
+	/** API 路径的颜色 - 例子：#66CCFFFF */
 	apiPathColor?: string;
 	/** API 路径的描述 */
 	apiPathDescription?: string;
 }
 
 /**
- * 创建 RBAC API 路径的请求载荷
+ * 创建 RBAC API 路径的请求响应
  */
 export type CreateRbacApiPathResponseDto = {
 	/** 是否请求成功 */
@@ -69,6 +69,64 @@ export type CreateRbacApiPathResponseDto = {
 	message?: string;
 	/** 如果成功，返回创建的数据 */
 	result?: RbacApiPathResult;
+}
+
+/**
+ * 删除 RBAC API 路径的请求载荷
+ */
+export type DeleteRbacApiPathRequestDto = {
+	/** API 路径*/
+	apiPath: string;
+}
+
+/**
+ * 删除 RBAC API 路径的请求响应
+ */
+export type DeleteRbacApiPathResponseDto = {
+	/** 是否请求成功 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 该 API 路径是否已经绑定到角色（如果绑定了角色则无法删除） */
+	isAssigned: boolean;
+}
+
+/**
+ * 获取 API 路劲的请求载荷
+ */
+export type GetRbacApiPathRequestDto = {
+	/** 搜索项 */
+	search: {
+		/** API 路径*/
+		apiPath?: string;
+		/** API 路径的类型 */
+		apiPathType?: string;
+		/** API 路径的颜色 - 例子：#66CCFFFF */
+		apiPathColor?: string;
+		/** API 路径的描述 */
+		apiPathDescription?: string;
+	};
+	/** 分页查询 */
+	pagination: {
+		/** 当前在第几页 */
+		page: number;
+		/** 一页显示多少条 */
+		pageSize: number;
+	};
+}
+
+/**
+ * 获取 API 路劲的请求响应
+ */
+export type GetRbacApiPathResponseDto = {
+	/** 是否请求成功 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 如果成功，返回数据 */
+	result?: RbacApiPathResult[];
+	/** 如果成功，返回合计数据 */
+	count?: number;
 }
 
 /**
@@ -81,7 +139,7 @@ type RbacRole = {
 	roleName: string;
 	/** 角色的类型 */
 	roleType?: string;
-	/** 角色的颜色 */
+	/** 角色的颜色 - 例子：#66CCFFFF */
 	roleColor?: string;
 	/** 角色的描述 */
 	roleDescription?: string;
@@ -105,14 +163,14 @@ export type CreateRbacRoleRequestDto = {
 	roleName: string;
 	/** 角色的类型 */
 	roleType?: string;
-	/** 角色的颜色 */
+	/** 角色的颜色 - 例子：#66CCFFFF */
 	roleColor?: string;
 	/** 角色的描述 */
 	roleDescription?: string;
 }
 
 /**
- * 创建 RBAC 角色的请求载荷
+ * 创建 RBAC 角色的请求响应
  */
 export type CreateRbacRoleResponseDto = {
 	/** 是否请求成功 */
@@ -121,6 +179,65 @@ export type CreateRbacRoleResponseDto = {
 	message?: string;
 	/** 如果成功，返回创建的数据 */
 	result?: RbacRole;
+}
+
+/**
+ * 删除 RBAC 角色的请求载荷
+ */
+export type DeleteRbacRoleRequestDto = {
+	/** 角色的名字 */
+	roleName: string;
+}
+
+/**
+ * 删除 RBAC 角色的请求响应
+ */
+export type DeleteRbacRoleResponseDto = {
+	/** 是否请求成功 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+}
+
+/**
+ * 获取 RBAC 角色的请求载荷
+ */
+export type GetRbacRoleRequestDto = {
+	/** 搜索项 */
+	search: {
+		/** 角色的名字 */
+		roleName: string;
+		/** 角色的类型 */
+		roleType?: string;
+		/** 角色的颜色 - 例子：#66CCFFFF */
+		roleColor?: string;
+		/** 角色的描述 */
+		roleDescription?: string;
+	};
+	/** 分页查询 */
+	pagination: {
+		/** 当前在第几页 */
+		page: number;
+		/** 一页显示多少条 */
+		pageSize: number;
+	};
+}
+
+/**
+ * 获取 RBAC 角色的请求响应
+ */
+export type GetRbacRoleResponseDto = {
+	/** 是否请求成功 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 如果成功，返回数据 */
+	result?: (
+		& RbacRole
+		& { apiPathList: RbacApiPathResult[] }
+	)[];
+	/** 如果成功，返回合计数据 */
+	count?: number;
 }
 
 /**

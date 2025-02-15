@@ -1,6 +1,6 @@
-import { isPassRbacCheck, createRbacApiPathService, createRbacRoleService, updateApiPathPermissionsForRoleService } from '../service/RbacService.js'
+import { isPassRbacCheck, createRbacApiPathService, createRbacRoleService, updateApiPathPermissionsForRoleService, getRbacApiPathService, deleteRbacApiPathService, deleteRbacRoleService, getRbacRoleService } from '../service/RbacService.js'
 import { koaCtx, koaNext } from '../type/koaTypes.js'
-import { CreateRbacApiPathRequestDto, CreateRbacRoleRequestDto, UpdateApiPathPermissionsForRoleRequestDto } from './RbacControllerDto.js'
+import { CreateRbacApiPathRequestDto, CreateRbacRoleRequestDto, DeleteRbacApiPathRequestDto, DeleteRbacRoleRequestDto, GetRbacApiPathRequestDto, GetRbacRoleRequestDto, UpdateApiPathPermissionsForRoleRequestDto } from './RbacControllerDto.js'
 
 /**
  * 创建 RBAC API 路径
@@ -29,6 +29,67 @@ export const createRbacApiPathController = async (ctx: koaCtx, next: koaNext) =>
 }
 
 /**
+ * 删除 RBAC API 路径
+ * @param ctx context
+ * @param next context
+ */
+export const deleteRbacApiPathController = async (ctx: koaCtx, next: koaNext) => {
+	const data = ctx.request.body as Partial<DeleteRbacApiPathRequestDto>
+	const uuid = ctx.cookies.get('uuid') ?? ''
+	const token = ctx.cookies.get('token') ?? ''
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
+	const deleteRbacApiPathRequest: DeleteRbacApiPathRequestDto = {
+		apiPath: data.apiPath ?? '',
+	}
+	const deleteRbacApiPathResponse = await deleteRbacApiPathService(deleteRbacApiPathRequest, uuid, token)
+	ctx.body = deleteRbacApiPathResponse
+	await next()
+}
+
+/**
+ * 获取 RBAC API 路径
+ * @param ctx context
+ * @param next context
+ */
+export const getRbacApiPathController = async (ctx: koaCtx, next: koaNext) => {
+	const apiPath = ctx.query.apiPath as string
+	const apiPathType = ctx.query.apiPathType as string
+	const apiPathColor = ctx.query.apiPathColor as string
+	const apiPathDescription = ctx.query.apiPathDescription as string
+	const page = parseInt(ctx.query.page as string, 10)
+	const pageSize = parseInt(ctx.query.pageSize as string, 10) 
+
+	const uuid = ctx.cookies.get('uuid') ?? ''
+	const token = ctx.cookies.get('token') ?? ''
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
+	const getRbacApiPathRequest: GetRbacApiPathRequestDto = {
+		search: {
+			apiPath,
+			apiPathType,
+			apiPathColor,
+			apiPathDescription,
+		},
+		pagination: {
+			page,
+			pageSize,
+		},
+	}
+	const getRbacApiPathResponse = await getRbacApiPathService(getRbacApiPathRequest, uuid, token)
+	ctx.body = getRbacApiPathResponse
+	await next()
+}
+
+/**
  * 创建 RBAC 角色
  * @param ctx context
  * @param next context
@@ -51,6 +112,66 @@ export const createRbacRoleController = async (ctx: koaCtx, next: koaNext) => {
 	}
 	const createRbacRoleResponse = await createRbacRoleService(createRbacRoleRequest, uuid, token)
 	ctx.body = createRbacRoleResponse
+	await next()
+}
+
+/**
+ * 删除 RBAC 角色
+ * @param ctx context
+ * @param next context
+ */
+export const deleteRbacRoleController = async (ctx: koaCtx, next: koaNext) => {
+	const data = ctx.request.body as Partial<DeleteRbacRoleRequestDto>
+	const uuid = ctx.cookies.get('uuid') ?? ''
+	const token = ctx.cookies.get('token') ?? ''
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
+	const deleteRbacRoleRequest: DeleteRbacRoleRequestDto = {
+		roleName: data.roleName ?? '',
+	}
+	const deleteRbacRoleResponse = await deleteRbacRoleService(deleteRbacRoleRequest, uuid, token)
+	ctx.body = deleteRbacRoleResponse
+	await next()
+}
+/**
+ * 获取 RBAC 角色
+ * @param ctx context
+ * @param next context
+ */
+export const getRbacRoleController = async (ctx: koaCtx, next: koaNext) => {
+	const roleName = ctx.query.roleName as string
+	const roleType = ctx.query.roleType as string
+	const roleColor = ctx.query.roleColor as string
+	const roleDescription = ctx.query.roleDescription as string
+	const page = parseInt(ctx.query.page as string, 10)
+	const pageSize = parseInt(ctx.query.pageSize as string, 10) 
+
+	const uuid = ctx.cookies.get('uuid') ?? ''
+	const token = ctx.cookies.get('token') ?? ''
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
+	const getRbacRoleRequest: GetRbacRoleRequestDto = {
+		search: {
+			roleName,
+			roleType,
+			roleColor,
+			roleDescription,
+		},
+		pagination: {
+			page,
+			pageSize,
+		},
+	}
+	const getRbacRoleResponse = await getRbacRoleService(getRbacRoleRequest, uuid, token)
+	ctx.body = getRbacRoleResponse
 	await next()
 }
 

@@ -45,7 +45,7 @@ import {
 import { adminDeleteVideoCommentController, cancelVideoCommentDownvoteController, cancelVideoCommentUpvoteController, deleteSelfVideoCommentController, emitVideoCommentController, emitVideoCommentDownvoteController, emitVideoCommentUpvoteController, getVideoCommentListByKvidController } from '../controller/VideoCommentController.js'
 import { approvePendingReviewVideoController, checkVideoExistController, deleteVideoByKvidController, getPendingReviewVideoController, getThumbVideoController, getVideoByKvidController, getVideoByUidController, getVideoCoverUploadSignedUrlController, getVideoFileTusEndpointController, searchVideoByKeywordController, searchVideoByVideoTagIdController, updateVideoController } from '../controller/VideoController.js'
 import { createVideoTagController, getVideoTagByTagIdController, searchVideoTagController } from '../controller/VideoTagController.js'
-import { createRbacApiPathController, createRbacRoleController, updateApiPathPermissionsForRoleController } from '../controller/RbacController.js'
+import { createRbacApiPathController, createRbacRoleController, deleteRbacApiPathController, deleteRbacRoleController, getRbacApiPathController, getRbacRoleController, updateApiPathPermissionsForRoleController } from '../controller/RbacController.js'
 
 const router = new Router()
 
@@ -560,6 +560,25 @@ router.post('/rbac/createRbacApiPath', createRbacApiPathController) // 创建 RB
 // 	"apiPathDescription": "这里是简介"
 // }
 
+router.delete('/rbac/deleteRbacApiPath', deleteRbacApiPathController) // 删除 RBAC API 路径
+// https://localhost:9999/rbac/deleteRbacApiPath
+// cookie: uuid, token
+// {
+// 	"apiPath": "/luo/tian/yi"
+// }
+
+router.get('/rbac/getRbacApiPath', getRbacApiPathController) // 获取 RBAC API 路径
+// https://localhost:9999/rbac/getRbacApiPath
+// cookie: uuid, token
+//
+// Query:
+// apiPath
+// apiPathType
+// apiPathColor
+// apiPathDescription
+// page
+// pageSize
+
 router.post('/rbac/createRbacRole', createRbacRoleController) // 创建 RBAC 角色
 // https://localhost:9999/rbac/createRbacRole
 // cookie: uuid, token
@@ -569,6 +588,25 @@ router.post('/rbac/createRbacRole', createRbacRoleController) // 创建 RBAC 角
 // 	"apiPathColor": "#66CCFFFF",
 // 	"apiPathDescription": "这是一个管理员角色，拥有绝大部分内容的管理权限，除了分配角色和其他 ROOT 角色专属的权限。"
 // }
+
+router.delete('/rbac/deleteRbacRole', deleteRbacRoleController) // 删除 RBAC 角色
+// https://localhost:9999/rbac/deleteRbacRole
+// cookie: uuid, token
+// {
+// 	"roleName": "administrator"
+// }
+
+router.get('/rbac/getRbacRole', getRbacRoleController) // 获取 RBAC 角色
+// https://localhost:9999/rbac/getRbacRole
+// cookie: uuid, token
+//
+// Query:
+// roleName
+// roleType
+// roleColor
+// roleDescription
+// page
+// pageSize
 
 router.post('/rbac/updateApiPathPermissionsForRole', updateApiPathPermissionsForRoleController) // 为角色更新 API 路径权限
 // https://localhost:9999/rbac/updateApiPathPermissionsForRole

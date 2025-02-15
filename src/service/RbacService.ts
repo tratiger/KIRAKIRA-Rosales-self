@@ -1,13 +1,14 @@
 import { InferSchemaType, PipelineStage, Query } from "mongoose";
-import { CheckUserRbacParams, CheckUserRbacResult, CreateRbacApiPathRequestDto, CreateRbacApiPathResponseDto, CreateRbacRoleRequestDto, CreateRbacRoleResponseDto, UpdateApiPathPermissionsForRoleRequestDto, UpdateApiPathPermissionsForRoleResponseDto } from "../controller/RbacControllerDto.js";
+import { CheckUserRbacParams, CheckUserRbacResult, CreateRbacApiPathRequestDto, CreateRbacApiPathResponseDto, CreateRbacRoleRequestDto, CreateRbacRoleResponseDto, DeleteRbacApiPathRequestDto, DeleteRbacApiPathResponseDto, DeleteRbacRoleRequestDto, DeleteRbacRoleResponseDto, GetRbacApiPathRequestDto, GetRbacApiPathResponseDto, GetRbacRoleRequestDto, GetRbacRoleResponseDto, UpdateApiPathPermissionsForRoleRequestDto, UpdateApiPathPermissionsForRoleResponseDto } from "../controller/RbacControllerDto.js";
 import { checkUserTokenByUuidService, getUserUuid } from "./UserService.js";
-import { findOneAndUpdateData4MongoDB, insertData2MongoDB, selectDataByAggregateFromMongoDB, selectDataFromMongoDB } from "../dbPool/DbClusterPool.js";
+import { deleteDataFromMongoDB, findOneAndUpdateData4MongoDB, insertData2MongoDB, selectDataByAggregateFromMongoDB, selectDataFromMongoDB } from "../dbPool/DbClusterPool.js";
 import { UserAuthSchema } from "../dbPool/schema/UserSchema.js";
 import { RbacApiSchema, RbacRoleSchema } from "../dbPool/schema/RbacSchema.js";
 import { v4 as uuidV4 } from 'uuid'
 import { QueryType, SelectType, UpdateType } from "../dbPool/DbClusterPoolTypes.js";
-import { abortAndEndSession, createAndStartSession } from "../common/MongoDBSessionTool.js";
+import { abortAndEndSession, commitSession, createAndStartSession } from "../common/MongoDBSessionTool.js";
 import { koaCtx } from "../type/koaTypes.js";
+import { clearUndefinedItemInObject } from "../common/ObjectTool.js";
 
 /**
  * 通过 RBAC 检查用户的权限
@@ -28,16 +29,12 @@ export const checkUserByRbac = async (params: CheckUserRbacParams): Promise<Chec
 		}
 
 		const match = { UUID: uuid, uid }
-		Object.keys(match).forEach(key => {
-			if (match[key] === undefined) {
-				delete match[key];
-			}
-		});
+		const clearedMatch = clearUndefinedItemInObject(match)
 
 		const checkUserRbacPipeline: PipelineStage[] = [
 			// 匹配用户
 			{
-				$match: match,
+				$match: clearedMatch,
 			},
 			// 关联 roles 集合
 			{
@@ -128,9 +125,9 @@ export const createRbacApiPathService = async (createRbacApiPathRequest: CreateR
 		const now = new Date().getTime()
 
 		const { collectionName: rbacApiCollectionName, schemaInstance: rbacApiSchemaInstance } = RbacApiSchema
-		type RbacApiList = InferSchemaType<typeof rbacApiSchemaInstance>
+		type RbacApi = InferSchemaType<typeof rbacApiSchemaInstance>
 
-		const rbacApiData: RbacApiList = {
+		const rbacApiData: RbacApi = {
 			apiPathUuid,
 			apiPath,
 			apiPathType,
@@ -142,7 +139,7 @@ export const createRbacApiPathService = async (createRbacApiPathRequest: CreateR
 			editDateTime: now
 		}
 
-		const insertResult = await insertData2MongoDB<RbacApiList>(rbacApiData, rbacApiSchemaInstance, rbacApiCollectionName)
+		const insertResult = await insertData2MongoDB<RbacApi>(rbacApiData, rbacApiSchemaInstance, rbacApiCollectionName)
 		const insertResultData = insertResult?.result?.[0]
 
 		if (!insertResult.success || !insertResultData) {
@@ -171,6 +168,171 @@ export const createRbacApiPathService = async (createRbacApiPathRequest: CreateR
 		return { success: false, message: '创建 RBAC API 路径时出错，未知错误' }
 	}
 }
+
+/**
+ * 删除 RBAC API 路径
+ * @param deleteRbacApiPathRequest 删除 RBAC API 路径的请求载荷
+ * @param uuid 用户 UUID
+ * @param token 用户 Token
+ * @returns 删除 RBAC API 路径的请求响应
+ */
+export const deleteRbacApiPathService = async (deleteRbacApiPathRequest: DeleteRbacApiPathRequestDto, uuid: string, token: string): Promise<DeleteRbacApiPathResponseDto> => {
+	try {
+		if (!checkDeleteRbacApiPathRequest(deleteRbacApiPathRequest)) {
+			console.error('ERROR', '删除 RBAC API 路径失败，参数不合法')
+			return { success: false, isAssigned: false, message: '删除 RBAC API 路径失败，参数不合法' }
+		}
+
+		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
+			console.error('ERROR', '删除 RBAC API 路径失败，用户 Token 校验未通过')
+			return { success: false, isAssigned: false, message: '删除 RBAC API 路径失败，用户 Token 校验未通过' }
+		}
+
+		const { apiPath } = deleteRbacApiPathRequest
+
+		const { collectionName: rbacRoleCollectionName, schemaInstance: rbacRoleSchemaInstance } = RbacRoleSchema
+		type RbacRole = InferSchemaType<typeof rbacRoleSchemaInstance>
+
+		const chackApiPathUnassignedWhere: QueryType<RbacRole> = {
+			apiPathPermissions: { $in: [apiPath] }
+		}
+		const chackApiPathUnassignedSelect: SelectType<RbacRole> = {
+			roleName: 1,
+		}
+
+		const session = await createAndStartSession()
+
+		const chackApiPathUnassignedResult = await selectDataFromMongoDB<RbacRole>(chackApiPathUnassignedWhere, chackApiPathUnassignedSelect, rbacRoleSchemaInstance, rbacRoleCollectionName, { session })
+
+		if (chackApiPathUnassignedResult.result?.length > 0) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '删除 RBAC API 路径失败，该 API 路径已经被绑定到一个角色，请先将其从角色中移出才能删除。')
+			return { success: false, isAssigned: true, message: '删除 RBAC API 路径失败，该 API 路径已经被绑定到一个角色，请先将其从角色中移出才能删除。' }
+		}
+
+		const { collectionName: rbacApiCollectionName, schemaInstance: rbacApiSchemaInstance } = RbacApiSchema
+		type RbacApi = InferSchemaType<typeof rbacApiSchemaInstance>
+
+		const deleteRbacApiWhere: QueryType<RbacApi> = {
+			apiPath,
+		}
+
+		const deleteRbacApiResult = await deleteDataFromMongoDB(deleteRbacApiWhere, rbacApiSchemaInstance, rbacApiCollectionName, { session })
+
+		if (!deleteRbacApiResult.success) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '删除 RBAC API 路径失败，数据删除失败')
+			return { success: false, isAssigned: false, message: '删除 RBAC API 路径失败，数据删除失败' }
+		}
+
+		await commitSession(session)
+		return { success: true, isAssigned: false, message: '删除 RBAC API 路径成功' }
+	} catch (error) {
+		console.error('ERROR', '创建 RBAC API 路径时出错，未知错误：', error)
+		return { success: false, isAssigned: false, message: '创建 RBAC API 路径时出错，未知错误' }
+	}
+}
+
+/**
+ * 获取 RBAC API 路径
+ * @param getRbacApiPathRequest 获取 RBAC API 路径的请求载荷
+ * @param uuid 用户 UUID
+ * @param token 用户 Token
+ * @returns 获取 RBAC API 路径的请求响应
+ */
+export const getRbacApiPathService = async (getRbacApiPathRequest: GetRbacApiPathRequestDto, uuid: string, token: string): Promise<GetRbacApiPathResponseDto> => {
+	try {
+		if (!checkGetRbacApiPathRequest(getRbacApiPathRequest)) {
+			console.error('ERROR', '获取 RBAC API 路径失败，参数不合法')
+			return { success: false, message: '获取 RBAC API 路径失败，参数不合法' }
+		}
+
+		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
+			console.error('ERROR', '获取 RBAC API 路径失败，用户 Token 校验未通过')
+			return { success: false, message: '获取 RBAC API 路径失败，用户 Token 校验未通过' }
+		}
+
+		const { search, pagination } = getRbacApiPathRequest
+		const clearedSearch = clearUndefinedItemInObject(search)
+
+		let skip = 0
+		let pageSize = undefined
+		if (pagination && pagination.page > 0 && pagination.pageSize > 0) {
+			skip = (pagination.page - 1) * pagination.pageSize
+			pageSize = pagination.pageSize
+		}
+
+		const countRbacApiPathPipeline: PipelineStage[] = [
+			{
+				$match: {
+					$and: Object.entries(clearedSearch).map(([key, value]) => ({
+						[key]: { $regex: value, $options: "i" } // 生成模糊查询
+					}))
+				},
+			},
+			{
+				$count: 'totalCount', // 统计总文档数
+			},
+		]
+
+		const getRbacApiPathPipeline: PipelineStage[] = [
+			{
+				$match: {
+					$and: Object.entries(clearedSearch).map(([key, value]) => ({
+						[key]: { $regex: value, $options: "i" } // 生成模糊查询
+					}))
+				},
+			},
+			{
+				$lookup: {
+					from: "rbac-roles",
+					localField: "apiPath",
+					foreignField: "apiPathPermissions",
+					as: "matchedDocs"
+				}
+			},
+			{
+				$addFields: {
+					isAssignedOnce: { $gt: [{ $size: "$matchedDocs" }, 0] } // 如果 matchedDocs 有数据，则为 true
+				}
+			},
+			{
+				$project: {
+					matchedDocs: 0 // 删除 matchedDocs 字段，保持 A 集合的原始结构
+				}
+			},
+			{ $skip: skip }, // 跳过指定数量的文档
+			{ $limit: pageSize }, // 限制返回的文档数量
+		]
+
+		const { collectionName: rbacApiCollectionName, schemaInstance: rbacApiSchemaInstance } = RbacApiSchema
+		type RbacApi = InferSchemaType<typeof rbacApiSchemaInstance>
+
+		const rbacApiPathCountPromise = selectDataByAggregateFromMongoDB(rbacApiSchemaInstance, rbacApiCollectionName, countRbacApiPathPipeline)
+		const rbacApiPathDataPromise = selectDataByAggregateFromMongoDB<RbacApi & { isAssignedOnce: boolean }>(rbacApiSchemaInstance, rbacApiCollectionName, getRbacApiPathPipeline)
+
+		const [ rbacApiPathCountResult, rbacApiPathDataResult ] = await Promise.all([rbacApiPathCountPromise, rbacApiPathDataPromise])
+		const count = rbacApiPathCountResult.result?.[0]?.totalCount
+		const result = rbacApiPathDataResult.result
+
+		if (!rbacApiPathCountResult.success || !rbacApiPathDataResult.success
+			|| typeof count !== 'number' || count < 0
+			|| ( Array.isArray(result) && !result )
+		) {
+			console.error('ERROR', '获取 RBAC API 路径失败，获取数据失败')
+			return { success: false, message: '获取 RBAC API 路径失败，获取数据失败' }
+		}
+
+		if (count === 0) {
+			return { success: true, message: '未查询到 RBAC API 路径', count: 0, result: [] }
+		} else {
+			return { success: true, message: '查询 RBAC API 路径成功', count, result }
+		}
+	} catch (error) {
+		console.error('ERROR', '获取 RBAC API 路径时出错，未知错误', error)
+		return { success: false, message: '获取 RBAC API 路径时出错，未知错误' }
+	}
+} 
 
 /**
  * 创建 RBAC 角色
@@ -223,6 +385,145 @@ export const createRbacRoleService = async (createRbacRoleRequest: CreateRbacRol
 	} catch (error) {
 		console.error('ERROR', '创建 RBAC 角色时出错，未知错误：', error)
 		return { success: false, message: '创建 RBAC 角色时出错，未知错误' }
+	}
+}
+
+/**
+ * 删除 RBAC 角色
+ * @param deleteRbacRoleRequest 删除 RBAC 角色的请求载荷
+ * @param uuid 用户 UUID
+ * @param token 用户 Token
+ * @returns 删除 RBAC 角色的请求响应
+ */
+export const deleteRbacRoleService = async (deleteRbacRoleRequest: DeleteRbacRoleRequestDto, uuid: string, token: string): Promise<DeleteRbacRoleResponseDto> => {
+	try {
+		if (!checkDeleteRbacRoleRequest(deleteRbacRoleRequest)) {
+			console.error('ERROR', '删除 RBAC 角色失败，参数不合法')
+			return { success: false, message: '删除 RBAC 角色失败，参数不合法' }
+		}
+
+		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
+			console.error('ERROR', '删除 RBAC 角色失败，用户 Token 校验未通过')
+			return { success: false, message: '删除 RBAC 角色失败，用户 Token 校验未通过' }
+		}
+
+		const { roleName } = deleteRbacRoleRequest
+
+		const { collectionName: rbacRoleCollectionName, schemaInstance: rbacRoleSchemaInstance } = RbacRoleSchema
+		type RbacRole = InferSchemaType<typeof rbacRoleSchemaInstance>
+
+		const deleteRbacRoleWhere: QueryType<RbacRole> = {
+			roleName,
+		}
+
+		const deleteResult = await deleteDataFromMongoDB(deleteRbacRoleWhere, rbacRoleSchemaInstance, rbacRoleCollectionName)
+
+		if (!deleteResult.success) {
+			console.error('ERROR', '删除 RBAC 角色失败，数据插入失败')
+			return { success: false, message: '删除 RBAC 角色失败，数据插入失败' }
+		}
+
+		return { success: true, message: '删除 RBAC 角色成功' }
+	} catch (error) {
+		console.error('ERROR', '删除 RBAC 角色时出错，未知错误：', error)
+		return { success: false, message: '删除 RBAC 角色时出错，未知错误' }
+	}
+}
+
+/**
+ * 获取 RBAC 角色
+ * @param getRbacRoleRequest 获取 RBAC 角色的请求载荷
+ * @param uuid 用户 UUID
+ * @param token 用户 Token
+ * @returns 获取 RBAC 角色的请求响应
+ */
+export const getRbacRoleService = async (getRbacRoleRequest: GetRbacRoleRequestDto, uuid: string, token: string): Promise<GetRbacRoleResponseDto> => {
+	try {
+		if (!checkGetRbacRoleRequest(getRbacRoleRequest)) {
+			console.error('ERROR', '获取 RBAC 角色失败，参数不合法')
+			return { success: false, message: '获取 RBAC 角色失败，参数不合法' }
+		}
+
+		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
+			console.error('ERROR', '获取 RBAC 角色失败，用户 Token 校验未通过')
+			return { success: false, message: '获取 RBAC 角色失败，用户 Token 校验未通过' }
+		}
+
+		const { search, pagination } = getRbacRoleRequest
+		const clearedSearch = clearUndefinedItemInObject(search)
+
+		let skip = 0
+		let pageSize = undefined
+		if (pagination && pagination.page > 0 && pagination.pageSize > 0) {
+			skip = (pagination.page - 1) * pagination.pageSize
+			pageSize = pagination.pageSize
+		}
+
+		const countRbacRolePipeline: PipelineStage[] = [
+			{
+				$match: {
+					$and: Object.entries(clearedSearch).map(([key, value]) => ({
+						[key]: { $regex: value, $options: "i" } // 生成模糊查询
+					}))
+				},
+			},
+			{
+				$count: 'totalCount', // 统计总文档数
+			},
+		]
+
+		const getRbacRolePipeline: PipelineStage[] = [
+			{
+				$match: {
+					$and: Object.entries(clearedSearch).map(([key, value]) => ({
+						[key]: { $regex: value, $options: "i" } // 生成模糊查询
+					}))
+				},
+			},
+			{
+				$lookup: {
+					from: "rbac-api-lists",
+					localField: "apiPathPermissions",
+					foreignField: "apiPath",
+					as: "apiPathList"
+				}
+			},
+			{
+				$addFields: {
+					apiPathList: "$apiPathList"
+				}
+			},
+			{ $skip: skip }, // 跳过指定数量的文档
+			{ $limit: pageSize }, // 限制返回的文档数量
+		]
+		
+		const { collectionName: rbacRoleCollectionName, schemaInstance: rbacRoleSchemaInstance } = RbacRoleSchema
+		type RbacRole = InferSchemaType<typeof rbacRoleSchemaInstance>
+
+		const rbacRoleCountPromise = selectDataByAggregateFromMongoDB(rbacRoleSchemaInstance, rbacRoleCollectionName, countRbacRolePipeline)
+		const rbacRoleDataPromise = selectDataByAggregateFromMongoDB<RbacRole & { apiPathList: GetRbacRoleResponseDto['result'][number]['apiPathList'] }>(rbacRoleSchemaInstance, rbacRoleCollectionName, getRbacRolePipeline)
+
+		const [ rbacRoleCountResult, rbacRoleDataResult ] = await Promise.all([rbacRoleCountPromise, rbacRoleDataPromise])
+		const count = rbacRoleCountResult.result?.[0]?.totalCount
+		const result = rbacRoleDataResult.result
+
+		if (!rbacRoleCountResult.success || !rbacRoleDataResult.success
+			|| typeof count !== 'number' || count < 0
+			|| ( Array.isArray(result) && !result )
+		) {
+			console.error('ERROR', '获取 RBAC 角色失败，获取数据失败')
+			return { success: false, message: '获取 RBAC 角色失败，获取数据失败' }
+		}
+
+		if (count === 0) {
+			return { success: true, message: '未查询到 RBAC 角色', count: 0, result: [] }
+		} else {
+			return { success: true, message: '查询 RBAC API 路径成功', count, result }
+		}
+
+	} catch (error) {
+		console.error('ERROR', '获取 RBAC 角色时出错，未知错误', error)
+		return { success: false, message: '获取 RBAC 角色时出错，未知错误' }
 	}
 }
 
@@ -317,6 +618,25 @@ const checkCreateRbacApiPathRequest = (createRbacApiPathRequest: CreateRbacApiPa
 }
 
 /**
+ * 校验删除 RBAC API 路径的请求载荷
+ * @param deleteRbacApiPathRequest 删除 RBAC API 路径的请求载荷
+ * @returns 合法返回 true, 不合法返回 false
+ */
+const checkDeleteRbacApiPathRequest = (deleteRbacApiPathRequest: DeleteRbacApiPathRequestDto): boolean => {
+	return ( !!deleteRbacApiPathRequest.apiPath )
+}
+
+
+/**
+ * 校验获取 RBAC API 路径的请求载荷
+ * @param getRbacApiPathRequest 获取 RBAC API 路径的请求载荷
+ * @returns 合法返回 true, 不合法返回 false
+ */
+const checkGetRbacApiPathRequest = (getRbacApiPathRequest: GetRbacApiPathRequestDto): boolean => {
+	return true // 没有什么好校验的
+}
+
+/**
  * 校验创建 RBAC 角色的请求载荷
  * @param createRbacApiPathRequest 创建 RBAC 角色的请求载荷
  * @returns 合法返回 true, 不合法返回 false
@@ -326,6 +646,24 @@ const checkCreateRbacRoleRequest = (createRbacRoleRequest: CreateRbacRoleRequest
 		!!createRbacRoleRequest.roleName
 		&& createRbacRoleRequest.roleColor ? /^#([0-9A-Fa-f]{8})$/.test(createRbacRoleRequest.roleColor) : true // 如果 roleColor 不为空，则测试是否符合八位 HAX 颜色代码格式（例如：#66CCFFFF），如果 roleColor 为空，则直接为 true
 	)
+}
+
+/**
+ * 校验删除 RBAC 角色的请求载荷
+ * @param createRbacApiPathRequest 删除 RBAC 角色的请求载荷
+ * @returns 合法返回 true, 不合法返回 false
+ */
+const checkDeleteRbacRoleRequest = (deleteRbacRoleRequest: DeleteRbacRoleRequestDto): boolean => {
+	return ( !!deleteRbacRoleRequest.roleName )
+}
+
+/**
+ * 检查获取 RBAC 角色的请求载荷
+ * @param getRbacRoleRequest 获取 RBAC 角色的请求载荷
+ * @returns 合法返回 true, 不合法返回 false
+ */
+const checkGetRbacRoleRequest = (getRbacRoleRequest: GetRbacRoleRequestDto): boolean => {
+	return true // 没什么好检查的
 }
 
 /**
