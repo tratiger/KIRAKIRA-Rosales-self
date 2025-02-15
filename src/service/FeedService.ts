@@ -921,11 +921,11 @@ export const getFeedContentService = async (getFeedContentRequest: GetFeedConten
 		const feedContentDataPromise = selectDataByAggregateFromMongoDB<ThumbVideo>(videoSchemaInstance, videoCollectionName, getFeedContentPipeline)
 
 		const [ feedContentCountResult, feedContentDataResult ] = await Promise.all([feedContentCountPromise, feedContentDataPromise])
-		const count = feedContentCountResult.result?.[0].totalCount
+		const count = feedContentCountResult.result?.[0]?.totalCount
 		const content = feedContentDataResult.result
 
 		if ( !feedContentCountResult.success || !feedContentDataResult.success
-			|| typeof count !== 'number' ||  count < 0
+			|| typeof count !== 'number' || count < 0
 			|| ( Array.isArray(content) && !content )
 		) {
 			console.error('ERROR', '获取动态内容失败，查询视频数据失败')
