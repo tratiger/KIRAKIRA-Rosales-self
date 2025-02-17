@@ -206,7 +206,7 @@ export type GetRbacRoleRequestDto = {
 	/** 搜索项 */
 	search: {
 		/** 角色的名字 */
-		roleName: string;
+		roleName?: string;
 		/** 角色的类型 */
 		roleType?: string;
 		/** 角色的颜色 - 例子：#66CCFFFF */
