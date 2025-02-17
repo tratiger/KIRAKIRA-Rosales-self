@@ -1,6 +1,6 @@
-import { isPassRbacCheck, createRbacApiPathService, createRbacRoleService, updateApiPathPermissionsForRoleService, getRbacApiPathService, deleteRbacApiPathService, deleteRbacRoleService, getRbacRoleService } from '../service/RbacService.js'
+import { isPassRbacCheck, createRbacApiPathService, createRbacRoleService, updateApiPathPermissionsForRoleService, getRbacApiPathService, deleteRbacApiPathService, deleteRbacRoleService, getRbacRoleService, adminGetUserRolesByUidService, adminUpdateUserRoleService } from '../service/RbacService.js'
 import { koaCtx, koaNext } from '../type/koaTypes.js'
-import { CreateRbacApiPathRequestDto, CreateRbacRoleRequestDto, DeleteRbacApiPathRequestDto, DeleteRbacRoleRequestDto, GetRbacApiPathRequestDto, GetRbacRoleRequestDto, UpdateApiPathPermissionsForRoleRequestDto } from './RbacControllerDto.js'
+import { AdminGetUserRolesByUidRequestDto, AdminUpdateUserRoleRequestDto, CreateRbacApiPathRequestDto, CreateRbacRoleRequestDto, DeleteRbacApiPathRequestDto, DeleteRbacRoleRequestDto, GetRbacApiPathRequestDto, GetRbacRoleRequestDto, UpdateApiPathPermissionsForRoleRequestDto } from './RbacControllerDto.js'
 
 /**
  * 创建 RBAC API 路径
@@ -137,6 +137,7 @@ export const deleteRbacRoleController = async (ctx: koaCtx, next: koaNext) => {
 	ctx.body = deleteRbacRoleResponse
 	await next()
 }
+
 /**
  * 获取 RBAC 角色
  * @param ctx context
@@ -196,5 +197,54 @@ export const updateApiPathPermissionsForRoleController = async (ctx: koaCtx, nex
 	}
 	const updateApiPathPermissionsForRoleResponse = await updateApiPathPermissionsForRoleService(updateApiPathPermissionsForRoleRequest, uuid, token)
 	ctx.body = updateApiPathPermissionsForRoleResponse
+	await next()
+}
+
+/**
+ * 管理员更新用户角色
+ * @param ctx context
+ * @param next context
+ */
+export const adminUpdateUserRoleController = async (ctx: koaCtx, next: koaNext) => {
+	const data = ctx.request.body as Partial<AdminUpdateUserRoleRequestDto>
+
+	const adminUuid = ctx.cookies.get('uuid') ?? ''
+	const adminToken = ctx.cookies.get('token') ?? ''
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid: adminUuid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
+	const adminUpdateUserRoleRequest: AdminUpdateUserRoleRequestDto = {
+		uuid: data.uuid ?? '',
+    newRoles: data.newRoles ?? []
+	}
+	const adminUpdateUserRoleResponseDto = await adminUpdateUserRoleService(adminUpdateUserRoleRequest, adminUuid, adminToken)
+	ctx.body = adminUpdateUserRoleResponseDto
+	await next()
+}
+
+/**
+ * 通过 uid 获取一个用户的角色
+ * @param ctx context
+ * @param next context
+ */
+export const adminGetUserRolesByUidController = async (ctx: koaCtx, next: koaNext) => {
+	const uid = parseInt(ctx.query.uid as string, 10) 
+
+	const adminUuid = ctx.cookies.get('uuid') ?? ''
+	const adminToken = ctx.cookies.get('token') ?? ''
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid: adminUuid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
+	const adminGetUserRolesByUidRequest: AdminGetUserRolesByUidRequestDto = {
+		uid,
+	}
+	const adminGetUserRolesByUidResponse = await adminGetUserRolesByUidService(adminGetUserRolesByUidRequest, adminUuid, adminToken)
+	ctx.body = adminGetUserRolesByUidResponse
 	await next()
 }

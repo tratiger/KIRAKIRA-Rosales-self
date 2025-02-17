@@ -261,3 +261,56 @@ export type UpdateApiPathPermissionsForRoleResponseDto = {
 	/** 如果成功，返回数据 */
 	result?: RbacRole;
 }
+
+/**
+ * 通过 UID 获取一个用户的角色的请求载荷
+ */
+export type AdminGetUserRolesByUidRequestDto = {
+	/** 用户的 UID */
+	uid: number;
+}
+
+/**
+ * 通过 UID 获取一个用户的角色的请求响应
+ */
+export type AdminGetUserRolesByUidResponseDto = {
+	/** 是否请求成功 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 如果成功，返回数据 */
+	result?: {
+		/** 用户的 UID */
+		uid: number;
+		/** 用户的 UUID */
+		uuid: string;
+		/** 用户名 */
+		username: string;
+		/** 用户昵称 */
+		userNickname: string;
+		/** 用户头像 */
+		avatar: string;
+		/** 用户的角色 */
+		roles: RbacRole[];
+	};
+}
+
+/**
+ * 管理员更新用户角色的请求载荷
+ */
+export type AdminUpdateUserRoleRequestDto = {
+	/** 要被更新角色的用户的 UUID */
+	uuid: string;
+	/** 新的角色 */
+	newRoles: string[];
+}
+
+/**
+ * 管理员更新用户角色的请求响应
+ */
+export type AdminUpdateUserRoleResponseDto = {
+	/** 是否请求成功 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+}

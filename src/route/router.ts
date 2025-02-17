@@ -45,7 +45,7 @@ import {
 import { adminDeleteVideoCommentController, cancelVideoCommentDownvoteController, cancelVideoCommentUpvoteController, deleteSelfVideoCommentController, emitVideoCommentController, emitVideoCommentDownvoteController, emitVideoCommentUpvoteController, getVideoCommentListByKvidController } from '../controller/VideoCommentController.js'
 import { approvePendingReviewVideoController, checkVideoExistController, deleteVideoByKvidController, getPendingReviewVideoController, getThumbVideoController, getVideoByKvidController, getVideoByUidController, getVideoCoverUploadSignedUrlController, getVideoFileTusEndpointController, searchVideoByKeywordController, searchVideoByVideoTagIdController, updateVideoController } from '../controller/VideoController.js'
 import { createVideoTagController, getVideoTagByTagIdController, searchVideoTagController } from '../controller/VideoTagController.js'
-import { createRbacApiPathController, createRbacRoleController, deleteRbacApiPathController, deleteRbacRoleController, getRbacApiPathController, getRbacRoleController, updateApiPathPermissionsForRoleController } from '../controller/RbacController.js'
+import { adminGetUserRolesByUidController, adminUpdateUserRoleController, createRbacApiPathController, createRbacRoleController, deleteRbacApiPathController, deleteRbacRoleController, getRbacApiPathController, getRbacRoleController, updateApiPathPermissionsForRoleController } from '../controller/RbacController.js'
 
 const router = new Router()
 
@@ -617,6 +617,24 @@ router.post('/rbac/updateApiPathPermissionsForRole', updateApiPathPermissionsFor
 // 		"/luo/tian/yi"
 // 	]
 // }
+
+router.post('/rbac/adminUpdateUserRole', adminUpdateUserRoleController) // 管理员更新用户角色
+// https://localhost:9999/rbac/adminUpdateUserRole
+// cookie: uuid, token
+// {
+// 	"uuid": "xxxxxxxxxxxxxxxxxxxxxxxxxx",
+// 	"newRoles": [
+// 		"administrator",
+// 		"user"
+// 	]
+// }
+
+router.get('/rbac/adminGetUserRolesByUid', adminGetUserRolesByUidController) // 通过 UUID 获取一个用户的角色
+// https://localhost:9999/rbac/adminGetUserRolesByUid
+// cookie: uuid, token
+//
+// Query:
+// uid
 
 
 

@@ -1,14 +1,14 @@
 import { InferSchemaType, PipelineStage, Query } from "mongoose";
-import { CheckUserRbacParams, CheckUserRbacResult, CreateRbacApiPathRequestDto, CreateRbacApiPathResponseDto, CreateRbacRoleRequestDto, CreateRbacRoleResponseDto, DeleteRbacApiPathRequestDto, DeleteRbacApiPathResponseDto, DeleteRbacRoleRequestDto, DeleteRbacRoleResponseDto, GetRbacApiPathRequestDto, GetRbacApiPathResponseDto, GetRbacRoleRequestDto, GetRbacRoleResponseDto, UpdateApiPathPermissionsForRoleRequestDto, UpdateApiPathPermissionsForRoleResponseDto } from "../controller/RbacControllerDto.js";
+import { AdminGetUserRolesByUidRequestDto, AdminGetUserRolesByUidResponseDto, AdminUpdateUserRoleRequestDto, AdminUpdateUserRoleResponseDto, CheckUserRbacParams, CheckUserRbacResult, CreateRbacApiPathRequestDto, CreateRbacApiPathResponseDto, CreateRbacRoleRequestDto, CreateRbacRoleResponseDto, DeleteRbacApiPathRequestDto, DeleteRbacApiPathResponseDto, DeleteRbacRoleRequestDto, DeleteRbacRoleResponseDto, GetRbacApiPathRequestDto, GetRbacApiPathResponseDto, GetRbacRoleRequestDto, GetRbacRoleResponseDto, UpdateApiPathPermissionsForRoleRequestDto, UpdateApiPathPermissionsForRoleResponseDto } from "../controller/RbacControllerDto.js";
 import { checkUserTokenByUuidService, getUserUuid } from "./UserService.js";
 import { deleteDataFromMongoDB, findOneAndUpdateData4MongoDB, insertData2MongoDB, selectDataByAggregateFromMongoDB, selectDataFromMongoDB } from "../dbPool/DbClusterPool.js";
-import { UserAuthSchema } from "../dbPool/schema/UserSchema.js";
+import { UserAuthSchema, UserInfoSchema } from "../dbPool/schema/UserSchema.js";
 import { RbacApiSchema, RbacRoleSchema } from "../dbPool/schema/RbacSchema.js";
 import { v4 as uuidV4 } from 'uuid'
 import { QueryType, SelectType, UpdateType } from "../dbPool/DbClusterPoolTypes.js";
 import { abortAndEndSession, commitSession, createAndStartSession } from "../common/MongoDBSessionTool.js";
 import { koaCtx } from "../type/koaTypes.js";
-import { clearUndefinedItemInObject } from "../common/ObjectTool.js";
+import { clearUndefinedItemInObject, isEmptyObject } from "../common/ObjectTool.js";
 
 /**
  * 通过 RBAC 检查用户的权限
@@ -263,26 +263,26 @@ export const getRbacApiPathService = async (getRbacApiPathRequest: GetRbacApiPat
 		}
 
 		const countRbacApiPathPipeline: PipelineStage[] = [
-			{
+			...(!isEmptyObject(clearedSearch) ? [{
 				$match: {
 					$and: Object.entries(clearedSearch).map(([key, value]) => ({
 						[key]: { $regex: value, $options: "i" } // 生成模糊查询
 					}))
 				},
-			},
+			}] : []),
 			{
 				$count: 'totalCount', // 统计总文档数
 			},
 		]
 
 		const getRbacApiPathPipeline: PipelineStage[] = [
-			{
+			...(!isEmptyObject(clearedSearch) ? [{
 				$match: {
 					$and: Object.entries(clearedSearch).map(([key, value]) => ({
 						[key]: { $regex: value, $options: "i" } // 生成模糊查询
 					}))
 				},
-			},
+			}] : []),
 			{
 				$lookup: {
 					from: "rbac-roles",
@@ -460,26 +460,26 @@ export const getRbacRoleService = async (getRbacRoleRequest: GetRbacRoleRequestD
 		}
 
 		const countRbacRolePipeline: PipelineStage[] = [
-			{
+			...(!isEmptyObject(clearedSearch) ? [{
 				$match: {
 					$and: Object.entries(clearedSearch).map(([key, value]) => ({
 						[key]: { $regex: value, $options: "i" } // 生成模糊查询
 					}))
 				},
-			},
+			}] : []),
 			{
 				$count: 'totalCount', // 统计总文档数
 			},
 		]
 
 		const getRbacRolePipeline: PipelineStage[] = [
-			{
+			...(!isEmptyObject(clearedSearch) ? [{
 				$match: {
 					$and: Object.entries(clearedSearch).map(([key, value]) => ({
 						[key]: { $regex: value, $options: "i" } // 生成模糊查询
 					}))
 				},
-			},
+			}] : []),
 			{
 				$lookup: {
 					from: "rbac-api-lists",
@@ -606,6 +606,177 @@ export const updateApiPathPermissionsForRoleService = async (updateApiPathPermis
 }
 
 /**
+ * 管理员更新用户角色
+ * @param adminUpdateUserRoleRequest 管理员更新用户角色的请求载荷
+ * @param adminUuid 管理员 UUID
+ * @param adminToken 管理员 Token
+ * @returns 管理员更新用户角色的请求响应
+ */
+export const adminUpdateUserRoleService = async (adminUpdateUserRoleRequest: AdminUpdateUserRoleRequestDto, adminUuid: string, adminToken: string): Promise<AdminUpdateUserRoleResponseDto> => {
+	try {
+		if (!checkAdminUpdateUserRoleRequest(adminUpdateUserRoleRequest)) {
+			console.error('ERROR', '管理员更新用户角色失败，参数不合法')
+			return { success: false, message: '管理员更新用户角色失败，参数不合法' }
+		}
+
+		if (!(await checkUserTokenByUuidService(adminUuid, adminToken)).success) {
+			console.error('ERROR', '管理员更新用户角色失败，用户 Token 校验未通过')
+			return { success: false, message: '管理员更新用户角色失败，用户 Token 校验未通过' }
+		}
+
+		const { uuid, newRoles } = adminUpdateUserRoleRequest
+		const uniqueNewRoels = [...new Set(newRoles)]
+
+		const { collectionName: rbacRoleCollectionName, schemaInstance: rbacRoleSchemaInstance } = RbacRoleSchema
+		type RbacRole = InferSchemaType<typeof rbacRoleSchemaInstance>
+
+		const checkNewRoelsCountWhere: QueryType<RbacRole> = {
+			roleName: { $in: uniqueNewRoels },
+		}
+		
+		const checkNewRoelsCountSelect: SelectType<RbacRole> = {
+			roleName: 1,
+		}
+
+		const session = await createAndStartSession()
+
+		const checkNewRoelsCountResult = await selectDataFromMongoDB<RbacRole>(checkNewRoelsCountWhere, checkNewRoelsCountSelect, rbacRoleSchemaInstance, rbacRoleCollectionName, { session })
+
+		if (!checkNewRoelsCountResult.success) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '管理员更新用户角色失败，检查 API 路径失败')
+			return { success: false, message: '管理员更新用户角色失败，检查 API 路径失败' }
+		}
+
+		if (checkNewRoelsCountResult.result.length !== uniqueNewRoels.length) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '管理员更新用户角色失败，检查角色未通过，可能是因为将一个不存在的角色绑定给用户')
+			return { success: false, message: '管理员更新用户角色失败，检查角色未通过，可能是因为将一个不存在的角色绑定给用户' }
+		}
+
+		const { collectionName: userAuthCollectionName, schemaInstance: userAuthSchemaInstance } = UserAuthSchema
+		type UserAuth = InferSchemaType<typeof userAuthSchemaInstance>
+
+		const updateApiPathPermissions4RoleWhere: QueryType<UserAuth> = {
+			UUID: uuid,
+		}
+		
+		const now = new Date().getTime()
+		const updateApiPathPermissions4RoleData: UpdateType<UserAuth> = {
+			roles: uniqueNewRoels as UserAuth['roles'], // TODO: Mongoose issue: #12420
+			editDateTime: now,
+		}
+
+		const updateRoles4UserResult = await findOneAndUpdateData4MongoDB<UserAuth>(updateApiPathPermissions4RoleWhere, updateApiPathPermissions4RoleData, userAuthSchemaInstance, userAuthCollectionName)
+
+		if (!updateRoles4UserResult.success) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '管理员更新用户角色失败，更新失败')
+			return { success: false, message: '管理员更新用户角色失败，更新失败' }
+		}
+
+		return { success: true, message: '管理员更新用户角色成功' }
+	} catch (error) {
+		console.error('ERROR', '管理员更新用户角色时出错，未知错误：', error)
+		return { success: false, message: '管理员更新用户角色时出错，未知错误' }
+	}
+}
+
+
+/**
+ * 通过 UID 获取一个用户的角色
+ * @param adminGetUserRolesByUidRequest 通过 UID 获取一个用户的角色的请求载荷
+ * @param adminUuid 管理员 UUID
+ * @param adminToken 管理员 Token
+ * @returns 通过 UID 获取一个用户的角色的请求响应
+ */
+export const adminGetUserRolesByUidService = async (adminGetUserRolesByUidRequest: AdminGetUserRolesByUidRequestDto, adminUuid: string, adminToken: string): Promise<AdminGetUserRolesByUidResponseDto> => {
+	try {
+		if (!checkAdminGetUserRolesByUidRequest(adminGetUserRolesByUidRequest)) {
+			console.error('ERROR', '通过 UID 获取一个用户的角色失败，参数不合法')
+			return { success: false, message: '通过 UID 获取一个用户的角色失败，参数不合法' }
+		}
+
+		if (!(await checkUserTokenByUuidService(adminUuid, adminToken)).success) {
+			console.error('ERROR', '通过 UID 获取一个用户的角色失败，用户 Token 校验未通过')
+			return { success: false, message: '通过 UID 获取一个用户的角色失败，用户 Token 校验未通过' }
+		}
+
+		const { uid } = adminGetUserRolesByUidRequest
+
+		const adminGetUserRolesPipeline: PipelineStage[] = [
+			{
+				$match: {
+					uid,
+				}
+			},
+			{
+				$lookup: {
+					from: "rbac-roles",
+					localField: "roles",
+					foreignField: "roleName",
+					as: "userRole"
+				}
+			},
+			{
+				$lookup: {
+					from: "user-infos",
+					localField: "UUID",
+					foreignField: "UUID",
+					as: "userInfo"
+				}
+			},
+			{
+				$unwind: '$userInfo',
+			},
+			{
+				$project: {
+					uid: 1,
+					uuid: '$UUID',
+					username: '$userInfo.username',
+					userNickname: '$userInfo.userNickname',
+					avatar: '$userInfo.avatar',
+					roles: '$userRole',
+				}
+			},
+		]
+
+		const { collectionName: userAuthCollectionName, schemaInstance: userAuthSchemaInstance } = UserAuthSchema
+		type UserAuth = InferSchemaType<typeof userAuthSchemaInstance>
+
+		const { schemaInstance: userInfoSchemaInstance } = UserInfoSchema
+		type UserInfo = InferSchemaType<typeof userInfoSchemaInstance>
+
+		const { schemaInstance: rbacRoleSchemaInstance } = RbacRoleSchema
+		type RbacRole = InferSchemaType<typeof rbacRoleSchemaInstance>
+		
+
+		const adminGerUserRolesResult = await selectDataByAggregateFromMongoDB<{
+			uid: UserAuth['uid'];
+			uuid: UserAuth['UUID'];
+			username: UserInfo['username'];
+			userNickname: UserInfo['userNickname'];
+			avatar: UserInfo['avatar'];
+			roles: RbacRole[];
+		}>(userAuthSchemaInstance, userAuthCollectionName, adminGetUserRolesPipeline)
+		const adminGerUserRolesData = adminGerUserRolesResult.result?.[0]
+
+		console.log('uuuuuu', uid)
+		console.log('rrrrrrrr', adminGerUserRolesResult.result)
+
+		if (!adminGerUserRolesResult.success || !adminGerUserRolesData) {
+			console.error('ERROR', '通过 UID 获取一个用户的角色失败，查询数据失败')
+			return { success: false, message: '通过 UID 获取一个用户的角色失败，查询数据失败' }
+		}
+
+		return { success: true, message: '通过 UID 获取一个用户的角色成功', result: adminGerUserRolesData }
+	} catch (error) {
+		console.error('ERROR', '通过 UID 获取一个用户的角色时出错，未知错误：', error)
+		return { success: false, message: '通过 UID 获取一个用户的角色时出错，未知错误' }
+	}
+}
+
+/**
  * 校验创建 RBAC API 路径的请求载荷
  * @param createRbacApiPathRequest 创建 RBAC API 路径的请求载荷
  * @returns 合法返回 true, 不合法返回 false
@@ -677,4 +848,26 @@ const checkUpdateApiPathPermissionsForRoleRequest = (updateApiPathPermissionsFor
 		&& !!updateApiPathPermissionsForRoleRequest.apiPathPermissions && Array.isArray(updateApiPathPermissionsForRoleRequest.apiPathPermissions)
 		&& updateApiPathPermissionsForRoleRequest.apiPathPermissions.every(apiPath => !!apiPath)
 	)
+}
+
+/**
+ * 校验管理员更新用户角色的请求载荷
+ * @param adminUpdateUserRoleRequest 管理员更新用户角色的请求载荷
+ * @returns 合法返回 true, 不合法返回 false
+ */
+const checkAdminUpdateUserRoleRequest = (adminUpdateUserRoleRequest: AdminUpdateUserRoleRequestDto): boolean => {
+	return (
+		!!adminUpdateUserRoleRequest.uuid
+		&& !!adminUpdateUserRoleRequest.newRoles && Array.isArray(adminUpdateUserRoleRequest.newRoles)
+		&& adminUpdateUserRoleRequest.newRoles.every(role => !!role)
+	)
+}
+
+/**
+ * 通过 UID 获取一个用户的角色
+ * @param adminGetUserRolesByUidRequest 通过 UID 获取一个用户的角色的请求载荷
+ * @returns 合法返回 true, 不合法返回 false
+ */
+const checkAdminGetUserRolesByUidRequest = (adminGetUserRolesByUidRequest: AdminGetUserRolesByUidRequestDto): boolean => {
+	return ( adminGetUserRolesByUidRequest.uid !== undefined && adminGetUserRolesByUidRequest.uid !== null )
 }
