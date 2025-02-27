@@ -1,2 +1,0 @@
-  - source: /locales/Chinese Simplified.*
-    translation: /locales/%language%.ts
