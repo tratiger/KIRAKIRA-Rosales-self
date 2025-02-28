@@ -1,4 +1,4 @@
-i1export const ChineseSimplified = {
+export const ChineseSimplified = {
   SendVerificationCode: {
     mailTitle: "KIRAKIRA - 注册验证码",
     mailHtml: `
