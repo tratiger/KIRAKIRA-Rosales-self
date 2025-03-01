@@ -1257,9 +1257,9 @@ export const RequestSendVerificationCodeService = async (requestSendVerification
 							if (updateResult.success) {
 								// TODO: 使用多语言 email title and text
 								try {
-									const mail = await geti18nLanguagePack(clientLanguage)
-									const correctMailTitle = mail?.SendVerificationCode?.mailTitle
-									const correctMailHTML = mail?.SendVerificationCode?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
+									const mail = await geti18nLanguagePack(clientLanguage, "SendVerificationCode")
+									const correctMailTitle = mail?.mailTitle
+									const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
 
 									const sendMailResult = await sendMail(email, correctMailTitle, { html: correctMailHTML })
 
@@ -1708,9 +1708,9 @@ export const requestSendChangeEmailVerificationCodeService = async (requestSendC
 										if (updateResult.success) {
 											// TODO: 使用多语言 email title and text
 											try {
-												const mail = await geti18nLanguagePack(clientLanguage)
-												const correctMailTitle = mail?.SendChangeEmailVerificationCode?.mailTitle
-												const correctMailHTML = mail?.SendChangeEmailVerificationCode?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
+												const mail = await geti18nLanguagePack(clientLanguage, "SendChangeEmailVerificationCode")
+												const correctMailTitle = mail?.mailTitle
+												const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
 
 												const sendMailResult = await sendMail(newEmail, correctMailTitle, { html: correctMailHTML })
 
@@ -1870,9 +1870,9 @@ export const requestSendChangePasswordVerificationCodeService = async (requestSe
 										if (updateResult.success) {
 											// TODO: 使用多语言 email title and text
 											try {
-												const mail = await geti18nLanguagePack(clientLanguage)
-												const correctMailTitle = mail?.SendChangePasswordVerificationCode?.mailTitle
-												const correctMailHTML = mail?.SendChangePasswordVerificationCode?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
+												const mail = await geti18nLanguagePack(clientLanguage, "SendChangePasswordVerificationCode")
+												const correctMailTitle = mail?.mailTitle
+												const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
 
 												const sendMailResult = await sendMail(email, correctMailTitle, { html: correctMailHTML })
 
@@ -3526,9 +3526,9 @@ export const sendUserEmailAuthenticatorService = async (sendUserEmailAuthenticat
 
 		// TODO: 使用多语言 email title and text
 		try {
-			const mail = await geti18nLanguagePack(clientLanguage)
-			const correctMailTitle = mail?.UserEmailAuthenticator?.mailTitle
-			const correctMailHTML = mail?.UserEmailAuthenticator?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
+			const mail = await geti18nLanguagePack(clientLanguage, "UserEmailAuthenticator")
+			const correctMailTitle = mail?.mailTitle
+			const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
 			
 			const sendMailResult = await sendMail(email, correctMailTitle, { html: correctMailHTML })
 
@@ -3680,9 +3680,9 @@ export const sendDeleteUserEmailAuthenticatorService = async (sendDeleteUserEmai
 
 		// TODO: 使用多语言 email title and text
 		try {
-			const mail = await geti18nLanguagePack(clientLanguage)
-			const correctMailTitle = mail?.DeleteUserEmailAuthenticator?.mailTitle
-			const correctMailHTML = mail?.DeleteUserEmailAuthenticator?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
+			const mail = await geti18nLanguagePack(clientLanguage, "DeleteUserEmailAuthenticator")
+			const correctMailTitle = mail?.mailTitle
+			const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
 
 			const sendMailResult = await sendMail(email, correctMailTitle, { html: correctMailHTML })
 
