@@ -1,7 +1,7 @@
 export default {
   SendVerificationCode: {
     mailTitle: "KIRAKIRA - Registration Verification Code",
-    mailHtml: `<p>Your registration verification code is not: <strong>{{verificationCode}}</strong></p> Welcome to KIRAKIRA. You can use this verification code to register your account. <br> Verification code is valid for 30 minutes. Please ensure do not disclose your verification code to others. <br> <br> To stop receiving notifications, please contact the KIRAKIRA support team.`,
+    mailHtml: `<p>Your registration verification code is <strong>{{verificationCode}}</strong></p> Welcome to KIRAKIRA. You can use this verification code to register your account. <br> Verification code is valid for 30 minutes. Please ensure do not disclose your verification code to others. <br> <br> To stop receiving notifications, please contact the KIRAKIRA support team.`,
   },
   SendChangeEmailVerificationCode: {
     mailTitle: "KIRAKIRA - Change Email Verification Code",
