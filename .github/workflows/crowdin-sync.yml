@@ -16,11 +16,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Crowdin CLI
-        run: |
-          curl -LO https://github.com/crowdin/crowdin-cli/releases/latest/download/crowdin-cli-linux.zip
-          unzip crowdin-cli-linux.zip
-          chmod +x crowdin
-          sudo mv crowdin /usr/local/bin/
+        run: npm install -g @crowdin/cli
 
       - name: Upload translations to Crowdin
         run: crowdin upload sources --config crowdin.yml
