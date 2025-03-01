@@ -1,0 +1,43 @@
+name: Crowdin Sync
+
+on:
+  push:
+    paths:
+      - 'src/locales/*.ts'
+    branches:
+      - main  # 修改为你的默认分支
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Crowdin CLI
+        run: |
+          curl -LO https://github.com/crowdin/crowdin-cli/releases/latest/download/crowdin-cli-linux.zip
+          unzip crowdin-cli-linux.zip
+          chmod +x crowdin
+          sudo mv crowdin /usr/local/bin/
+
+      - name: Upload translations to Crowdin
+        run: crowdin upload sources --config crowdin.yml
+        env:
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+
+      - name: Wait for translations (optional)
+        run: sleep 60  # 根据实际情况调整等待时间
+
+      - name: Download translations from Crowdin
+        run: crowdin download --config crowdin.yml
+        env:
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+
+      - name: Commit and push updated translations
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/locales/
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: update translations from Crowdin" && git push)
