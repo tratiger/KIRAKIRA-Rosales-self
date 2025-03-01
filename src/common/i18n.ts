@@ -1,5 +1,5 @@
 import English from "../locales/English.js";
-import ChineseSimplified from "../locales/ChineseSimplified.js";
+import ChineseSimplified from "../locales/Chinese Simplified.js";
 
 const languagePacks: Record<string, any> = {
 	"zh-Hans-CN": ChineseSimplified,
