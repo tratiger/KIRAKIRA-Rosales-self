@@ -16,20 +16,20 @@ jobs:
 
     steps:
       - name: Checkout repository
-      uses: actions/checkout@v2
+        uses: actions/checkout@v2
 
       - name: Upload to Crowdin
-      if: github.event_name == 'push'
-      uses: crowdin/github-action@v2.6.1
-      with:
-        upload_sources: true
-        config: crowdin.yml
-        token: ${{ secrets.CROWDIN_TOKEN }}
+        if: github.event_name == 'push'
+        uses: crowdin/github-action@v2.6.1
+        with:
+          upload_sources: true
+          config: crowdin.yml
+          token: ${{ secrets.CROWDIN_TOKEN }}
 
       - name: Download latest translations
-      if: github.event_name == 'push' || github.event_name == 'pull_request'
-      uses: crowdin/github-action@v2.6.1
-      with:
-        download_translations: true
-        config: crowdin.yml
-        token: ${{ secrets.CROWDIN_TOKEN }}
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        uses: crowdin/github-action@v2.6.1
+        with:
+          download_translations: true
+          config: crowdin.yml
+          token: ${{ secrets.CROWDIN_TOKEN }}
