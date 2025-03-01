@@ -3,7 +3,7 @@ name: Crowdin Sync
 on:
   push:
     paths:
-      - 'src/locales/English.ts'
+      - 'src/locales/English.*'
   pull_request:
     types: [closed]
 
