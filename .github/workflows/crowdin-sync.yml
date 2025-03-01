@@ -5,7 +5,7 @@ on:
     paths:
       - 'src/locales/*.ts'
     branches:
-      - main  # 修改为你的默认分支
+      - develop  # 修改为你的默认分支
 
 jobs:
   sync:
