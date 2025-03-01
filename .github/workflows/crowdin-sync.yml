@@ -3,41 +3,33 @@ name: Crowdin Sync
 on:
   push:
     paths:
-      - 'src/locales/*.ts'
-    branches:
-      - main  # 修改为你的默认分支
+      - 'src/locales/English.*'
+  pull_request:
+    types: [closed]
 
 jobs:
-  sync:
+  crowdin_sync:
     runs-on: ubuntu-latest
+
+    env:
+      CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
 
-      - name: Install Crowdin CLI
-        run: |
-          curl -LO https://github.com/crowdin/crowdin-cli/releases/latest/download/crowdin-cli-linux.zip
-          unzip crowdin-cli-linux.zip
-          chmod +x crowdin
-          sudo mv crowdin /usr/local/bin/
+      - name: Upload to Crowdin
+        if: github.event_name == 'push'
+        uses: crowdin/github-action@v2.6.1
+        with:
+          upload_sources: true
+          config: crowdin.yml
+          token: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
 
-      - name: Upload translations to Crowdin
-        run: crowdin upload sources --config crowdin.yml
-        env:
-          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
-
-      - name: Wait for translations (optional)
-        run: sleep 60  # 根据实际情况调整等待时间
-
-      - name: Download translations from Crowdin
-        run: crowdin download --config crowdin.yml
-        env:
-          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
-
-      - name: Commit and push updated translations
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add src/locales/
-          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: update translations from Crowdin" && git push)
+      - name: Download latest translations
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        uses: crowdin/github-action@v2.6.1
+        with:
+          download_translations: true
+          config: crowdin.yml
+          token: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
