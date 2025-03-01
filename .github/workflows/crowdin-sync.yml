@@ -3,7 +3,7 @@ name: Crowdin Sync
 on:
   push:
     paths:
-      - 'src/locales/English.*'
+      - 'src/locales/'
   pull_request:
     types: [closed]
 
@@ -31,5 +31,5 @@ jobs:
         uses: crowdin/github-action@v2.6.1
         with:
           download_translations: true
-          config: crowdin.yml
-          token: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+                    config: crowdin.yml
+                    token: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
