@@ -24,7 +24,7 @@ jobs:
         with:
           upload_sources: true
           config: crowdin.yml
-          token: ${{ secrets.CROWDIN_TOKEN }}
+          token: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
 
       - name: Download latest translations
         if: github.event_name == 'push' || github.event_name == 'pull_request'
@@ -32,4 +32,4 @@ jobs:
         with:
           download_translations: true
           config: crowdin.yml
-          token: ${{ secrets.CROWDIN_TOKEN }}
+          token: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
