@@ -1,3 +1,6 @@
-files:
-  - source: /src/locales/English.*
-    translation: /src/locales/%language%.ts
+"files": {
+  {
+    "source": "/src/locales/English.*",
+    "translation": "/src/locales/%language%.ts"
+  }
+}
