@@ -63,4 +63,3 @@ jobs:
         title: "🌐 更新翻译"
         body: "由 GitHub Actions 自动生成的翻译更新 PR。"
         labels: "translation, automated"
-        assignees: "github-actions[bot]"
