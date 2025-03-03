@@ -14,9 +14,9 @@ jobs:
         fetch-depth: 0  # 获取完整历史记录，以便删除远程分支
 
     - name: Set up Node.js
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v4
       with:
-        node-version: '14'
+        node-version: '18'
 
     - name: Install Crowdin CLI
       run: npm install -g @crowdin/cli
