@@ -10,6 +10,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
+      with:
+        fetch-depth: 0  # 获取完整历史记录，以便删除远程分支
 
     - name: Set up Node.js
       uses: actions/setup-node@v2
@@ -18,6 +20,19 @@ jobs:
 
     - name: Install Crowdin CLI
       run: npm install -g @crowdin/cli
+
+    - name: Delete remote translations branch (if exists)
+      run: |
+        git fetch origin
+        if git ls-remote --exit-code --heads origin translations; then
+          git push origin --delete translations
+        fi
+
+    - name: Create new translations branch
+      run: |
+        git checkout develop
+        git pull origin develop
+        git checkout -b translations
 
     - name: Upload source files to Crowdin
       run: crowdin upload sources --token ${{ secrets.CROWDIN_PERSONAL_TOKEN }} --project-id ${{ secrets.CROWDIN_PROJECT_ID }} -c crowdin.yml
@@ -35,10 +50,9 @@ jobs:
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
-        git checkout -B translations
         git add .
         git commit -m "🌐 更新翻译" || echo "No changes to commit"
-        git push --force origin translations
+        git push --set-upstream origin translations --force
 
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v5
