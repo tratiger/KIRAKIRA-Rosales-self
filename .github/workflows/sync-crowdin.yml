@@ -2,7 +2,12 @@ name: Sync Crowdin
 
 on:
   workflow_dispatch:
-
+  push:
+    branches:
+      - develop
+    paths:
+      - src/locales/English.ts
+      
 jobs:
   Sync:
     runs-on: ubuntu-latest
