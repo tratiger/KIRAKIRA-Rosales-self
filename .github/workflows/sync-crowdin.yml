@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  upload:
+  Sync:
     runs-on: ubuntu-latest
 
     steps:
@@ -54,6 +54,14 @@ jobs:
         git commit -m "🌐 更新翻译" || echo "No changes to commit"
         git push --set-upstream origin translations --force
 
+    - name: Generate translated files list
+      run: |
+        echo "由 GitHub Actions 自动生成的翻译更新 PR。" >> pr_body.txt
+        echo "### 本次更新的翻译文件：" > pr_body.txt
+        git diff --name-only develop translations >> pr_body.txt
+        echo "" >> pr_body.txt
+
+
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v5
       with:
@@ -61,5 +69,5 @@ jobs:
         branch: translations
         base: develop
         title: "🌐 更新翻译"
-        body: "由 GitHub Actions 自动生成的翻译更新 PR。"
+        body-path: pr_body.txt
         labels: "translation, automated"
