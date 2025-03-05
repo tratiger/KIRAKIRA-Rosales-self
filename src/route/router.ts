@@ -629,7 +629,7 @@ router.post('/rbac/adminUpdateUserRole', adminUpdateUserRoleController) // 管�
 // 	]
 // }
 
-router.get('/rbac/adminGetUserRolesByUid', adminGetUserRolesByUidController) // 通过 UUID 获取一个用户的角色
+router.get('/rbac/adminGetUserRolesByUid', adminGetUserRolesByUidController) // 通过 UID 获取一个用户的角色
 // https://localhost:9999/rbac/adminGetUserRolesByUid
 // cookie: uuid, token
 //
