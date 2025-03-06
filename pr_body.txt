@@ -1,3 +1,2 @@
 ### 本次更新的翻译文件：
-src/locales/Chinese Simplified.ts
 
