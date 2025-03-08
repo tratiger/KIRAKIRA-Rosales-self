@@ -1256,7 +1256,7 @@ export const RequestSendVerificationCodeService = async (requestSendVerification
 							const updateResult = await findOneAndUpdateData4MongoDB(requestSendVerificationCodeWhere, requestSendVerificationCodeUpdate, schemaInstance, collectionName, { session })
 							if (updateResult.success) {
 								try {
-									const mail = await getI18nLanguagePack(clientLanguage, "SendVerificationCode")
+									const mail = getI18nLanguagePack(clientLanguage, "SendVerificationCode")
 									const correctMailTitle = mail?.mailTitle
 									const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
 
@@ -1706,7 +1706,7 @@ export const requestSendChangeEmailVerificationCodeService = async (requestSendC
 										const updateResult = await findOneAndUpdateData4MongoDB(requestSendVerificationCodeWhere, requestSendVerificationCodeUpdate, schemaInstance, collectionName, { session })
 										if (updateResult.success) {
 											try {
-												const mail = await getI18nLanguagePack(clientLanguage, "SendChangeEmailVerificationCode")
+												const mail = getI18nLanguagePack(clientLanguage, "SendChangeEmailVerificationCode")
 												const correctMailTitle = mail?.mailTitle
 												const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
 
@@ -1867,7 +1867,7 @@ export const requestSendChangePasswordVerificationCodeService = async (requestSe
 										const updateResult = await findOneAndUpdateData4MongoDB(requestSendVerificationCodeWhere, requestSendVerificationCodeUpdate, schemaInstance, collectionName, { session })
 										if (updateResult.success) {
 											try {
-												const mail = await getI18nLanguagePack(clientLanguage, "SendChangePasswordVerificationCode")
+												const mail = getI18nLanguagePack(clientLanguage, "SendChangePasswordVerificationCode")
 												const correctMailTitle = mail?.mailTitle
 												const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
 
@@ -3522,7 +3522,7 @@ export const sendUserEmailAuthenticatorService = async (sendUserEmailAuthenticat
 		}
 
 		try {
-			const mail = await getI18nLanguagePack(clientLanguage, "UserEmailAuthenticator")
+			const mail = getI18nLanguagePack(clientLanguage, "UserEmailAuthenticator")
 			const correctMailTitle = mail?.mailTitle
 			const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
 
@@ -3675,7 +3675,7 @@ export const sendDeleteUserEmailAuthenticatorService = async (sendDeleteUserEmai
 		}
 
 		try {
-			const mail = await getI18nLanguagePack(clientLanguage, "DeleteUserEmailAuthenticator")
+			const mail = getI18nLanguagePack(clientLanguage, "DeleteUserEmailAuthenticator")
 			const correctMailTitle = mail?.mailTitle
 			const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
 

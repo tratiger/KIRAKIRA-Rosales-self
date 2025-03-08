@@ -4,7 +4,7 @@
 	"description": "",
 	"main": "src/app.ts",
 	"type": "module",
-	"author": "",
+	"author": "KIRAKIRA Project Team",
 	"scripts": {
 		"start": "tsc --noEmitOnError --sourceMap --outDir .kirakira && node ./.kirakira/app.js",
 		"dev": "npm start",
