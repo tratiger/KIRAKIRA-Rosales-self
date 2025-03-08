@@ -78,7 +78,7 @@ import { DbPoolResultsType, QueryType, SelectType, UpdateType } from '../dbPool/
 import { UserAuthSchema, UserTotpAuthenticatorSchema, UserChangeEmailVerificationCodeSchema, UserChangePasswordVerificationCodeSchema, UserInfoSchema, UserInvitationCodeSchema, UserSettingsSchema, UserVerificationCodeSchema, UserEmailAuthenticatorSchema, UserEmailAuthenticatorVerificationCodeSchema } from '../dbPool/schema/UserSchema.js'
 import { getNextSequenceValueService } from './SequenceValueService.js'
 import { authenticator } from 'otplib'
-import { geti18nLanguagePack } from '../common/i18n.js'
+import { getI18nLanguagePack } from '../common/i18n.js'
 import { abortAndEndSession, commitSession, createAndStartSession } from '../common/MongoDBSessionTool.js'
 import { StorageClassAnalysisSchemaVersion } from '@aws-sdk/client-s3'
 
@@ -1257,7 +1257,7 @@ export const RequestSendVerificationCodeService = async (requestSendVerification
 							if (updateResult.success) {
 								// TODO: 使用多语言 email title and text
 								try {
-									const mail = await geti18nLanguagePack(clientLanguage, "SendVerificationCode")
+									const mail = await getI18nLanguagePack(clientLanguage, "SendVerificationCode")
 									const correctMailTitle = mail?.mailTitle
 									const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
 
@@ -1708,7 +1708,7 @@ export const requestSendChangeEmailVerificationCodeService = async (requestSendC
 										if (updateResult.success) {
 											// TODO: 使用多语言 email title and text
 											try {
-												const mail = await geti18nLanguagePack(clientLanguage, "SendChangeEmailVerificationCode")
+												const mail = await getI18nLanguagePack(clientLanguage, "SendChangeEmailVerificationCode")
 												const correctMailTitle = mail?.mailTitle
 												const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
 
@@ -1870,7 +1870,7 @@ export const requestSendChangePasswordVerificationCodeService = async (requestSe
 										if (updateResult.success) {
 											// TODO: 使用多语言 email title and text
 											try {
-												const mail = await geti18nLanguagePack(clientLanguage, "SendChangePasswordVerificationCode")
+												const mail = await getI18nLanguagePack(clientLanguage, "SendChangePasswordVerificationCode")
 												const correctMailTitle = mail?.mailTitle
 												const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
 
@@ -3526,10 +3526,10 @@ export const sendUserEmailAuthenticatorService = async (sendUserEmailAuthenticat
 
 		// TODO: 使用多语言 email title and text
 		try {
-			const mail = await geti18nLanguagePack(clientLanguage, "UserEmailAuthenticator")
+			const mail = await getI18nLanguagePack(clientLanguage, "UserEmailAuthenticator")
 			const correctMailTitle = mail?.mailTitle
 			const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
-			
+
 			const sendMailResult = await sendMail(email, correctMailTitle, { html: correctMailHTML })
 
 			if (!sendMailResult.success) {
@@ -3680,7 +3680,7 @@ export const sendDeleteUserEmailAuthenticatorService = async (sendDeleteUserEmai
 
 		// TODO: 使用多语言 email title and text
 		try {
-			const mail = await geti18nLanguagePack(clientLanguage, "DeleteUserEmailAuthenticator")
+			const mail = await getI18nLanguagePack(clientLanguage, "DeleteUserEmailAuthenticator")
 			const correctMailTitle = mail?.mailTitle
 			const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
 

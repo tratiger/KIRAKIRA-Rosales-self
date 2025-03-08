@@ -15,7 +15,7 @@ const languagePacks: Record<string, any> = {
  * @param targetMail 目标邮件
  * @returns 对应的语言包内容或 null
  */
-export const geti18nLanguagePack = async (clientLanguage: string, targetMail: string): Promise<any> => {
+export const getI18nLanguagePack = async (clientLanguage: string, targetMail: string): Promise<any> => {
 	const languagePack = languagePacks[clientLanguage] ?? English;
 	if (languagePack[targetMail]) {
 		const replacements: Record<string, string> = {
@@ -26,7 +26,7 @@ export const geti18nLanguagePack = async (clientLanguage: string, targetMail: st
 
 		const mailHtml = Object.entries(replacements).reduce((html, [key, value]) => html.replace(new RegExp(key, "g"), value),EmailTemplate.mailHtml)
 		const mailTitle = languagePack[targetMail].mailTitle;
-		
+
 		return { mailTitle: mailTitle, mailHtml: mailHtml };
 	}
 	return null;
