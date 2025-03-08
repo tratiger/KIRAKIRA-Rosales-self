@@ -78,6 +78,7 @@ import { DbPoolResultsType, QueryType, SelectType, UpdateType } from '../dbPool/
 import { UserAuthSchema, UserTotpAuthenticatorSchema, UserChangeEmailVerificationCodeSchema, UserChangePasswordVerificationCodeSchema, UserInfoSchema, UserInvitationCodeSchema, UserSettingsSchema, UserVerificationCodeSchema, UserEmailAuthenticatorSchema, UserEmailAuthenticatorVerificationCodeSchema } from '../dbPool/schema/UserSchema.js'
 import { getNextSequenceValueService } from './SequenceValueService.js'
 import { authenticator } from 'otplib'
+import { geti18nLanguagePack } from '../common/i18n.js'
 import { abortAndEndSession, commitSession, createAndStartSession } from '../common/MongoDBSessionTool.js'
 import { StorageClassAnalysisSchemaVersion } from '@aws-sdk/client-s3'
 
@@ -1256,28 +1257,12 @@ export const RequestSendVerificationCodeService = async (requestSendVerification
 							if (updateResult.success) {
 								// TODO: 使用多语言 email title and text
 								try {
-									const mailTitleCHS = 'KIRAKIRA 注册验证码'
-									const mailTitleEN = 'KIRAKIRA Registration Verification Code'
-									const correctMailTitle = clientLanguage === 'zh-Hans-CN' ? mailTitleCHS : mailTitleEN
+									const mail = await geti18nLanguagePack(clientLanguage, "SendVerificationCode")
+									const correctMailTitle = mail?.mailTitle
+									const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
 
-									// 请不要使用 “您”
-									const mailHtmlCHS = `
-											<p>你的注册验证码是：<strong>${verificationCode}</strong></p>
-											欢迎来到 KIRAKIRA，使用这个验证码来完成注册吧！
-											<br>
-											验证码 30 分钟内有效。请注意安全，不要向他人泄露你的验证码。
-										`
-									const mailHtmlEN = `
-											<p>Your registration verification code is: <strong>${verificationCode}</strong></p>
-											Welcome to KIRAKIRA. You can use this verification code to register your account.
-											<br>
-											Verification code is valid for 30 minutes. Please ensure do not disclose your verification code to others.
-											<br>
-											<br>
-											To stop receiving notifications, please contact the KIRAKIRA support team.
-										`
-									const correctMailHTML = clientLanguage === 'zh-Hans-CN' ? mailHtmlCHS : mailHtmlEN
 									const sendMailResult = await sendMail(email, correctMailTitle, { html: correctMailHTML })
+
 									if (sendMailResult.success) {
 										await session.commitTransaction()
 										session.endSession()
@@ -1723,26 +1708,12 @@ export const requestSendChangeEmailVerificationCodeService = async (requestSendC
 										if (updateResult.success) {
 											// TODO: 使用多语言 email title and text
 											try {
-												const mailTitleCHS = 'KIRAKIRA 更改邮箱验证码'
-												const mailTitleEN = 'KIRAKIRA Change Email Verification Code'
-												const correctMailTitle = clientLanguage === 'zh-Hans-CN' ? mailTitleCHS : mailTitleEN
+												const mail = await geti18nLanguagePack(clientLanguage, "SendChangeEmailVerificationCode")
+												const correctMailTitle = mail?.mailTitle
+												const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
 
-												// 请不要使用 “您”
-												const mailHtmlCHS = `
-														<p>你更改邮箱的验证码是：<strong>${verificationCode}</strong></p>
-														<br>
-														验证码 30 分钟内有效。请注意安全，不要向他人泄露你的验证码。
-													`
-												const mailHtmlEN = `
-														<p>Your change email verification code is: <strong>${verificationCode}</strong></p>
-														<br>
-														Verification code is valid for 30 minutes. Please ensure do not disclose your verification code to others.
-														<br>
-														<br>
-														To stop receiving notifications, please contact the KIRAKIRA support team.
-													`
-												const correctMailHTML = clientLanguage === 'zh-Hans-CN' ? mailHtmlCHS : mailHtmlEN
 												const sendMailResult = await sendMail(newEmail, correctMailTitle, { html: correctMailHTML })
+
 												if (sendMailResult.success) {
 													await session.commitTransaction()
 													session.endSession()
@@ -1899,26 +1870,12 @@ export const requestSendChangePasswordVerificationCodeService = async (requestSe
 										if (updateResult.success) {
 											// TODO: 使用多语言 email title and text
 											try {
-												const mailTitleCHS = 'KIRAKIRA 更改密码验证码'
-												const mailTitleEN = 'KIRAKIRA Change Password Verification Code'
-												const correctMailTitle = clientLanguage === 'zh-Hans-CN' ? mailTitleCHS : mailTitleEN
+												const mail = await geti18nLanguagePack(clientLanguage, "SendChangePasswordVerificationCode")
+												const correctMailTitle = mail?.mailTitle
+												const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
 
-												// 请不要使用 “您”
-												const mailHtmlCHS = `
-														<p>你更改密码的验证码是：<strong>${verificationCode}</strong></p>
-														<br>
-														验证码 30 分钟内有效。请注意安全，不要向他人泄露你的验证码。
-													`
-												const mailHtmlEN = `
-														<p>Your change password verification code is: <strong>${verificationCode}</strong></p>
-														<br>
-														Verification code is valid for 30 minutes. Please ensure do not disclose your verification code to others.
-														<br>
-														<br>
-														To stop receiving notifications, please contact the KIRAKIRA support team.
-													`
-												const correctMailHTML = clientLanguage === 'zh-Hans-CN' ? mailHtmlCHS : mailHtmlEN
 												const sendMailResult = await sendMail(email, correctMailTitle, { html: correctMailHTML })
+
 												if (sendMailResult.success) {
 													await session.commitTransaction()
 													session.endSession()
@@ -3569,29 +3526,12 @@ export const sendUserEmailAuthenticatorService = async (sendUserEmailAuthenticat
 
 		// TODO: 使用多语言 email title and text
 		try {
-			const mailTitleCHS = 'KIRAKIRA - 验证 2FA 的验证码'
-			const mailTitleEN = 'KIRAKIRA - Verification Code For Verifying 2FA'
-			const correctMailTitle = clientLanguage === 'zh-Hans-CN' ? mailTitleCHS : mailTitleEN
-
-			// 请不要使用 “您”
-			const mailHtmlCHS = `
-					<p>验证 2FA 的验证码是：<strong>${verificationCode}</strong></p>
-					注意：你可以使用这个验证码来验证你的 2FA（二重身份验证器）。
-					<br>
-					验证码 30 分钟内有效。请注意安全，不要向他人泄露你的验证码。
-				`
-			const mailHtmlEN = `
-					<p>Your verification code for verifying Authenticator is: <strong>${verificationCode}</strong></p>
-					Note: Please make sure you will use this verification code to verify your Authenticator.
-					<br>
-					Verification code is valid for 30 minutes. Please ensure do not disclose your verification code to others.
-					<br>
-					<br>
-					To stop receiving notifications, please contact the KIRAKIRA support team.
-				`
-			const correctMailHTML = clientLanguage === 'zh-Hans-CN' ? mailHtmlCHS : mailHtmlEN
-
+			const mail = await geti18nLanguagePack(clientLanguage, "UserEmailAuthenticator")
+			const correctMailTitle = mail?.mailTitle
+			const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
+			
 			const sendMailResult = await sendMail(email, correctMailTitle, { html: correctMailHTML })
+
 			if (!sendMailResult.success) {
 				if (session.inTransaction()) {
 					await session.abortTransaction()
@@ -3740,29 +3680,12 @@ export const sendDeleteUserEmailAuthenticatorService = async (sendDeleteUserEmai
 
 		// TODO: 使用多语言 email title and text
 		try {
-			const mailTitleCHS = 'KIRAKIRA - 删除 2FA 的验证码'
-			const mailTitleEN = 'KIRAKIRA - Verification Code For Delete 2FA'
-			const correctMailTitle = clientLanguage === 'zh-Hans-CN' ? mailTitleCHS : mailTitleEN
-
-			// 请不要使用 “您”
-			const mailHtmlCHS = `
-					<p>删除 2FA 的验证码是：<strong>${verificationCode}</strong></p>
-					注意：你可以使用这个验证码来删除你的 2FA（二重身份验证器）。
-					<br>
-					验证码 30 分钟内有效。请注意安全，不要向他人泄露你的验证码。
-				`
-			const mailHtmlEN = `
-					<p>Your verification code for delete Authenticator is: <strong>${verificationCode}</strong></p>
-					Note: Please make sure you will use this verification code to delete your Authenticator.
-					<br>
-					Verification code is valid for 30 minutes. Please ensure do not disclose your verification code to others.
-					<br>
-					<br>
-					To stop receiving notifications, please contact the KIRAKIRA support team.
-				`
-			const correctMailHTML = clientLanguage === 'zh-Hans-CN' ? mailHtmlCHS : mailHtmlEN
+			const mail = await geti18nLanguagePack(clientLanguage, "DeleteUserEmailAuthenticator")
+			const correctMailTitle = mail?.mailTitle
+			const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
 
 			const sendMailResult = await sendMail(email, correctMailTitle, { html: correctMailHTML })
+
 			if (!sendMailResult.success) {
 				if (session.inTransaction()) {
 					await session.abortTransaction()
