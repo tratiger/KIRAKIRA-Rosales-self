@@ -1258,7 +1258,7 @@ export const RequestSendVerificationCodeService = async (requestSendVerification
 								try {
 									const mail = getI18nLanguagePack(clientLanguage, "SendVerificationCode")
 									const correctMailTitle = mail?.mailTitle
-									const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
+									const correctMailHTML = mail?.mailHtml?.replaceAll('{{verificationCode}}', verificationCode)
 
 									const sendMailResult = await sendMail(email, correctMailTitle, { html: correctMailHTML })
 
@@ -1708,7 +1708,7 @@ export const requestSendChangeEmailVerificationCodeService = async (requestSendC
 											try {
 												const mail = getI18nLanguagePack(clientLanguage, "SendChangeEmailVerificationCode")
 												const correctMailTitle = mail?.mailTitle
-												const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
+												const correctMailHTML = mail?.mailHtml?.replaceAll('{{verificationCode}}', verificationCode)
 
 												const sendMailResult = await sendMail(newEmail, correctMailTitle, { html: correctMailHTML })
 
@@ -1869,7 +1869,7 @@ export const requestSendChangePasswordVerificationCodeService = async (requestSe
 											try {
 												const mail = getI18nLanguagePack(clientLanguage, "SendChangePasswordVerificationCode")
 												const correctMailTitle = mail?.mailTitle
-												const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
+												const correctMailHTML = mail?.mailHtml?.replaceAll('{{verificationCode}}', verificationCode)
 
 												const sendMailResult = await sendMail(email, correctMailTitle, { html: correctMailHTML })
 
@@ -3524,7 +3524,7 @@ export const sendUserEmailAuthenticatorService = async (sendUserEmailAuthenticat
 		try {
 			const mail = getI18nLanguagePack(clientLanguage, "UserEmailAuthenticator")
 			const correctMailTitle = mail?.mailTitle
-			const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
+			const correctMailHTML = mail?.mailHtml?.replaceAll('{{verificationCode}}', verificationCode)
 
 			const sendMailResult = await sendMail(email, correctMailTitle, { html: correctMailHTML })
 
@@ -3677,7 +3677,7 @@ export const sendDeleteUserEmailAuthenticatorService = async (sendDeleteUserEmai
 		try {
 			const mail = getI18nLanguagePack(clientLanguage, "DeleteUserEmailAuthenticator")
 			const correctMailTitle = mail?.mailTitle
-			const correctMailHTML = mail?.mailHtml?.replace(/{{verificationCode}}/g, verificationCode)
+			const correctMailHTML = mail?.mailHtml?.replaceAll('{{verificationCode}}', verificationCode)
 
 			const sendMailResult = await sendMail(email, correctMailTitle, { html: correctMailHTML })
 
