@@ -1,10 +1,11 @@
 {
 	"name": "kirakira-rosales",
 	"version": "1.0.0",
-	"description": "",
+	"description": "KIRAKIRA-Rosales, The RESTful Back-end API Created by koa.",
 	"main": "src/app.ts",
 	"type": "module",
 	"author": "KIRAKIRA Project Team",
+	"private": true,
 	"scripts": {
 		"start": "tsc --noEmitOnError --sourceMap --outDir .kirakira && node ./.kirakira/app.js",
 		"dev": "npm start",
