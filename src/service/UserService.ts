@@ -1255,7 +1255,6 @@ export const RequestSendVerificationCodeService = async (requestSendVerification
 							}
 							const updateResult = await findOneAndUpdateData4MongoDB(requestSendVerificationCodeWhere, requestSendVerificationCodeUpdate, schemaInstance, collectionName, { session })
 							if (updateResult.success) {
-								// TODO: 使用多语言 email title and text
 								try {
 									const mail = await getI18nLanguagePack(clientLanguage, "SendVerificationCode")
 									const correctMailTitle = mail?.mailTitle
@@ -1706,7 +1705,6 @@ export const requestSendChangeEmailVerificationCodeService = async (requestSendC
 										}
 										const updateResult = await findOneAndUpdateData4MongoDB(requestSendVerificationCodeWhere, requestSendVerificationCodeUpdate, schemaInstance, collectionName, { session })
 										if (updateResult.success) {
-											// TODO: 使用多语言 email title and text
 											try {
 												const mail = await getI18nLanguagePack(clientLanguage, "SendChangeEmailVerificationCode")
 												const correctMailTitle = mail?.mailTitle
@@ -1868,7 +1866,6 @@ export const requestSendChangePasswordVerificationCodeService = async (requestSe
 										}
 										const updateResult = await findOneAndUpdateData4MongoDB(requestSendVerificationCodeWhere, requestSendVerificationCodeUpdate, schemaInstance, collectionName, { session })
 										if (updateResult.success) {
-											// TODO: 使用多语言 email title and text
 											try {
 												const mail = await getI18nLanguagePack(clientLanguage, "SendChangePasswordVerificationCode")
 												const correctMailTitle = mail?.mailTitle
@@ -3524,7 +3521,6 @@ export const sendUserEmailAuthenticatorService = async (sendUserEmailAuthenticat
 			return { success: false, isCoolingDown: false, message: '请求发送身份验证器的邮箱验证码失败，更新或新增用户验证码失败' }
 		}
 
-		// TODO: 使用多语言 email title and text
 		try {
 			const mail = await getI18nLanguagePack(clientLanguage, "UserEmailAuthenticator")
 			const correctMailTitle = mail?.mailTitle
@@ -3678,7 +3674,6 @@ export const sendDeleteUserEmailAuthenticatorService = async (sendDeleteUserEmai
 			return { success: false, isCoolingDown: false, message: '请求发送身份验证器的邮箱验证码失败，更新或新增用户验证码失败' }
 		}
 
-		// TODO: 使用多语言 email title and text
 		try {
 			const mail = await getI18nLanguagePack(clientLanguage, "DeleteUserEmailAuthenticator")
 			const correctMailTitle = mail?.mailTitle
