@@ -12,7 +12,7 @@
 		"serve": "npm start",
 		"dev-hot": "nodemon --watch src/**/* --delay 1500ms -e ts --exec npm start",
 		"build": "tsc --removeComments --declaration && npm run copy-assets",
-		"copy-assets": "copyfiles -u 1 src/assets/**/* .kirakira/assets/"
+		"copy-assets": "copyfiles -u 1 src/assets/**/* .kirakira/"
 	},
 	"devDependencies": {
 		"@types/koa": "^2.13.5",
