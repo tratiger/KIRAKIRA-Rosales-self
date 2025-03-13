@@ -88,17 +88,19 @@ export const sendMail = async (to: string, title: string, body: EmailBodyType) =
 				data: body.html,
 				alternative: true,
 			},
-			// 内嵌附件图片
-			{
+			// #region 内嵌附件图片
+			/* {
 				path: resolve(import.meta.dirname, "../assets/images", "background.png"),
 				type: "image/png",
 				headers: { "Content-ID": "<background>" },
-			},
+			}, */
+			// 糟糕，许多邮箱不支持 CSS background-image 的内嵌图片显示！
 			{
 				path: resolve(import.meta.dirname, "../assets/images", "banner.png"),
 				type: "image/png",
 				headers: { "Content-ID": "<banner>" },
 			},
+			// #endregion
 		],
 	}
 

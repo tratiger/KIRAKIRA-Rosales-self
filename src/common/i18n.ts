@@ -20,7 +20,8 @@ export const getI18nLanguagePack = (clientLanguage: string, targetMail: string) 
 	const messages = languagePack[targetMail as keyof typeof languagePack] as Record<string, string>;
 	if (!messages) return null;
 
-	let { mailHtml } = EmailTemplate;
+	const { mailTitle } = messages;
+	let mailHtml = EmailTemplate;
 	Object.entries(messages).forEach(([key, value]) => mailHtml = mailHtml.replaceAll(`{{${key}}}`, value.replaceAll("\n", "<br>")));
-	return { mailTitle: messages.mailTitle, mailHtml };
+	return { mailTitle, mailHtml };
 };
