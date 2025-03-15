@@ -7,12 +7,11 @@
 	"author": "KIRAKIRA Project Team",
 	"private": true,
 	"scripts": {
-		"start": "tsc --noEmitOnError --sourceMap --outDir .kirakira && npm run copy-assets && node ./.kirakira/app.js",
+		"start": "tsc --noEmitOnError --sourceMap --outDir .kirakira && node ./.kirakira/app.js",
 		"dev": "npm start",
 		"serve": "npm start",
 		"dev-hot": "nodemon --watch src/**/* --delay 1500ms -e ts --exec npm start",
-		"build": "tsc --removeComments --declaration && npm run copy-assets",
-		"copy-assets": "copyfiles -u 1 src/assets/**/* .kirakira/"
+		"build": "tsc --removeComments --declaration"
 	},
 	"devDependencies": {
 		"@types/koa": "^2.13.5",
