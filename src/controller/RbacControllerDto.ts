@@ -92,7 +92,7 @@ export type DeleteRbacApiPathResponseDto = {
 }
 
 /**
- * 获取 API 路劲的请求载荷
+ * 获取 API 路径的请求载荷
  */
 export type GetRbacApiPathRequestDto = {
 	/** 搜索项 */
@@ -116,7 +116,7 @@ export type GetRbacApiPathRequestDto = {
 }
 
 /**
- * 获取 API 路劲的请求响应
+ * 获取 API 路径的请求响应
  */
 export type GetRbacApiPathResponseDto = {
 	/** 是否请求成功 */
