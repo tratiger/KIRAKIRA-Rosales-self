@@ -47,6 +47,15 @@
 *.tsx text eol=lf
 *.jsx text eol=lf linguist-vendored
 *.vue text eol=lf
+*.cjs text eol=lf linguist-vendored
+*.mjs text eol=lf linguist-vendored
+*.jsm text eol=lf linguist-vendored
+*.cjsx text eol=lf linguist-vendored
+*.mjsx text eol=lf linguist-vendored
+*.cts text eol=lf
+*.mts text eol=lf
+*.ctsx text eol=lf
+*.mtsx text eol=lf
 
 # templates
 *.ejs text eol=lf
@@ -112,6 +121,8 @@ AUTHORS text eol=lf
 *.tiff binary
 *.bmp binary
 *.avif binary
+*.heif binary
+*.heic binary
 
 # media
 *.mov binary
@@ -129,6 +140,7 @@ AUTHORS text eol=lf
 *.ape binary
 *.flac binary
 *.webm binary
+*.hevc binary
 
 # zips
 *.gz binary
