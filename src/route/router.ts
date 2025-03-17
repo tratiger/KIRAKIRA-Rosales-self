@@ -46,6 +46,7 @@ import { adminDeleteVideoCommentController, cancelVideoCommentDownvoteController
 import { approvePendingReviewVideoController, checkVideoExistController, deleteVideoByKvidController, getPendingReviewVideoController, getThumbVideoController, getVideoByKvidController, getVideoByUidController, getVideoCoverUploadSignedUrlController, getVideoFileTusEndpointController, searchVideoByKeywordController, searchVideoByVideoTagIdController, updateVideoController } from '../controller/VideoController.js'
 import { createVideoTagController, getVideoTagByTagIdController, searchVideoTagController } from '../controller/VideoTagController.js'
 import { adminGetUserRolesByUidController, adminUpdateUserRoleController, createRbacApiPathController, createRbacRoleController, deleteRbacApiPathController, deleteRbacRoleController, getRbacApiPathController, getRbacRoleController, updateApiPathPermissionsForRoleController } from '../controller/RbacController.js'
+import { getStgEnvBackEndSecretController } from '../controller/ConsoleSecretController.js'
 
 const router = new Router()
 
@@ -635,6 +636,27 @@ router.get('/rbac/adminGetUserRolesByUid', adminGetUserRolesByUidController) // 
 //
 // Query:
 // uid
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+router.get('/secret/getStgEnvBackEndSecret', getStgEnvBackEndSecretController) // 获取预生产环境后端环境变量机密
+// https://localhost:9999/secret/getStgEnvBackEndSecret
+// cookie: uuid, token
 
 
 
