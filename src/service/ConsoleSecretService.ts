@@ -11,7 +11,7 @@ const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY
 const AWS_SECRET_ACCESS_SECRET = process.env.AWS_SECRET_ACCESS_SECRET
 const AWS_SECRET_NAME = process.env.AWS_SECRET_NAME
 
-if (!SERVER_ENV || !['dev', 'prod'].includes(SERVER_ENV)) {
+if (!!SERVER_ENV || ['dev', 'prod'].includes(SERVER_ENV)) {
 	try {
 		if (!AWS_SECRET_REGION || !AWS_SECRET_ACCESS_KEY || !AWS_SECRET_ACCESS_SECRET) {
 			console.error("ERROR", "缺少 AWS 认证信息，请检查环境变量 AWS_SECRET_REGION、AWS_SECRET_ACCESS_KEY 和 AWS_SECRET_ACCESS_SECRET")
