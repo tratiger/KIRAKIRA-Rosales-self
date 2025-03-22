@@ -53,17 +53,9 @@ jobs:
         CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
         CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
     
-    - name: Process translations
-      run: |
-        for file in src/locales/*.ts; do
-          sed -i '/import type { LocaleIdentifiers } from ".\/types";/d' "$file"
-            
-          sed -i 's/} as const satisfies LocaleIdentifiers;/}/' "$file"
-        done
-        mv /src/locales/English.json /src/locales/English.ts
-        
     - name: Commit and push translations
       run: |
+        mv /src/locales/English.json /src/locales/English.ts
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         git commit -m "🌐 更新翻译" || echo "No changes to commit"
