@@ -3,4 +3,4 @@ preserve_hierarchy: true
 files:
   - source: /src/locales/English.json
     translation: /src/locales/%language%.ts
-    dest: /[KIRAKIRA-DOUGA.KIRAKIRA-Rosales] develop/src/locales/English.json
+    dest: /src/locales/English.json

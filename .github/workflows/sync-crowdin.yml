@@ -42,16 +42,25 @@ jobs:
     - name: Upload source files to Crowdin
       run: |
         mv /src/locales/English.ts /src/locales/English.json
-        crowdin upload sources --token ${{ secrets.CROWDIN_PERSONAL_TOKEN }} --project-id ${{ secrets.CROWDIN_PROJECT_ID }} -c crowdin.yml
+        crowdin upload sources --token ${{ secrets.CROWDIN_PERSONAL_TOKEN }} --project-id ${{ secrets.CROWDIN_PROJECT_ID }} -c crowdin.yml -b "[KIRAKIRA-DOUGA.KIRAKIRA-Rosales] develop"
       env:
         CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
         CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
 
     - name: Download translations from Crowdin
-      run: crowdin download --token ${{ secrets.CROWDIN_PERSONAL_TOKEN }} --project-id ${{ secrets.CROWDIN_PROJECT_ID }} -c crowdin.yml crowdin download --token ${{ secrets.CROWDIN_PERSONAL_TOKEN }} --project-id ${{ secrets.CROWDIN_PROJECT_ID }} -c crowdin.yml --files "/[KIRAKIRA-DOUGA.KIRAKIRA-Rosales] develop/src/locales/English.json"
+      run: crowdin download translations --token ${{ secrets.CROWDIN_PERSONAL_TOKEN }} --project-id ${{ secrets.CROWDIN_PROJECT_ID }} -c crowdin.yml -b "[KIRAKIRA-DOUGA.KIRAKIRA-Rosales] develop"
       env:
         CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
         CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+    
+    - name: Process translations
+      run: |
+        for file in src/locales/*.ts; do
+          sed -i '/import type { LocaleIdentifiers } from ".\/types";/d' "$file"
+            
+          sed -i 's/} as const satisfies LocaleIdentifiers;/}/' "$file"
+        done
+        mv /src/locales/English.json /src/locales/English.ts
     
     - name: Commit and push translations
       run: |
