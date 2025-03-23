@@ -60,7 +60,6 @@ jobs:
             
           sed -i 's/} as const satisfies LocaleIdentifiers;/}/' "$file"
         done
-        mv /src/locales/English.json /src/locales/English.ts
     
     - name: Commit and push translations
       run: |
