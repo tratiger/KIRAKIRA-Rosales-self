@@ -72,11 +72,16 @@ jobs:
 
     - name: Generate translated files list
       run: |
-        echo "由 GitHub Actions 自动生成的翻译更新 PR。" >> pr_body.txt
-        echo "### 本次更新的翻译文件：" > pr_body.txt
-        git diff --name-only develop translations >> pr_body.txt
-        echo "" >> pr_body.txt
+        # 确保获取最新分支信息
+        git fetch origin develop:develop
 
+        # 正确构建文件内容（注意重定向符号顺序）
+        echo "由 GitHub Actions 自动生成的翻译更新 PR。" > pr_body.txt
+        echo "### 本次更新的翻译文件：" >> pr_body.txt
+        git diff --name-only develop..translations -- src/locales >> pr_body.txt
+
+        # 添加空行保证格式
+        echo "" >> pr_body.txt
 
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v5
