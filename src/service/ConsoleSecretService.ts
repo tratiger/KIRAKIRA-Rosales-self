@@ -33,6 +33,9 @@ if (!!SERVER_ENV && ['dev', 'prod'].includes(SERVER_ENV)) {
 		console.error('ERROR', '创建 AWS Secrets Manager 客户端失败：', error)
 		process.exit()
 	}
+} else {
+	console.info()
+	console.info('Now starting the server without created an AWS Sercret Manager Client.')
 }
 
 /**
