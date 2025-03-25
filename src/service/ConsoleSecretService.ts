@@ -28,7 +28,7 @@ if (!!SERVER_ENV || ['dev', 'prod'].includes(SERVER_ENV)) {
 		})
 	
 		console.info()
-		console.info('AWS Sercret Manager Connect Successfuly!')
+		console.info('Created an AWS Sercret Manager Client base on the environment variables you provided!')
 	} catch(error) {
 		console.error('ERROR', '创建 AWS Secrets Manager 客户端失败：', error)
 		process.exit()
