@@ -1,9 +1,10 @@
 import { getCorrectCookieDomain } from '../common/UrlTool.js'
+import { isPassRbacCheck } from '../service/RbacService.js'
 import {
 	adminClearUserInfoService,
 	adminGetUserInfoService,
 	approveUserInfoService,
-	blockUserByUIDService,
+	// blockUserByUIDService,
 	changePasswordService,
 	checkInvitationCodeService,
 	checkUsernameService,
@@ -15,7 +16,7 @@ import {
 	getUserAvatarUploadSignedUrlService,
 	getUserInfoByUidService,
 	getUserSettingsService,
-	reactivateUserByUIDService,
+	// reactivateUserByUIDService,
 	requestSendChangeEmailVerificationCodeService,
 	requestSendChangePasswordVerificationCodeService,
 	RequestSendVerificationCodeService,
@@ -340,6 +341,14 @@ export const updateUserEmailController = async (ctx: koaCtx, next: koaNext) => {
  */
 export const updateOrCreateUserInfoController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<UpdateOrCreateUserInfoRequestDto>
+	const uid = parseInt(ctx.cookies.get('uid'), 10)
+	const token = ctx.cookies.get('token')
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
 	const updateOrCreateUserInfoRequest: UpdateOrCreateUserInfoRequestDto = {
 		username: data?.username,
 		userNickname: data?.userNickname,
@@ -353,8 +362,6 @@ export const updateOrCreateUserInfoController = async (ctx: koaCtx, next: koaNex
 		userLinkAccounts: data?.userLinkAccounts,
 		userWebsite: data?.userWebsite,
 	}
-	const uid = parseInt(ctx.cookies.get('uid'), 10)
-	const token = ctx.cookies.get('token')
 	ctx.body = await updateOrCreateUserInfoService(updateOrCreateUserInfoRequest, uid, token)
 	await next()
 }
@@ -679,43 +686,43 @@ export const checkUsernameController = async (ctx: koaCtx, next: koaNext) => {
 	await next()
 }
 
-/**
- * 根据 UID 封禁一个用户
- * @param ctx context
- * @param next context
- * @return 封禁用户的请求响应
- */
-export const blockUserByUIDController = async (ctx: koaCtx, next: koaNext) => {
-	const data = ctx.request.body as Partial<BlockUserByUIDRequestDto>
-	const blockUserByUIDRequest: BlockUserByUIDRequestDto = {
-		criminalUid: data.criminalUid ?? -1,
-	}
-	const uid = parseInt(ctx.cookies.get('uid'), 10)
-	const token = ctx.cookies.get('token')
+// /**
+//  * 根据 UID 封禁一个用户
+//  * @param ctx context
+//  * @param next context
+//  * @return 封禁用户的请求响应
+//  */
+// export const blockUserByUIDController = async (ctx: koaCtx, next: koaNext) => {
+// 	const data = ctx.request.body as Partial<BlockUserByUIDRequestDto>
+// 	const blockUserByUIDRequest: BlockUserByUIDRequestDto = {
+// 		criminalUid: data.criminalUid ?? -1,
+// 	}
+// 	const uid = parseInt(ctx.cookies.get('uid'), 10)
+// 	const token = ctx.cookies.get('token')
 
-	const blockUserByUIDResponse = await blockUserByUIDService(blockUserByUIDRequest, uid, token)
-	ctx.body = blockUserByUIDResponse
-	await next()
-}
+// 	const blockUserByUIDResponse = await blockUserByUIDService(blockUserByUIDRequest, uid, token)
+// 	ctx.body = blockUserByUIDResponse
+// 	await next()
+// }
 
-/**
- * 根据 UID 重新激活一个用户
- * @param ctx context
- * @param next context
- * @return 重新激活用户的请求响应
- */
-export const reactivateUserByUIDController = async (ctx: koaCtx, next: koaNext) => {
-	const data = ctx.request.body as Partial<ReactivateUserByUIDRequestDto>
-	const reactivateUserByUIDRequest: ReactivateUserByUIDRequestDto = {
-		uid: data.uid ?? -1,
-	}
-	const uid = parseInt(ctx.cookies.get('uid'), 10)
-	const token = ctx.cookies.get('token')
+// /**
+//  * 根据 UID 重新激活一个用户
+//  * @param ctx context
+//  * @param next context
+//  * @return 重新激活用户的请求响应
+//  */
+// export const reactivateUserByUIDController = async (ctx: koaCtx, next: koaNext) => {
+// 	const data = ctx.request.body as Partial<ReactivateUserByUIDRequestDto>
+// 	const reactivateUserByUIDRequest: ReactivateUserByUIDRequestDto = {
+// 		uid: data.uid ?? -1,
+// 	}
+// 	const uid = parseInt(ctx.cookies.get('uid'), 10)
+// 	const token = ctx.cookies.get('token')
 
-	const reactivateUserByUIDResponse = await reactivateUserByUIDService(reactivateUserByUIDRequest, uid, token)
-	ctx.body = reactivateUserByUIDResponse
-	await next()
-}
+// 	const reactivateUserByUIDResponse = await reactivateUserByUIDService(reactivateUserByUIDRequest, uid, token)
+// 	ctx.body = reactivateUserByUIDResponse
+// 	await next()
+// }
 
 /**
  * 获取所有被封禁用户的信息
@@ -726,6 +733,11 @@ export const reactivateUserByUIDController = async (ctx: koaCtx, next: koaNext) 
 export const getBlockedUserController = async (ctx: koaCtx, next: koaNext) => {
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
+		return
+	}
 
 	const reactivateUserByUIDResponse = await getBlockedUserService(uid, token)
 	ctx.body = reactivateUserByUIDResponse
@@ -741,6 +753,11 @@ export const getBlockedUserController = async (ctx: koaCtx, next: koaNext) => {
 export const adminGetUserInfoController = async (ctx: koaCtx, next: koaNext) => {
 	const adminUUID = ctx.cookies.get('uuid')
 	const adminToken = ctx.cookies.get('token')
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid: adminUUID, apiPath: ctx.path }, ctx)) {
+		return
+	}
 
 	const isOnlyShowUserInfoUpdatedAfterReviewString = ctx.query.isOnlyShowUserInfoUpdatedAfterReview as string
 	const page = ctx.query.page as string
@@ -769,6 +786,11 @@ export const approveUserInfoController = async (ctx: koaCtx, next: koaNext) => {
 	const adminUUID = ctx.cookies.get('uuid')
 	const adminToken = ctx.cookies.get('token')
 
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid: adminUUID, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
 	const data = ctx.request.body as Partial<ApproveUserInfoRequestDto>
 
 	const approveUserInfoRequest: ApproveUserInfoRequestDto = {
@@ -789,6 +811,11 @@ export const approveUserInfoController = async (ctx: koaCtx, next: koaNext) => {
 export const adminClearUserInfoController = async (ctx: koaCtx, next: koaNext) => {
 	const adminUUID = ctx.cookies.get('uuid')
 	const adminToken = ctx.cookies.get('token')
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid: adminUUID, apiPath: ctx.path }, ctx)) {
+		return
+	}
 
 	const data = ctx.request.body as Partial<AdminClearUserInfoRequestDto>
 

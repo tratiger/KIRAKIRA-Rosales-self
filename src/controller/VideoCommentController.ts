@@ -1,3 +1,4 @@
+import { isPassRbacCheck } from '../service/RbacService.js'
 import { adminDeleteVideoCommentService, cancelVideoCommentDownvoteService, cancelVideoCommentUpvoteService, deleteSelfVideoCommentService, emitVideoCommentDownvoteService, emitVideoCommentService, emitVideoCommentUpvoteService, getVideoCommentListByKvidService } from '../service/VideoCommentService.js'
 import { koaCtx, koaNext } from '../type/koaTypes.js'
 import { AdminDeleteVideoCommentRequestDto, CancelVideoCommentDownvoteRequestDto, CancelVideoCommentUpvoteRequestDto, DeleteSelfVideoCommentRequestDto, EmitVideoCommentDownvoteRequestDto, EmitVideoCommentRequestDto, EmitVideoCommentUpvoteRequestDto, GetVideoCommentByKvidRequestDto } from './VideoCommentControllerDto.js'
@@ -11,6 +12,12 @@ export const emitVideoCommentController = async (ctx: koaCtx, next: koaNext) => 
 	const data = ctx.request.body as Partial<EmitVideoCommentRequestDto>
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
 	const emitVideoCommentRequest: EmitVideoCommentRequestDto = {
 		/** KVID 视频 ID */
 		videoId: data.videoId,
@@ -154,6 +161,12 @@ export const adminDeleteVideoCommentController = async (ctx: koaCtx, next: koaNe
 	const data = ctx.request.body as Partial<AdminDeleteVideoCommentRequestDto>
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
 	const adminDeleteVideoCommentRequest: AdminDeleteVideoCommentRequestDto = {
 		/** KVID 视频 ID */
 		videoId: data.videoId,

@@ -1,4 +1,5 @@
 import { emitDanmakuService, getDanmakuListByKvidService } from '../service/DanmakuService.js'
+import { isPassRbacCheck } from '../service/RbacService.js'
 import { koaCtx, koaNext } from '../type/koaTypes.js'
 import { EmitDanmakuRequestDto, GetDanmakuByKvidRequestDto } from './DanmakuControllerDto.js'
 
@@ -12,6 +13,12 @@ export const emitDanmakuController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<EmitDanmakuRequestDto>
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
 	const emitDanmakuRequest: EmitDanmakuRequestDto = {
 		/** 非空 - KVID 视频 ID */
 		videoId: data.videoId,
