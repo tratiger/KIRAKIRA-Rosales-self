@@ -1,16 +1,18 @@
 {
 	"name": "kirakira-rosales",
 	"version": "1.0.0",
-	"description": "",
+	"description": "KIRAKIRA-Rosales, The RESTful Back-end API Created by koa.",
 	"main": "src/app.ts",
 	"type": "module",
-	"author": "",
+	"author": "KIRAKIRA Project Team",
+	"private": true,
 	"scripts": {
-		"start": "tsc --noEmitOnError --sourceMap --outDir .kirakira && node ./.kirakira/app.js",
+		"start": "tsc --noEmitOnError --sourceMap --outDir .kirakira && npm run copy-assets && node ./.kirakira/app.js",
 		"dev": "npm start",
 		"serve": "npm start",
 		"dev-hot": "nodemon --watch src/**/* --delay 1500ms -e ts --exec npm start",
-		"build": "tsc --removeComments --declaration"
+		"build": "tsc --removeComments --declaration && npm run copy-assets",
+		"copy-assets": "copyfiles -u 1 src/assets/**/* .kirakira/"
 	},
 	"devDependencies": {
 		"@types/koa": "^2.13.5",
@@ -18,6 +20,7 @@
 		"@types/koa-router": "^7.4.4",
 		"@typescript-eslint/eslint-plugin": "^8.0.1",
 		"@typescript-eslint/parser": "^8.0.1",
+		"copyfiles": "^2.4.1",
 		"esbuild-register": "^3.4.1",
 		"eslint": "^9.9.0",
 		"nodemon": "^3.1.4",
