@@ -309,7 +309,7 @@ export type GetUserInfoByUidResponseDto = {
 		role?: string;
 		/** 是否正在关注该用户 */
 		isFollowing: boolean;
-		/** 
+		/**
 		 * 查询的用户是否是自己。
 		 * 如果该字段的值为 true，则通常意味着发生了错误的请求，因为有专用的接口用于查询用户自己的信息。
 		 */
@@ -666,7 +666,7 @@ export type CheckUsernameResponseDto = {
 /**
  * 封锁一个用户的请求载荷
  */
-export type BlockUserByUIDRequestDto = {
+export type BanUserByUIDRequestDto = {
 	/** 将被封锁的用户的 UID */
 	criminalUid: number;
 }
@@ -674,7 +674,7 @@ export type BlockUserByUIDRequestDto = {
 /**
  * 封锁一个用户的请求响应
  */
-export type BlockUserByUIDResponseDto = {
+export type BanUserByUIDResponseDto = {
 	/** 执行结果，是否封锁成功 */
 	success: boolean;
 	/** 附加的文本消息 */
@@ -702,7 +702,7 @@ export type ReactivateUserByUIDResponseDto = {
 /**
  * 获取所有被封禁用户的信息的请求响应
  */
-export type GetBlockedUserResponseDto = {
+export type GetBannedUserResponseDto = {
 	/** 执行结果 */
 	success: boolean;
 	/** 附加的文本消息 */

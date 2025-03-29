@@ -7,12 +7,12 @@ import {
 	adminClearUserInfoController,
 	adminGetUserInfoController,
 	approveUserInfoController,
-	blockUserByUIDController,
+	banUserByUIDController,
 	checkInvitationCodeController,
 	checkUsernameController,
 	checkUserTokenController,
 	createInvitationCodeController,
-	getBlockedUserController,
+	getBannedUserController,
 	getMyInvitationCodeController,
 	getSelfUserInfoController,
 	getUserAvatarUploadSignedUrlController,
@@ -271,8 +271,8 @@ router.post('/user/update/password', updateUserPasswordController) // 更新用�
 router.get('/user/checkUsername', checkUsernameController) // 检查用户名是否可用
 // https://localhost:9999/user/checkUsername?username=xxxxxxxx
 
-router.post('/user/blockUser', blockUserByUIDController) // 根据 UID 封禁一个用户 // WARN: 仅限管理员
-// https://localhost:9999/user/blockUser
+router.post('/user/banUser', banUserByUIDController) // 根据 UID 封禁一个用户 // WARN: 仅限管理员
+// https://localhost:9999/user/banUser
 // cookie: uid, token
 // {
 // 	"criminalUid": XXXX
@@ -285,8 +285,8 @@ router.post('/user/reactivateUser', reactivateUserByUIDController) // 根据 UID
 // 	"uid": XXXX
 // }
 
-router.get('/user/blocked/info', getBlockedUserController) // 获取所有被封禁用户的信息 // WARN: 仅限管理员
-// https://localhost:9999/user/blocked/info
+router.get('/user/baned/info', getBannedUserController) // 获取所有被封禁用户的信息 // WARN: 仅限管理员
+// https://localhost:9999/user/baned/info
 // cookie: uid, token
 
 router.get('/user/adminGetUserInfo', adminGetUserInfoController) // 管理员获取用户信息 // WARN: 仅限管理员

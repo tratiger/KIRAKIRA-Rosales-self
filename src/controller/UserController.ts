@@ -3,13 +3,13 @@ import {
 	adminClearUserInfoService,
 	adminGetUserInfoService,
 	approveUserInfoService,
-	blockUserByUIDService,
+	banUserByUIDService,
 	changePasswordService,
 	checkInvitationCodeService,
 	checkUsernameService,
 	checkUserTokenService,
 	createInvitationCodeService,
-	getBlockedUserService,
+	getBannedUserService,
 	getMyInvitationCodeService,
 	getSelfUserInfoService,
 	getUserAvatarUploadSignedUrlService,
@@ -43,7 +43,7 @@ import {
 	AdminClearUserInfoRequestDto,
 	AdminGetUserInfoRequestDto,
 	ApproveUserInfoRequestDto,
-	BlockUserByUIDRequestDto,
+	BanUserByUIDRequestDto,
 	CheckInvitationCodeRequestDto,
 	CheckUserHave2FARequestDto,
 	CheckUsernameRequestDto,
@@ -688,16 +688,16 @@ export const checkUsernameController = async (ctx: koaCtx, next: koaNext) => {
  * @param next context
  * @return 封禁用户的请求响应
  */
-export const blockUserByUIDController = async (ctx: koaCtx, next: koaNext) => {
-	const data = ctx.request.body as Partial<BlockUserByUIDRequestDto>
-	const blockUserByUIDRequest: BlockUserByUIDRequestDto = {
+export const banUserByUIDController = async (ctx: koaCtx, next: koaNext) => {
+	const data = ctx.request.body as Partial<BanUserByUIDRequestDto>
+	const banUserByUIDRequest: BanUserByUIDRequestDto = {
 		criminalUid: data.criminalUid ?? -1,
 	}
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
 
-	const blockUserByUIDResponse = await blockUserByUIDService(blockUserByUIDRequest, uid, token)
-	ctx.body = blockUserByUIDResponse
+	const banUserByUIDResponse = await banUserByUIDService(banUserByUIDRequest, uid, token)
+	ctx.body = banUserByUIDResponse
 	await next()
 }
 
@@ -726,11 +726,11 @@ export const reactivateUserByUIDController = async (ctx: koaCtx, next: koaNext) 
  * @param next context
  * @return 获取所有被封禁用户的信息的请求响应
  */
-export const getBlockedUserController = async (ctx: koaCtx, next: koaNext) => {
+export const getBannedUserController = async (ctx: koaCtx, next: koaNext) => {
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
 
-	const reactivateUserByUIDResponse = await getBlockedUserService(uid, token)
+	const reactivateUserByUIDResponse = await getBannedUserService(uid, token)
 	ctx.body = reactivateUserByUIDResponse
 	await next()
 }

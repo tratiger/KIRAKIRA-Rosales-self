@@ -11,8 +11,8 @@ import {
 	AdminGetUserInfoResponseDto,
 	ApproveUserInfoRequestDto,
 	ApproveUserInfoResponseDto,
-	BlockUserByUIDRequestDto,
-	BlockUserByUIDResponseDto,
+	BanUserByUIDRequestDto,
+	BanUserByUIDResponseDto,
 	CheckInvitationCodeRequestDto,
 	CheckInvitationCodeResponseDto,
 	CheckUsernameRequestDto,
@@ -20,7 +20,7 @@ import {
 	CheckUserTokenResponseDto,
 	CreateInvitationCodeResponseDto,
 	DeleteTotpAuthenticatorByTotpVerificationCodeResponseDto,
-	GetBlockedUserResponseDto,
+	GetBannedUserResponseDto,
 	GetMyInvitationCodeResponseDto,
 	GetSelfUserInfoRequestDto,
 	GetSelfUserInfoResponseDto,
@@ -702,7 +702,7 @@ export const updateUserEmailService = async (updateUserEmailRequest: UpdateUserE
  */
 export const updateOrCreateUserInfoService = async (updateOrCreateUserInfoRequest: UpdateOrCreateUserInfoRequestDto, uid: number, token: string): Promise<UpdateOrCreateUserInfoResponseDto> => {
 	try {
-		if (await checkUserRoleService(uid, 'blocked')) {
+		if (await checkUserRoleService(uid, 'baned')) {
 			console.error('ERROR', '更新或创建用户信息失败，用户已封禁')
 			return { success: false, message: '更新或创建用户信息失败，用户已封禁' }
 		}
@@ -2393,31 +2393,31 @@ export const checkUserExistsByUuidService = async (checkUserExistsByUuidRequest:
 
 /**
  * 根据 UID 封禁一个用户
- * @param blockUserByUIDRequest 封禁用户的请求载荷
+ * @param banUserByUIDRequest 封禁用户的请求载荷
  * @param adminUid 管理员的 UID
  * @param adminToken 管理员的 Token
  * @returns 封禁用户的请求响应
  */
-export const blockUserByUIDService = async (blockUserByUIDRequest: BlockUserByUIDRequestDto, adminUid: number, adminToken: string): Promise<BlockUserByUIDResponseDto> => {
+export const banUserByUIDService = async (banUserByUIDRequest: BanUserByUIDRequestDto, adminUid: number, adminToken: string): Promise<BanUserByUIDResponseDto> => {
 	try {
-		if (checkBlockUserByUIDRequest(blockUserByUIDRequest)) {
+		if (checkBanUserByUIDRequest(banUserByUIDRequest)) {
 			if (await checkUserToken(adminUid, adminToken)) {
 				const isAdmin = await checkUserRoleService(adminUid, 'admin')
 				if (isAdmin) {
-					const { criminalUid } = blockUserByUIDRequest
+					const { criminalUid } = banUserByUIDRequest
 					const { collectionName, schemaInstance } = UserAuthSchema
 					type UserAuth = InferSchemaType<typeof schemaInstance>
 
-					const blockUserByUIDWhere: QueryType<UserAuth> = {
+					const banUserByUIDWhere: QueryType<UserAuth> = {
 						uid: criminalUid,
 						role: 'user',
 					}
 
-					const blockUserByUIDUpdate: UpdateType<UserAuth> = {
-						role: 'blocked',
+					const banUserByUIDUpdate: UpdateType<UserAuth> = {
+						role: 'baned',
 					}
 					try {
-						const updateResult = await findOneAndUpdateData4MongoDB<UserAuth>(blockUserByUIDWhere, blockUserByUIDUpdate, schemaInstance, collectionName, undefined, false)
+						const updateResult = await findOneAndUpdateData4MongoDB<UserAuth>(banUserByUIDWhere, banUserByUIDUpdate, schemaInstance, collectionName, undefined, false)
 						if (updateResult.success && updateResult.result) {
 							return { success: true, message: '封禁用户成功' }
 						} else {
@@ -2465,7 +2465,7 @@ export const reactivateUserByUIDService = async (reactivateUserByUIDRequest: Rea
 
 					const reactivateUserByUIDWhere: QueryType<UserAuth> = {
 						uid,
-						role: 'blocked',
+						role: 'baned',
 					}
 
 					const reactivateUserByUIDUpdate: UpdateType<UserAuth> = {
@@ -2507,7 +2507,7 @@ export const reactivateUserByUIDService = async (reactivateUserByUIDRequest: Rea
  * @param adminToken 管理员的 Token
  * @returns 获取所有被封禁用户的信息的请求响应
  */
-export const getBlockedUserService = async (adminUid: number, adminToken: string): Promise<GetBlockedUserResponseDto> => {
+export const getBannedUserService = async (adminUid: number, adminToken: string): Promise<GetBannedUserResponseDto> => {
 	try {
 		if (await checkUserToken(adminUid, adminToken)) {
 			const isAdmin = await checkUserRoleService(adminUid, 'admin')
@@ -2515,10 +2515,10 @@ export const getBlockedUserService = async (adminUid: number, adminToken: string
 				const { collectionName: userAuthCollectionName, schemaInstance: userAuthSchemaInstance } = UserAuthSchema
 
 				// TODO: 下方这个 Aggregate 只适用于被封禁用户的搜索
-				const blockedUserAggregateProps: PipelineStage[] = [
+				const banedUserAggregateProps: PipelineStage[] = [
 					{
 						$match: {
-							role: 'blocked',
+							role: 'baned',
 						},
 					},
 					{
@@ -2552,7 +2552,7 @@ export const getBlockedUserService = async (adminUid: number, adminToken: string
 				]
 
 				try {
-					const userResult = await selectDataByAggregateFromMongoDB(userAuthSchemaInstance, userAuthCollectionName, blockedUserAggregateProps)
+					const userResult = await selectDataByAggregateFromMongoDB(userAuthSchemaInstance, userAuthCollectionName, banedUserAggregateProps)
 					if (userResult && userResult.success) {
 						const userInfo = userResult?.result
 						if (userInfo?.length > 0) {
@@ -4403,16 +4403,16 @@ const checkCheckUsernameRequest = (checkUsernameRequest: CheckUsernameRequestDto
 
 /**
  * 检查封禁用户的请求载荷
- * @param blockUserByUIDRequest 封禁用户的请求载荷
+ * @param banUserByUIDRequest 封禁用户的请求载荷
  * @returns 检查结果，合法返回 true，不合法返回 false
  */
-const checkBlockUserByUIDRequest = (blockUserByUIDRequest: BlockUserByUIDRequestDto): boolean => {
-	return (blockUserByUIDRequest.criminalUid !== null && blockUserByUIDRequest.criminalUid !== undefined)
+const checkBanUserByUIDRequest = (banUserByUIDRequest: BanUserByUIDRequestDto): boolean => {
+	return (banUserByUIDRequest.criminalUid !== null && banUserByUIDRequest.criminalUid !== undefined)
 }
 
 /**
  * 检查重新激活用户的请求载荷
- * @param blockUserByUIDRequest 重新激活用户的请求载荷
+ * @param banUserByUIDRequest 重新激活用户的请求载荷
  * @returns 检查结果，合法返回 true，不合法返回 false
  */
 const checkReactivateUserByUIDRequest = (reactivateUserByUIDRequest: ReactivateUserByUIDRequestDto): boolean => {
