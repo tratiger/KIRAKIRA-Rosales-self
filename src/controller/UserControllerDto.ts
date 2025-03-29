@@ -974,7 +974,7 @@ export type CheckUserHave2FAResponseDto = {
 }
 
 /**
- * 根据 UUID 校验用户是否已经存在的请求载荷
+ * 根据 UUID 校验用户是否存在的请求载荷
  */
 export type CheckUserExistsByUuidRequestDto = {
 	/** 用户的 UUID */
@@ -982,7 +982,7 @@ export type CheckUserExistsByUuidRequestDto = {
 }
 
 /**
- * 根据 UUID 校验用户是否已经存在的请求响应
+ * 根据 UUID 校验用户是否存在的请求响应
  */
 export type CheckUserExistsByUuidResponseDto = {
 	/** 执行结果 */

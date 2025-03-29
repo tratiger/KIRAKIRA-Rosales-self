@@ -3,7 +3,7 @@ import { Schema } from 'mongoose'
 /**
  * 用户关注数据
  */
-class FollingSchemaFactory {
+class FollowingSchemaFactory {
 	/** MongoDB Schema */
 	schema = {
 		/** 关注者 UUID - 非空 */
@@ -24,7 +24,7 @@ class FollingSchemaFactory {
 	/** Mongoose Schema 实例 */
 	schemaInstance = new Schema(this.schema)
 }
-export const FollowingSchema = new FollingSchemaFactory()
+export const FollowingSchema = new FollowingSchemaFactory()
 
 /**
  * 用户取消关注数据

@@ -735,7 +735,7 @@ export const administratorDeleteFeedGroupService = async (administratorDeleteFee
  * 获取动态分组
  * @param uuid 用户的 UUID
  * @param token 用户的 token
- * @returns
+ * @returns 获取动态分组的请求响应
  */
 export const getFeedGroupListService = async (uuid: string, token: string): Promise<GetFeedGroupListResponseDto> => {
 	try {

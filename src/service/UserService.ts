@@ -702,7 +702,7 @@ export const updateUserEmailService = async (updateUserEmailRequest: UpdateUserE
  */
 export const updateOrCreateUserInfoService = async (updateOrCreateUserInfoRequest: UpdateOrCreateUserInfoRequestDto, uid: number, token: string): Promise<UpdateOrCreateUserInfoResponseDto> => {
 	try {
-		if (await checkUserRoleService(uid, 'baned')) {
+		if (await checkUserRoleService(uid, 'banned')) {
 			console.error('ERROR', '更新或创建用户信息失败，用户已封禁')
 			return { success: false, message: '更新或创建用户信息失败，用户已封禁' }
 		}
@@ -2347,9 +2347,9 @@ export const checkUsernameService = async (checkUsernameRequest: CheckUsernameRe
 }
 
 /**
- * 根据 UUID 校验用户是否已经存在
- * @param checkUserExistsByUuidRequest 根据 UUID 校验用户是否已经存在的请求载荷
- * @returns 根据 UUID 校验用户是否已经存在的请求响应
+ * 根据 UUID 校验用户是否存在
+ * @param checkUserExistsByUuidRequest 根据 UUID 校验用户是否存在的请求载荷
+ * @returns 根据 UUID 校验用户是否存在的请求响应
  */
 export const checkUserExistsByUuidService = async (checkUserExistsByUuidRequest: CheckUserExistsByUuidRequestDto): Promise<CheckUserExistsByUuidResponseDto> => {
 	try {
@@ -2414,7 +2414,7 @@ export const banUserByUIDService = async (banUserByUIDRequest: BanUserByUIDReque
 					}
 
 					const banUserByUIDUpdate: UpdateType<UserAuth> = {
-						role: 'baned',
+						role: 'banned',
 					}
 					try {
 						const updateResult = await findOneAndUpdateData4MongoDB<UserAuth>(banUserByUIDWhere, banUserByUIDUpdate, schemaInstance, collectionName, undefined, false)
@@ -2465,7 +2465,7 @@ export const reactivateUserByUIDService = async (reactivateUserByUIDRequest: Rea
 
 					const reactivateUserByUIDWhere: QueryType<UserAuth> = {
 						uid,
-						role: 'baned',
+						role: 'banned',
 					}
 
 					const reactivateUserByUIDUpdate: UpdateType<UserAuth> = {
@@ -2515,10 +2515,10 @@ export const getBannedUserService = async (adminUid: number, adminToken: string)
 				const { collectionName: userAuthCollectionName, schemaInstance: userAuthSchemaInstance } = UserAuthSchema
 
 				// TODO: 下方这个 Aggregate 只适用于被封禁用户的搜索
-				const banedUserAggregateProps: PipelineStage[] = [
+				const bannedUserAggregateProps: PipelineStage[] = [
 					{
 						$match: {
-							role: 'baned',
+							role: 'banned',
 						},
 					},
 					{
@@ -2552,7 +2552,7 @@ export const getBannedUserService = async (adminUid: number, adminToken: string)
 				]
 
 				try {
-					const userResult = await selectDataByAggregateFromMongoDB(userAuthSchemaInstance, userAuthCollectionName, banedUserAggregateProps)
+					const userResult = await selectDataByAggregateFromMongoDB(userAuthSchemaInstance, userAuthCollectionName, bannedUserAggregateProps)
 					if (userResult && userResult.success) {
 						const userInfo = userResult?.result
 						if (userInfo?.length > 0) {
