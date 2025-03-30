@@ -67,6 +67,28 @@ class BlockKeywordSchemaFactory {
 export const BlockingKeywordSchema = new BlockKeywordSchemaFactory()
 
 /**
+ * 用户封禁标签数据
+ */
+class BlockTagSchemaFactory {
+	/** MongoDB Schema */
+	schema = {
+		/** 用户的 UUID - 非空 */
+		UUID: { type: String, required: true, index: true },
+		/** 被封禁的标签 */
+		blockTag: { type: [Number], default: [] },
+		/** 系统专用字段-最后编辑时间 - 非空 */
+		editDateTime: { type: Number, required: true },
+		/** 系统专用字段-创建时间 - 非空 */
+		createDateTime: { type: Number, required: true },
+	}
+	/** MongoDB 集合名 */
+	collectionName = 'blocking-tag'
+	/** Mongoose Schema 实例 */
+	schemaInstance = new Schema(this.schema)
+}
+export const BlockingTagSchema = new BlockTagSchemaFactory()
+
+/**
  * 用户正则表达式数据
  */
 class BlockRegexSchemaFactory {
@@ -76,6 +98,8 @@ class BlockRegexSchemaFactory {
 		UUID: { type: String, required: true, index: true },
 		/** 被封禁的正则表达式 */
 		blockRegex: { type: [String], default: [] },
+		/** 正则表达式标志 */
+		// flag: { type: [String], default: [] },
 		/** 系统专用字段-最后编辑时间 - 非空 */
 		editDateTime: { type: Number, required: true },
 		/** 系统专用字段-创建时间 - 非空 */
