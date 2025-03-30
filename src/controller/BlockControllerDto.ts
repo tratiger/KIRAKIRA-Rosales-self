@@ -15,6 +15,21 @@ export type HideUserByUidRequestDto = {
 }
 
 /**
+ * 隐藏用户的请求响应
+ */
+export type HideUserByUidResponseDto = {
+	/** 是否请求成功 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 隐藏用户列表 */
+	result?: {
+		/** 被隐藏的用户的 UUID */
+		hideUuid?: string;
+	}
+}
+
+/**
  * 封禁用户的请求响应
  */
 export type BlockUserByUidResponseDto = {
