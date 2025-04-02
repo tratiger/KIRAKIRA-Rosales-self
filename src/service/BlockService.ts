@@ -4,8 +4,9 @@ import { checkUserExistsByUuidService, checkUserTokenByUuidService, getUserUuid 
 import { QueryType, SelectType, UpdateType } from "../dbPool/DbClusterPoolTypes.js";
 import { abortAndEndSession, commitAndEndSession, createAndStartSession } from "../common/MongoDBSessionTool.js";
 import { findOneAndUpdateData4MongoDB, selectDataFromMongoDB } from "../dbPool/DbClusterPool.js";
-import { BlockingKeywordSchema, BlockingRegexSchema, BlockingTagSchema, BlockingUserSchema, HidingUserSchema } from "../dbPool/schema/BlockSchema.js";
+import { BlockingSchema } from "../dbPool/schema/BlockSchema.js";
 
+// DELETE ME： 一定要重写一下
 
 /**
  * 封禁用户
@@ -41,7 +42,7 @@ export const BlockUserByUidService = async (blockUserByUidRequest: BlockUserByUi
 			return { success: false, message: '封禁用户失败，不能封禁自己' }
 		}
 
-		const { collectionName: blockingUserCollectionName, schemaInstance: blockingUserSchemaInstance } = BlockingUserSchema
+		const { collectionName: blockingUserCollectionName, schemaInstance: blockingUserSchemaInstance } = BlockingSchema
 		type BlockingUser = InferSchemaType<typeof blockingUserSchemaInstance>
 
 		const blockingUserWhere: QueryType<BlockingUser> = {
@@ -130,7 +131,7 @@ export const HideUserByUidService = async (hideUserByUidRequest: HideUserByUidRe
 			return { success: false, message: '隐藏用户失败，不能隐藏自己' }
 		}
 
-		const { collectionName: hidingUserCollectionName, schemaInstance: hidingUserSchemaInstance } = HidingUserSchema
+		const { collectionName: hidingUserCollectionName, schemaInstance: hidingUserSchemaInstance } = BlockingSchema
 		type HidingUser = InferSchemaType<typeof hidingUserSchemaInstance>
 		const blockingUserWhere: QueryType<HidingUser> = {
 			uuid,
@@ -200,7 +201,7 @@ export const BlockKeywordService = async (blockKeywordRequest: BlockKeywordReque
 			return { success: false, message: '封禁关键词失败，非法用户' }
 		}
 
-		const { collectionName: blockingKeywordCollectionName, schemaInstance: blockingKeywordSchemaInstance } = BlockingKeywordSchema
+		const { collectionName: blockingKeywordCollectionName, schemaInstance: blockingKeywordSchemaInstance } = BlockingSchema
 		type BlockingKeyword = InferSchemaType<typeof blockingKeywordSchemaInstance>
 		const blockingKeywordWhere: QueryType<BlockingKeyword> = {
 			uuid,
@@ -276,7 +277,7 @@ export const BlockTagService = async (blockTagRequest: BlockTagRequestDto, uuid:
 			return { success: false, message: '封禁标签失败，非法用户' }
 		}
 
-		const { collectionName: blockingTagCollectionName, schemaInstance: blockingTagSchemaInstance } = BlockingTagSchema
+		const { collectionName: blockingTagCollectionName, schemaInstance: blockingTagSchemaInstance } = BlockingSchema
 		type BlockingTag = InferSchemaType<typeof blockingTagSchemaInstance>
 		const blockingTagWhere: QueryType<BlockingTag> = {
 			uuid,
@@ -353,7 +354,7 @@ export const BlockRegexService = async (blockRegexRequest: AddRegexRequestDto, u
 			return { success: false, message: '封禁正则表达式失败，非法用户' }
 		}
 
-		const { collectionName: blockingRegexCollectionName, schemaInstance: blockingRegexSchemaInstance } = BlockingRegexSchema
+		const { collectionName: blockingRegexCollectionName, schemaInstance: blockingRegexSchemaInstance } = BlockingSchema
 		type BlockingRegex = InferSchemaType<typeof blockingRegexSchemaInstance>
 		const blockingRegexWhere: QueryType<BlockingRegex> = {
 			uuid,
@@ -441,7 +442,7 @@ export const UnBlockUserByUidService = async (blockUserByUidRequest: UnblockUser
 			return { success: false, message: '解封用户失败，不能解封自己' }
 		}
 
-		const { collectionName: blockingUserCollectionName, schemaInstance: blockingUserSchemaInstance } = BlockingUserSchema
+		const { collectionName: blockingUserCollectionName, schemaInstance: blockingUserSchemaInstance } = BlockingSchema
 		type BlockingUser = InferSchemaType<typeof blockingUserSchemaInstance>
 
 		const blockingUserWhere: QueryType<BlockingUser> = {
@@ -517,7 +518,7 @@ export const UnBlockKeywordService = async (blockKeywordRequest: UnblockKeywordR
 			return { success: false, message: '解封关键词失败，非法用户' }
 		}
 
-		const { collectionName: blockingKeywordCollectionName, schemaInstance: blockingKeywordSchemaInstance } = BlockingKeywordSchema
+		const { collectionName: blockingKeywordCollectionName, schemaInstance: blockingKeywordSchemaInstance } = BlockingSchema
 		type BlockingKeyword = InferSchemaType<typeof blockingKeywordSchemaInstance>
 		const blockingKeywordWhere: QueryType<BlockingKeyword> = {
 			uuid,
@@ -604,7 +605,7 @@ export const ShowUserByUidService = async (hideUserByUidRequest: ShowUserByUidRe
 			return { success: false, message: '显示用户失败，不能显示自己' }
 		}
 
-		const { collectionName: hidingUserCollectionName, schemaInstance: hidingUserSchemaInstance } = HidingUserSchema
+		const { collectionName: hidingUserCollectionName, schemaInstance: hidingUserSchemaInstance } = BlockingSchema
 		type HidingUser = InferSchemaType<typeof hidingUserSchemaInstance>
 
 		const blockingUserWhere: QueryType<HidingUser> = {
@@ -681,7 +682,7 @@ export const UnBlockTagService = async (blockTagRequest: UnblockTagRequestDto, u
 			return { success: false, message: '解封标签失败，非法用户' }
 		}
 
-		const { collectionName: blockingTagCollectionName, schemaInstance: blockingTagSchemaInstance } = BlockingTagSchema
+		const { collectionName: blockingTagCollectionName, schemaInstance: blockingTagSchemaInstance } = BlockingSchema
 		type BlockingTag = InferSchemaType<typeof blockingTagSchemaInstance>
 		const blockingTagWhere: QueryType<BlockingTag> = {
 			uuid,
@@ -755,7 +756,7 @@ export const UnBlockRegexService = async (blockRegexRequest: RemoveRegexRequestD
 			return { success: false, message: '删除正则表达式失败，非法用户' }
 		}
 
-		const { collectionName: blockingRegexCollectionName, schemaInstance: blockingRegexSchemaInstance } = BlockingRegexSchema
+		const { collectionName: blockingRegexCollectionName, schemaInstance: blockingRegexSchemaInstance } = BlockingSchema
 		type BlockingRegex = InferSchemaType<typeof blockingRegexSchemaInstance>
 		const blockingRegexWhere: QueryType<BlockingRegex> = {
 			uuid,

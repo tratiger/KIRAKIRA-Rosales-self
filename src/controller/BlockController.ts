@@ -14,6 +14,7 @@ export const BlockUserByUidController = async (ctx: koaCtx, next: koaNext) => {
 	const BlockUserByUidData = {
 		blockUid: data.blockUid ?? -1,
 	}
+
 	ctx.body = await BlockUserByUidService(BlockUserByUidData, uuid, token)
 	await next()
 }
@@ -30,6 +31,7 @@ export const HideUserByUidController = async (ctx: koaCtx, next: koaNext) => {
 	const HideUserByUidData = {
 		hideUid: data.hideUid ?? -1,
 	}
+
 	ctx.body = await HideUserByUidService(HideUserByUidData, uuid, token)
 	await next()
 }
