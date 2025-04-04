@@ -46,7 +46,7 @@ export const BlockUserByUidService = async (blockUserByUidRequest: BlockUserByUi
 		type BlockingUser = InferSchemaType<typeof blockingUserSchemaInstance>
 
 		const blockingUserWhere: QueryType<BlockingUser> = {
-			uuid,
+			UUID: uuid,
 		}
 		const blockingUserSelect: SelectType<BlockingUser> = {
 			UUID: 1,
@@ -134,7 +134,7 @@ export const HideUserByUidService = async (hideUserByUidRequest: HideUserByUidRe
 		const { collectionName: hidingUserCollectionName, schemaInstance: hidingUserSchemaInstance } = BlockingSchema
 		type HidingUser = InferSchemaType<typeof hidingUserSchemaInstance>
 		const blockingUserWhere: QueryType<HidingUser> = {
-			uuid,
+			UUID: uuid,
 		}
 		const blockingUserSelect: SelectType<HidingUser> = {
 			UUID: 1,
@@ -155,7 +155,6 @@ export const HideUserByUidService = async (hideUserByUidRequest: HideUserByUidRe
 
 		const hideUuid = [...new Set([...blockingUserData.hideUuid, hidedUuid])]
 		const blockingUserUpdateData: UpdateType<HidingUser> = {
-			UUID: uuid,
 			hideUuid,
 			editDateTime: now,
 		}
@@ -204,7 +203,7 @@ export const BlockKeywordService = async (blockKeywordRequest: BlockKeywordReque
 		const { collectionName: blockingKeywordCollectionName, schemaInstance: blockingKeywordSchemaInstance } = BlockingSchema
 		type BlockingKeyword = InferSchemaType<typeof blockingKeywordSchemaInstance>
 		const blockingKeywordWhere: QueryType<BlockingKeyword> = {
-			uuid,
+			UUID: uuid,
 		}
 		const blockingKeywordSelect: SelectType<BlockingKeyword> = {
 			UUID: 1,
@@ -280,7 +279,7 @@ export const BlockTagService = async (blockTagRequest: BlockTagRequestDto, uuid:
 		const { collectionName: blockingTagCollectionName, schemaInstance: blockingTagSchemaInstance } = BlockingSchema
 		type BlockingTag = InferSchemaType<typeof blockingTagSchemaInstance>
 		const blockingTagWhere: QueryType<BlockingTag> = {
-			uuid,
+			UUID: uuid,
 		}
 		const blockingTagSelect: SelectType<BlockingTag> = {
 			UUID: 1,
@@ -357,7 +356,7 @@ export const BlockRegexService = async (blockRegexRequest: AddRegexRequestDto, u
 		const { collectionName: blockingRegexCollectionName, schemaInstance: blockingRegexSchemaInstance } = BlockingSchema
 		type BlockingRegex = InferSchemaType<typeof blockingRegexSchemaInstance>
 		const blockingRegexWhere: QueryType<BlockingRegex> = {
-			uuid,
+			UUID: uuid,
 		}
 		const blockingRegexSelect: SelectType<BlockingRegex> = {
 			UUID: 1,
@@ -446,7 +445,7 @@ export const UnBlockUserByUidService = async (blockUserByUidRequest: UnblockUser
 		type BlockingUser = InferSchemaType<typeof blockingUserSchemaInstance>
 
 		const blockingUserWhere: QueryType<BlockingUser> = {
-			uuid,
+			UUID: uuid,
 		}
 		const blockingUserSelect: SelectType<BlockingUser> = {
 			UUID: 1,
@@ -521,7 +520,7 @@ export const UnBlockKeywordService = async (blockKeywordRequest: UnblockKeywordR
 		const { collectionName: blockingKeywordCollectionName, schemaInstance: blockingKeywordSchemaInstance } = BlockingSchema
 		type BlockingKeyword = InferSchemaType<typeof blockingKeywordSchemaInstance>
 		const blockingKeywordWhere: QueryType<BlockingKeyword> = {
-			uuid,
+			UUID: uuid,
 		}
 		const blockingKeywordSelect: SelectType<BlockingKeyword> = {
 			UUID: 1,
@@ -609,7 +608,7 @@ export const ShowUserByUidService = async (hideUserByUidRequest: ShowUserByUidRe
 		type HidingUser = InferSchemaType<typeof hidingUserSchemaInstance>
 
 		const blockingUserWhere: QueryType<HidingUser> = {
-			uuid,
+			UUID: uuid,
 		}
 		const blockingUserSelect: SelectType<HidingUser> = {
 			UUID: 1,
@@ -685,7 +684,7 @@ export const UnBlockTagService = async (blockTagRequest: UnblockTagRequestDto, u
 		const { collectionName: blockingTagCollectionName, schemaInstance: blockingTagSchemaInstance } = BlockingSchema
 		type BlockingTag = InferSchemaType<typeof blockingTagSchemaInstance>
 		const blockingTagWhere: QueryType<BlockingTag> = {
-			uuid,
+			UUID: uuid,
 		}
 		const blockingTagSelect: SelectType<BlockingTag> = {
 			UUID: 1,
@@ -759,7 +758,7 @@ export const UnBlockRegexService = async (blockRegexRequest: RemoveRegexRequestD
 		const { collectionName: blockingRegexCollectionName, schemaInstance: blockingRegexSchemaInstance } = BlockingSchema
 		type BlockingRegex = InferSchemaType<typeof blockingRegexSchemaInstance>
 		const blockingRegexWhere: QueryType<BlockingRegex> = {
-			uuid,
+			UUID: uuid,
 		}
 		const blockingRegexSelect: SelectType<BlockingRegex> = {
 			UUID: 1,
