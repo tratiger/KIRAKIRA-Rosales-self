@@ -179,7 +179,7 @@ export const userRegistrationService = async (userRegistrationRequest: UserRegis
 					passwordHashHash,
 					token,
 					passwordHint,
-					roles: ['user'], // newbie will always has a user role.
+					roles: ['user'], // newbie will always has a 'user' roles.
 					authenticatorType: 'none', // 刚注册的用户默认没有开启 2FA
 					userCreateDateTime: now,
 					editDateTime: now,
@@ -972,7 +972,7 @@ export const getUserInfoByUidService = async (getUserInfoByUidRequest: GetUserIn
 		const userAuthSelect: SelectType<UserAuth> = {
 			UUID: 1, // UUID
 			userCreateDateTime: 1, // 用户创建日期
-			role: 1, // 用户的角色
+			roles: 1, // 用户的角色
 		}
 
 		const { collectionName: userInfoCollectionName, schemaInstance: userInfoSchemaInstance } = UserInfoSchema
@@ -1037,7 +1037,7 @@ export const getUserInfoByUidService = async (getUserInfoByUidRequest: GetUserIn
 				result: {
 					...userInfo[0],
 					userCreateDateTime: userAuth[0].userCreateDateTime,
-					role: userAuth[0].role,
+					roles: userAuth[0].roles,
 					isFollowing,
 					isSelf,
 				}
@@ -2465,7 +2465,7 @@ export const getBlockedUserService = async (adminUid: number, adminToken: string
 			const blockedUserAggregateProps: PipelineStage[] = [
 				{
 					$match: {
-						role: 'blocked',
+						roles: 'blocked',
 					},
 				},
 				{
@@ -2487,7 +2487,7 @@ export const getBlockedUserService = async (adminUid: number, adminToken: string
 						uid: 1,
 						UUID: 1,
 						userCreateDateTime: 1, // 用户创建日期
-						role: 1, // 用户的角色
+						roles: 1, // 用户的角色
 						username: '$user_info_data.username', // 用户名
 						userNickname: '$user_info_data.userNickname', // 用户昵称
 						avatar: '$user_info_data.avatar', // 用户头像
@@ -2606,7 +2606,7 @@ export const adminGetUserInfoService = async (adminGetUserInfoRequest: AdminGetU
 				uid: 1,
 				UUID: 1,
 				userCreateDateTime: 1, // 用户创建日期
-				role: 1, // 用户的角色
+				roles: 1, // 用户的角色
 				username: '$user_info_data.username', // 用户名
 				userNickname: '$user_info_data.userNickname', // 用户昵称
 				avatar: '$user_info_data.avatar', // 用户头像
