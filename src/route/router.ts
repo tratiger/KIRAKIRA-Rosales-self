@@ -46,6 +46,7 @@ import { adminDeleteVideoCommentController, cancelVideoCommentDownvoteController
 import { approvePendingReviewVideoController, checkVideoExistController, deleteVideoByKvidController, getPendingReviewVideoController, getThumbVideoController, getVideoByKvidController, getVideoByUidController, getVideoCoverUploadSignedUrlController, getVideoFileTusEndpointController, searchVideoByKeywordController, searchVideoByVideoTagIdController, updateVideoController } from '../controller/VideoController.js'
 import { createVideoTagController, getVideoTagByTagIdController, searchVideoTagController } from '../controller/VideoTagController.js'
 import { followingUploaderController, unfollowingUploaderController } from '../controller/FeedController.js'
+import { AddRegexController, BlockKeywordController, BlockTagController, BlockUserByUidController, HideUserByUidController, RemoveRegexController, ShowUserByUidController, UnblockKeywordController, UnblockTagController, UnblockUserByUidController } from '../controller/BlockController.js'
 
 const router = new Router()
 
@@ -306,6 +307,87 @@ router.post('/user/adminClearUserInfo', adminClearUserInfoController) // 管理�
 // {
 // 	"uid": XXXX
 // }
+
+
+
+
+
+
+router.post('/block/user', BlockUserByUidController) // 用户封禁用户
+// https://localhost:9999/block/user
+// cookie: UUID, token
+// {
+// 	"blockUid": XXXX
+// }
+
+router.post('/block/hideuser', HideUserByUidController) // 用户隐藏用户
+// https://localhost:9999/block/hideuser
+// cookie: UUID, token
+// {
+//	"hideUid": XXXX
+// }
+
+router.post('/block/keyword', BlockKeywordController) // 用户封禁关键词
+// https://localhost:9999/block/keyword
+// cookie: UUID, token
+// {
+// 	"blockKeyword": "XXXXXX"
+// }
+
+router.post('/block/tag', BlockTagController) // 用户封禁标签
+// https://localhost:9999/block/tag
+// cookie: UUID, token
+// {
+//	"blockTag": XXXX
+// }
+
+router.post('/block/addregex', AddRegexController) // 用户封禁正则表达式
+// https://localhost:9999/block/addregex
+// cookie: UUID, token
+// {
+//	"blockRegex": "XXXXXX"
+// }
+
+router.delete('/block/delete/user', UnblockUserByUidController) // 用户解封用户
+// https://localhost:9999/block/delete/user
+// cookie: UUID, token
+// {
+//	"blockUid": XXXX
+// }
+
+router.delete('/block/delete/hideuser', ShowUserByUidController) // 用户取消隐藏用户
+// https://localhost:9999/block/delete/hideuser
+// {
+//	"hideUid": XXXX
+// }
+
+router.delete('/block/delete/keyword', UnblockKeywordController) // 用户解封关键词
+// https://localhost:9999/block/delete/keyword
+// cookie: UUID, token
+// {
+//	"blockKeyword": "XXXXXX"
+// }
+
+router.delete('/block/delete/tag', UnblockTagController) // 用户解封标签
+// https://localhost:9999/block/delete/tag
+// cookie: UUID, token
+// {
+//	"blockTag": XXXX
+// }
+
+router.delete('/block/delete/regex', RemoveRegexController) // 用户解封正则表达式
+// https://localhost:9999/block/delete/regex
+// cookie: UUID, token
+// {
+//	"blockRegex": "XXXXXX"
+// }
+
+router.get('/block/list', getBlockedUserController) // 获取黑名单列表
+// https://localhost:9999/block/list
+// cookie: UUID, token
+
+
+
 
 
 

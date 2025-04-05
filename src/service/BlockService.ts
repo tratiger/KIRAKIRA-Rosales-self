@@ -1,5 +1,5 @@
 import { InferSchemaType } from "mongoose";
-import { AddRegexRequestDto, AddRegexResponseDto, BlockKeywordRequestDto, BlockKeywordResponseDto, BlockTagRequestDto, BlockTagResponseDto, BlockUserByUidRequestDto, BlockUserByUidResponseDto, HideUserByUidRequestDto, HideUserByUidResponseDto, RemoveRegexRequestDto, RemoveRegexResponseDto, ShowUserByUidRequestDto, ShowUserByUidResponseDto, UnblockKeywordRequestDto, UnblockKeywordResponseDto, UnblockTagRequestDto, UnblockTagResponseDto, UnblockUserByUidRequestDto, UnblockUserByUidResponseDto } from "../controller/BlockControllerDto.js";
+import { AddRegexRequestDto, AddRegexResponseDto, BlockKeywordRequestDto, BlockKeywordResponseDto, BlockTagRequestDto, BlockTagResponseDto, BlockUserByUidRequestDto, BlockUserByUidResponseDto, GetBlockListResponseDto, HideUserByUidRequestDto, HideUserByUidResponseDto, RemoveRegexRequestDto, RemoveRegexResponseDto, ShowUserByUidRequestDto, ShowUserByUidResponseDto, UnblockKeywordRequestDto, UnblockKeywordResponseDto, UnblockTagRequestDto, UnblockTagResponseDto, UnblockUserByUidRequestDto, UnblockUserByUidResponseDto } from "../controller/BlockControllerDto.js";
 import { checkUserExistsByUuidService, checkUserTokenByUuidService, getUserUuid } from "./UserService.js";
 import { QueryType, SelectType, UpdateType } from "../dbPool/DbClusterPoolTypes.js";
 import { abortAndEndSession, commitAndEndSession, createAndStartSession } from "../common/MongoDBSessionTool.js";
@@ -187,12 +187,12 @@ export const HideUserByUidService = async (hideUserByUidRequest: HideUserByUidRe
  */
 export const BlockKeywordService = async (blockKeywordRequest: BlockKeywordRequestDto, uuid: string, token: string): Promise<BlockKeywordResponseDto> => {
 	try {
-		if (!blockKeywordRequest.keyword) {
+		if (!blockKeywordRequest.blockKeyword) {
 			console.error('ERROR', '封禁关键词请求载荷不合法')
 			return { success: false, message: '封禁关键词请求载荷不合法' }
 		}
 
-		const { keyword } = blockKeywordRequest
+		const { blockKeyword } = blockKeywordRequest
 		const now = new Date().getTime()
 
 		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
@@ -218,16 +218,16 @@ export const BlockKeywordService = async (blockKeywordRequest: BlockKeywordReque
 			return { success: false, message: '封禁关键词失败，查询数据库失败' }
 		}
 
-		if (!blockingKeywordData.blockKeyword.includes(keyword)) {
+		if (!blockingKeywordData.blockKeyword.includes(blockKeyword)) {
 			console.error('ERROR', '封禁关键词失败，已经封禁过了')
 			return { success: false, message: '封禁关键词失败，已经封禁过了' }
 		}
 
-		const blockKeyword = [...new Set([...blockingKeywordData.blockKeyword, keyword])]
+		const keyword = [...new Set([...blockingKeywordData.blockKeyword, blockKeyword])]
 
 		const blockingUserUpdateData: UpdateType<BlockingKeyword> = {
 			UUID: uuid,
-			blockKeyword,
+			blockKeyword: keyword,
 			editDateTime: now,
 		}
 
@@ -338,14 +338,14 @@ export const BlockTagService = async (blockTagRequest: BlockTagRequestDto, uuid:
  * @param token 用户的 token
  * @returns 封禁正则表达式的请求响应
  */
-export const BlockRegexService = async (blockRegexRequest: AddRegexRequestDto, uuid: string, token: string): Promise<AddRegexResponseDto> => {
+export const AddRegexService = async (addRegexRequest: AddRegexRequestDto, uuid: string, token: string): Promise<AddRegexResponseDto> => {
 	try {
-		if (!blockRegexRequest.regex) {
+		if (!addRegexRequest.blockRegex) {
 			console.error('ERROR', '封禁正则表达式请求载荷不合法')
 			return { success: false, message: '封禁正则表达式请求载荷不合法' }
 		}
 
-		const { regex } = blockRegexRequest
+		const { blockRegex } = addRegexRequest
 		const now = new Date().getTime()
 
 		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
@@ -371,16 +371,16 @@ export const BlockRegexService = async (blockRegexRequest: AddRegexRequestDto, u
 			return { success: false, message: '封禁正则表达式失败，查询数据库失败' }
 		}
 
-		if (!blockingRegexData.blockRegex.includes(regex)) {
+		if (!blockingRegexData.blockRegex.includes(blockRegex)) {
 			console.error('ERROR', '封禁正则表达式失败，已经封禁过了')
 			return { success: false, message: '封禁正则表达式失败，已经封禁过了' }
 		}
 
-		const blockRegex = [...new Set([...blockingRegexData.blockRegex, regex])]
+		const regex = [...new Set([...blockingRegexData.blockRegex, blockRegex])]
 
 		const blockingUserUpdateData: UpdateType<BlockingRegex> = {
 			UUID: uuid,
-			blockRegex,
+			blockRegex: regex,
 			editDateTime: now,
 		}
 
@@ -414,15 +414,15 @@ export const BlockRegexService = async (blockRegexRequest: AddRegexRequestDto, u
  * @param token 用户的 token
  * @returns 解封用户的请求响应
 */
-export const UnBlockUserByUidService = async (blockUserByUidRequest: UnblockUserByUidRequestDto, uuid: string, token: string): Promise<UnblockUserByUidResponseDto> => {
+export const UnBlockUserByUidService = async (unblockUserByUidRequest: UnblockUserByUidRequestDto, uuid: string, token: string): Promise<UnblockUserByUidResponseDto> => {
 	try {
 		if (!checkBlockUserByUidRequest) {
 			console.error('ERROR', '解封用户请求载荷不合法')
 			return { success: false, message: '解封用户请求载荷不合法' }
 		}
 
-		const { unblockUid } = blockUserByUidRequest
-		const unBlockedUuid = await getUserUuid(unblockUid) as string
+		const { blockUid } = unblockUserByUidRequest
+		const unBlockedUuid = await getUserUuid(blockUid) as string
 
 		const now = new Date().getTime()
 		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
@@ -502,14 +502,14 @@ export const UnBlockUserByUidService = async (blockUserByUidRequest: UnblockUser
  * @param token 用户的 token
  * @returns 解封关键词的请求响应
  */
-export const UnBlockKeywordService = async (blockKeywordRequest: UnblockKeywordRequestDto, uuid: string, token: string): Promise<UnblockKeywordResponseDto> => {
+export const UnBlockKeywordService = async (UnblockKeywordRequest: UnblockKeywordRequestDto, uuid: string, token: string): Promise<UnblockKeywordResponseDto> => {
 	try {
-		if (!blockKeywordRequest.keywords) {
+		if (!UnblockKeywordRequest.blockKeyword) {
 			console.error('ERROR', '解封关键词请求载荷不合法')
 			return { success: false, message: '解封关键词请求载荷不合法' }
 		}
 
-		const { keywords } = blockKeywordRequest
+		const { blockKeyword } = UnblockKeywordRequest
 		const now = new Date().getTime()
 
 		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
@@ -535,15 +535,15 @@ export const UnBlockKeywordService = async (blockKeywordRequest: UnblockKeywordR
 			return { success: false, message: '解封关键词失败，查询数据库失败' }
 		}
 
-		if (!blockingKeywordData.blockKeyword.includes(keywords)) {
+		if (!blockingKeywordData.blockKeyword.includes(blockKeyword)) {
 			console.error('ERROR', '解封关键词失败，不在黑名单')
 			return { success: false, message: '解封关键词失败，不在黑名单' }
 		}
 
-		const blockKeyword = blockingKeywordData.blockKeyword.filter((keyword) => keyword !== keyword)
+		const keyword = blockingKeywordData.blockKeyword.filter((keyword) => keyword !== keyword)
 		const blockingUserUpdateData: UpdateType<BlockingKeyword> = {
 			UUID: uuid,
-			blockKeyword,
+			blockKeyword: keyword,
 			editDateTime: now,
 		}
 		const session = await createAndStartSession()
@@ -577,15 +577,15 @@ export const UnBlockKeywordService = async (blockKeywordRequest: UnblockKeywordR
  * @param token 用户的 token
  * @returns 显示用户的请求响应
  */
-export const ShowUserByUidService = async (hideUserByUidRequest: ShowUserByUidRequestDto, uuid: string, token: string): Promise<ShowUserByUidResponseDto> => {
+export const ShowUserByUidService = async (showUserByUidRequest: ShowUserByUidRequestDto, uuid: string, token: string): Promise<ShowUserByUidResponseDto> => {
 	try {
-		if (!hideUserByUidRequest) {
+		if (!showUserByUidRequest) {
 			console.error('ERROR', '显示用户请求载荷不合法')
 			return { success: false, message: '显示用户请求载荷不合法' }
 		}
 
-		const { showUid } = hideUserByUidRequest
-		const showUuid = await getUserUuid(showUid) as string
+		const { hideUid } = showUserByUidRequest
+		const showUuid = await getUserUuid(hideUid) as string
 		const now = new Date().getTime()
 
 		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
@@ -740,14 +740,14 @@ export const UnBlockTagService = async (blockTagRequest: UnblockTagRequestDto, u
  * @param token 用户的 token
  * @returns 删除正则表达式的请求响应
  */
-export const UnBlockRegexService = async (blockRegexRequest: RemoveRegexRequestDto, uuid: string, token: string): Promise<RemoveRegexResponseDto> => {
+export const RemoveRegexService = async (removeRegexRequest: RemoveRegexRequestDto, uuid: string, token: string): Promise<RemoveRegexResponseDto> => {
 	try {
-		if (!blockRegexRequest.regex) {
+		if (!removeRegexRequest.blockRegex) {
 			console.error('ERROR', '删除正则表达式请求载荷不合法')
 			return { success: false, message: '删除正则表达式请求载荷不合法' }
 		}
 
-		const { regex } = blockRegexRequest
+		const { blockRegex } = removeRegexRequest
 		const now = new Date().getTime()
 
 		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
@@ -773,15 +773,15 @@ export const UnBlockRegexService = async (blockRegexRequest: RemoveRegexRequestD
 			return { success: false, message: '删除正则表达式失败，查询数据库失败' }
 		}
 
-		if (!blockingRegexData.blockRegex.includes(regex)) {
+		if (!blockingRegexData.blockRegex.includes(blockRegex)) {
 			console.error('ERROR', '删除正则表达式失败，不在黑名单')
 			return { success: false, message: '删除正则表达式失败，不在黑名单' }
 		}
 
-		const blockRegex = blockingRegexData.blockRegex.filter((regex) => regex !== regex)
+		const regex = blockingRegexData.blockRegex.filter((regex) => regex !== regex)
 		const blockingUserUpdateData: UpdateType<BlockingRegex> = {
 			UUID: uuid,
-			blockRegex,
+			blockRegex: regex,
 			editDateTime: now,
 		}
 
@@ -805,6 +805,56 @@ export const UnBlockRegexService = async (blockRegexRequest: RemoveRegexRequestD
 	} catch (error) {
 		console.error('ERROR', '删除正则表达式错误，未知错误', error)
 		return { success: false, message: '删除正则表达式失败，未知错误' }
+	}
+}
+
+/**
+ * 获取用户的黑名单
+ * @param uuid 用户的 UUID
+ * @param token 用户的 token
+ * @returns 用户的封禁列表
+ */
+export const GetBlockListService = async (uuid: string, token: string): Promise<GetBlockListResponseDto> => {
+	try {
+		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
+			console.error('ERROR', '获取封禁列表失败，非法用户')
+			return { success: false, message: '获取封禁列表失败，非法用户' }
+		}
+
+		const { collectionName: blockingUserCollectionName, schemaInstance: blockingUserSchemaInstance } = BlockingSchema
+		type BlockingUser = InferSchemaType<typeof blockingUserSchemaInstance>
+		const blockingUserWhere: QueryType<BlockingUser> = {
+			UUID: uuid,
+		}
+		const blockingUserSelect: SelectType<BlockingUser> = {
+			blockUuid: 1,
+			hideUuid: 1,
+			blockTag: 1,
+			blockKeyword: 1,
+			blockRegex: 1,
+		}
+
+		const blockingUserResult = await selectDataFromMongoDB<BlockingUser>(blockingUserWhere, blockingUserSelect, blockingUserSchemaInstance, blockingUserCollectionName)
+		const blockingUserData = blockingUserResult.result?.[0]
+
+		const result = {
+			blockUuid: blockingUserData.blockUuid,
+			hideUuid: blockingUserData.hideUuid,
+			tagId: blockingUserData.blockTag,
+			blockKeyword: blockingUserData.blockKeyword, // Map blockKeyword to blockKeywords
+			blockRegex: blockingUserData.blockRegex, // Map blockRegex to regex
+		};
+
+		if (!blockingUserResult.success) {
+			console.error('ERROR', '获取封禁列表失败，查询数据库失败')
+			return { success: false, message: '获取封禁列表失败，查询数据库失败' }
+		}
+
+		return { success: true, message: '获取封禁列表成功', result }
+
+	} catch (error) {
+		console.error('ERROR', '获取封禁列表错误，未知错误', error)
+		return { success: false, message: '获取封禁列表失败，未知错误' }
 	}
 }
 
@@ -837,7 +887,7 @@ export const checkHideUserByUidRequest = (hideUserByUidRequest: HideUserByUidReq
  * 检测封禁关键词的请求载荷
  */
 export const checkBlockKeywordRequest = (blockKeywordRequest: BlockKeywordRequestDto): boolean => {
-	if (!blockKeywordRequest.keyword) {
+	if (!blockKeywordRequest.blockKeyword) {
 		console.error('ERROR', '封禁关键词请求载荷不合法')
 		return false
 	}

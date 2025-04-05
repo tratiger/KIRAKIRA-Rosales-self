@@ -25,7 +25,7 @@ export type HideUserByUidResponseDto = {
 	/** 隐藏用户列表 */
 	result?: {
 		/** 被隐藏的用户的 UUID */
-		Uuid?: string[];
+		hideUuid?: string[];
 	}
 }
 
@@ -40,7 +40,7 @@ export type BlockUserByUidResponseDto = {
 	/** 封禁用户列表 */
 	result?: {
 		/** 当前被封禁的用户的 UUID */
-		Uuid: string[];
+		blockUuid: string[];
 	}
 }
 
@@ -63,7 +63,7 @@ export type BlockTagResponseDto = {
 	/** 封禁标签列表 */
 	result?: {
 		/** 当前被封禁的标签的 ID */
-		TagId: number[];
+		tagId: number[];
 	}
 }
 
@@ -72,7 +72,7 @@ export type BlockTagResponseDto = {
  */
 export type BlockKeywordRequestDto = {
 	/* 封禁的关键词 - 非空 */
-	keyword: string;
+	blockKeyword: string;
 }
 
 /**
@@ -86,7 +86,7 @@ export type BlockKeywordResponseDto = {
 	/** 封禁关键词列表 */
 	result?: {
 		/** 被封禁的关键词 */
-		Keyword: string[];
+		blockKeyword: string[];
 	}
 }
 
@@ -95,7 +95,7 @@ export type BlockKeywordResponseDto = {
  */
 export type AddRegexRequestDto = {
 	/** 正则表达式 - 非空 */
-	regex: string;
+	blockRegex: string;
 	/** 正则表达式的标志 - 非空 */
 	// flag: string;
 }
@@ -111,7 +111,7 @@ export type AddRegexResponseDto = {
 	/** 添加的正则表达式列表 */
 	result?: {
 		/**  当前的正则表达式 */
-		Regex: string[];
+		blockRegex: string[];
 	}
 }
 
@@ -120,7 +120,7 @@ export type AddRegexResponseDto = {
  */
 export type RemoveRegexRequestDto = {
 	/** 正则表达式 - 非空 */
-	regex: string;
+	blockRegex: string;
 	/** 正则表达式的标志 - 非空 */
 	// flag: string;
 }
@@ -135,7 +135,7 @@ export type RemoveRegexResponseDto = {
 	/** 删除的正则表达式列表 */
 	result?: {
 		/** 当前的正则表达式 */
-		Regex: string[];
+		blockRegex: string[];
 	}
 }
 
@@ -144,7 +144,7 @@ export type RemoveRegexResponseDto = {
  */
 export type UnblockUserByUidRequestDto = {
 	/** 被封禁的用户的 UID - 非空 */
-	unblockUid: number;
+	blockUid: number;
 }
 
 /**
@@ -152,7 +152,7 @@ export type UnblockUserByUidRequestDto = {
  */
 export type ShowUserByUidRequestDto = {
 	/** 被显示的用户的 UID - 非空 */
-	showUid: number;
+	hideUid: number;
 }
 
 /**
@@ -166,7 +166,7 @@ export type ShowUserByUidResponseDto = {
 	/** 显示用户列表 */
 	result?: {
 		/** 被显示的用户的 UUID */
-		Uuid: string[];
+		hideUuid: string[];
 	}
 }
 
@@ -181,7 +181,7 @@ export type UnblockUserByUidResponseDto = {
 	/** 解封用户列表 */
 	result?: {
 		/** 当前被封禁的用户列表  */
-		Uuid: string[];
+		blockUuid: string[];
 	}
 }
 
@@ -204,7 +204,7 @@ export type UnblockTagResponseDto = {
 	/** 解封标签列表 */
 	result?: {
 		/** 当前被封禁标签的 ID */
-		TagId: number[];
+		tagId: number[];
 	}
 }
 
@@ -213,7 +213,7 @@ export type UnblockTagResponseDto = {
  */
 export type UnblockKeywordRequestDto = {
 	/** 封禁的关键词 - 非空 */
-	keywords: string;
+	blockKeyword: string;
 }
 
 /**
@@ -227,14 +227,14 @@ export type UnblockKeywordResponseDto = {
 	/** 解封关键词列表 */
 	result?: {
 		/** 被解封的关键词 */
-		Keywords: string[];
+		blockKeyword: string[];
 	}
 }
 
 /**
  * 获取封禁用户列表的请求响应
  */
-export type GetBlockUserListResponseDto = {
+export type GetBlockListResponseDto = {
 	/** 是否请求成功 */
 	success: boolean;
 	/** 附加的文本消息 */
@@ -242,66 +242,14 @@ export type GetBlockUserListResponseDto = {
 	/** 封禁用户列表 */
 	result?: {
 		/** 当前被封禁的用户的 UUID */
-		Uuid: string[];
-	}
-}
-
-/**
- * 获取隐藏用户列表的请求响应
- */
-export type GetHideUserListResponseDto = {
-	/** 是否请求成功 */
-	success: boolean;
-	/** 附加的文本消息 */
-	message?: string;
-	/** 隐藏用户列表 */
-	result?: {
-		/** 当前被隐藏的用户的 UUID */
-		Uuid: string[];
-	}
-}
-
-/**
- * 获取封禁标签列表的请求响应
- */
-export type GetBlockTagListResponseDto = {
-	/** 是否请求成功 */
-	success: boolean;
-	/** 附加的文本消息 */
-	message?: string;
-	/** 封禁标签列表 */
-	result?: {
+		blockUuid: string[];
+		/** 当前被隐藏的用户的 UID */
+		hideUuid: string[];
 		/** 当前被封禁的标签的 ID */
-		TagId: number[];
-	}
-}
-
-/**
- * 获取封禁关键词列表的请求响应
- */
-export type GetBlockKeywordListResponseDto = {
-	/** 是否请求成功 */
-	success: boolean;
-	/** 附加的文本消息 */
-	message?: string;
-	/** 封禁关键词列表 */
-	result?: {
-		/** 被封禁的关键词 */
-		Keyword: string[];
-	}
-}
-
-/**
- * 获取正则表达式列表的请求响应
- */
-export type GetRegexListResponseDto = {
-	/** 是否请求成功 */
-	success: boolean;
-	/** 附加的文本消息 */
-	message?: string;
-	/** 正则表达式列表 */
-	result?: {
+		tagId: number[];
+		/** 当前被封禁的关键词 */
+		blockKeyword: string[];
 		/** 当前的正则表达式 */
-		Regex: string[];
+		blockRegex: string[];
 	}
 }
