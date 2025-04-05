@@ -47,6 +47,7 @@ import { approvePendingReviewVideoController, checkVideoExistController, deleteV
 import { createVideoTagController, getVideoTagByTagIdController, searchVideoTagController } from '../controller/VideoTagController.js'
 import { adminGetUserRolesByUidController, adminUpdateUserRoleController, createRbacApiPathController, createRbacRoleController, deleteRbacApiPathController, deleteRbacRoleController, getRbacApiPathController, getRbacRoleController, updateApiPathPermissionsForRoleController } from '../controller/RbacController.js'
 import { getStgEnvBackEndSecretController } from '../controller/ConsoleSecretController.js'
+import { followingUploaderController, unfollowingUploaderController } from '../controller/FeedController.js'
 
 const router = new Router()
 
@@ -512,6 +513,11 @@ router.post('/video/tag/get', getVideoTagByTagIdController) // 根据 TAG ID 在
 
 
 
+
+
+
+
+
 router.post('/history/merge', createOrUpdateUserBrowsingHistoryController) // 更新或创建用户浏览历史 // DELETE: 该接口没必要暴露
 // https://localhost:9999/history/merge
 // cookie: uid, token
@@ -528,6 +534,12 @@ router.get('/history/filter', getUserBrowsingHistoryWithFilterController) // 获
 
 
 
+
+
+
+
+
+
 router.post('/favorites/create', createFavoritesController) // 创建收藏夹
 // https://localhost:9999/favorites/create
 // cookie: uid, token
@@ -541,6 +553,31 @@ router.post('/favorites/create', createFavoritesController) // 创建收藏夹
 router.get('/favorites', getFavoritesController) // 获取当前登录用户的收藏夹列表
 // https://localhost:9999/favorites
 // cookie: uid, token
+
+
+
+
+
+
+
+
+
+
+
+router.post('/feed/following', followingUploaderController) // 关注一个用户
+// https://localhost:9999/feed/following
+// cookie: uuid, token
+// {
+// 	"followingUid": 999
+// }
+
+router.post('/feed/unfollowing', unfollowingUploaderController) // 取消关注一个用户
+// https://localhost:9999/feed/unfollowing
+// cookie: uuid, token
+// {
+// 	"unfollowingUid": 999
+// }
+
 
 
 
@@ -666,6 +703,19 @@ router.get('/secret/getStgEnvBackEndSecret', getStgEnvBackEndSecretController) /
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 // router.post('/02/koa/user/settings/userSettings/save', saveUserSettingsByUUID)
 // // http://localhost:9999/02/koa/user/settings/userSettings/save
 // //
@@ -691,14 +741,6 @@ router.get('/secret/getStgEnvBackEndSecret', getStgEnvBackEndSecretController) /
 // router.get('/02/koa/user/settings/userSettings/get', getUserSettingsByUUID)
 // // http://localhost:9999/02/koa/user/settings/userSettings/get?uuid=u00001
 
-
-
-// router.post('/02/koa/user/register', userRegistrationController)
-// // http://localhost:9999/02/koa/user/register
-// // {
-// // 	"userName": "u00001",
-// // 	"passwordHash": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-// // }
 
 
 

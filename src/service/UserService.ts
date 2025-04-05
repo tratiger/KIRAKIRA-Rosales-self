@@ -72,6 +72,8 @@ import {
 	UserExistsCheckByUIDResponseDto,
 	UserEmailExistsCheckRequestDto,
 	UserEmailExistsCheckResponseDto,
+	CheckUserExistsByUuidRequestDto,
+	CheckUserExistsByUuidResponseDto,
 } from '../controller/UserControllerDto.js'
 import { findOneAndUpdateData4MongoDB, insertData2MongoDB, selectDataFromMongoDB, updateData4MongoDB, selectDataByAggregateFromMongoDB, deleteDataFromMongoDB } from '../dbPool/DbClusterPool.js'
 import { DbPoolResultsType, QueryType, SelectType, UpdateType } from '../dbPool/DbClusterPoolTypes.js'
@@ -79,8 +81,9 @@ import { UserAuthSchema, UserTotpAuthenticatorSchema, UserChangeEmailVerificatio
 import { getNextSequenceValueService } from './SequenceValueService.js'
 import { authenticator } from 'otplib'
 import { getI18nLanguagePack } from '../common/i18n.js'
-import { abortAndEndSession, commitSession, createAndStartSession } from '../common/MongoDBSessionTool.js'
+import { abortAndEndSession, commitAndEndSession, createAndStartSession } from '../common/MongoDBSessionTool.js'
 import { StorageClassAnalysisSchemaVersion } from '@aws-sdk/client-s3'
+import { FollowingSchema } from '../dbPool/schema/FeedSchema.js'
 
 authenticator.options = { window: 1 } // 设置 TOTP 宽裕一个窗口
 
@@ -190,7 +193,7 @@ export const userRegistrationService = async (userRegistrationRequest: UserRegis
 					username,
 					userNickname,
 					label: [] as UserInfo['label'], // TODO: Mongoose issue: #12420
-					userLinkAccounts: [] as UserInfo['userLinkAccounts'], // TODO: Mongoose issue: #12420
+					userLinkedAccounts: [] as UserInfo['userLinkedAccounts'], // TODO: Mongoose issue: #12420
 					isUpdatedAfterReview: true,
 					editDateTime: now,
 					createDateTime: now,
@@ -202,7 +205,8 @@ export const userRegistrationService = async (userRegistrationRequest: UserRegis
 				const userSettingsData: UserSettings = {
 					UUID: uuid,
 					uid,
-					userLinkAccountsPrivacySetting: [] as UserSettings['userLinkAccountsPrivacySetting'], // TODO: Mongoose issue: #12420
+					userPrivaryVisibilitiesSetting: [] as UserSettings['userPrivaryVisibilitiesSetting'], // TODO: Mongoose issue: #12420
+					userLinkedAccountsVisibilitiesSetting: [] as UserSettings['userLinkedAccountsVisibilitiesSetting'], // TODO: Mongoose issue: #12420
 					editDateTime: now,
 					createDateTime: now,
 				}
@@ -460,7 +464,7 @@ export const userLoginService = async (userLoginRequest: UserLoginRequestDto): P
 						return { success: false, message: '登录失败，更新备份码失败', authenticatorType }
 					}
 
-					await commitSession(session)
+					await commitAndEndSession(session)
 					return { success: true, email, uid, token, UUID: uuid, message: '用户使用备用码登录成功', authenticatorType }
 				} else {
 					return { success: true, email, uid, token, UUID: uuid, message: '用户使用 TOTP 验证码登录成功', authenticatorType }
@@ -499,9 +503,9 @@ export const userLoginService = async (userLoginRequest: UserLoginRequestDto): P
 }
 
 /**
- * 检查一个用户邮箱是否存在
- * @param checkUserExistsCheckRequest 检查用户邮箱是否存在需要的信息（用户邮箱）
- * @return UserExistsCheckResponseDto 检查结果
+ * 检查一个用户邮箱是否存在（检查一个邮箱是否已经注册）
+ * @param checkUserExistsCheckRequest 检查用户是否存在需要的信息（用户邮箱）
+ * @return UserExistsCheckResponseDto 检查结果，如果存在或查询失败则 exists: true
  */
 export const userEmailExistsCheckService = async (userEmailExistsCheckRequest: UserEmailExistsCheckRequestDto): Promise<UserEmailExistsCheckResponseDto> => {
 	try {
@@ -519,23 +523,26 @@ export const userEmailExistsCheckService = async (userEmailExistsCheckRequest: U
 			try {
 				result = await selectDataFromMongoDB(where, select, schemaInstance, collectionName)
 			} catch (error) {
-				console.error('ERROR', '验证用户是否存在（查询用户）时出现异常：', error)
-				return { success: false, exists: false, message: '验证用户是否存在时出现异常' }
+				console.error('ERROR', '验证用户邮箱是否存在（查询用户）时出现异常：', error)
+				return { success: false, exists: false, message: '验证用户邮箱是否存在时出现异常' }
 			}
 
 			if (result && result.success && result.result) {
 				if (result.result?.length > 0) {
-					return { success: true, exists: true, message: '用户已存在' }
+					return { success: true, exists: true, message: '用户邮箱已存在' }
 				} else {
-					return { success: true, exists: false, message: '用户不存在' }
+					return { success: true, exists: false, message: '用户邮箱不存在' }
 				}
 			} else {
-				return { success: false, exists: true, message: '查询失败' }
+				return { success: false, exists: false, message: '邮箱查询失败' }
 			}
+		} else {
+			console.error('ERROR', '查询用户邮箱是否存在时失败：参数不合法')
+			return { success: false, exists: false, message: '查询用户邮箱是否存在时失败：参数不合法' }
 		}
 	} catch (error) {
-		console.error('ERROR', '查询用户是否存在时出错：', error)
-		return { success: false, exists: true, message: '验证用户是否存在时程序异常' }
+		console.error('ERROR', '查询用户邮箱是否存在时出错：未知错误', error)
+		return { success: false, exists: false, message: '查询用户邮箱是否存在时出错：未知错误' }
 	}
 }
 
@@ -736,7 +743,7 @@ export const updateOrCreateUserInfoService = async (updateOrCreateUserInfoReques
 				const updateUserInfoUpdate: UpdateType<UserInfo> = {
 					...updateOrCreateUserInfoRequest,
 					label: updateOrCreateUserInfoRequest.label as UserInfo['label'], // TODO: Mongoose issue: #12420
-					userLinkAccounts: updateOrCreateUserInfoRequest.userLinkAccounts as UserInfo['userLinkAccounts'], // TODO: Mongoose issue: #12420
+					userLinkedAccounts: updateOrCreateUserInfoRequest.userLinkedAccounts as UserInfo['userLinkedAccounts'], // TODO: Mongoose issue: #12420
 					isUpdatedAfterReview: true,
 					editDateTime: new Date().getTime(),
 				}
@@ -944,61 +951,100 @@ export const getSelfUserInfoByUuidService = async (getSelfUserInfoByUuidRequest:
 	}
 }
 
-
 /**
  * 通过 uid 获取（其他）用户信息
- * @param uid 用户 ID
+ * @param getUserInfoByUidRequest 通过 UID 获取用户信息的请求载荷
+ * @param selectorUuid 发起请求者的 UUID
+ * @param selectorToken 发起请求者的 token
  * @returns 获取用户信息的请求结果
  */
-export const getUserInfoByUidService = async (getUserInfoByUidRequest: GetUserInfoByUidRequestDto): Promise<GetUserInfoByUidResponseDto> => {
+export const getUserInfoByUidService = async (getUserInfoByUidRequest: GetUserInfoByUidRequestDto, selectorUuid?: string, selectorToken?: string): Promise<GetUserInfoByUidResponseDto> => {
 	try {
-		const uid = getUserInfoByUidRequest?.uid
-		if (uid !== null && uid !== undefined) {
-			const { collectionName: userAuthCollectionName, schemaInstance: userAuthSchemaInstance } = UserAuthSchema
-			type UserAuth = InferSchemaType<typeof userAuthSchemaInstance>
-			const userAuthWhere: QueryType<UserAuth> = { uid }
-			const userAuthSelect: SelectType<UserAuth> = {
-				userCreateDateTime: 1, // 用户创建日期
-				roles: 1, // 用户的角色
-			}
-
-			const { collectionName: userInfoCollectionName, schemaInstance: userInfoSchemaInstance } = UserInfoSchema
-			type UserInfo = InferSchemaType<typeof userInfoSchemaInstance>
-			const getUserInfoWhere: QueryType<UserInfo> = { uid }
-			const getUserInfoSelect: SelectType<UserInfo> = {
-				label: 1, // 用户标签
-				username: 1, // 用户名
-				userNickname: 1, // 用户昵称
-				avatar: 1, // 用户头像
-				userBannerImage: 1, // 用户的背景图
-				signature: 1, // 用户的个性签名
-				gender: 1, // 用户的性别
-			}
-
-			try {
-				const userAuthPromise = selectDataFromMongoDB<UserAuth>(userAuthWhere, userAuthSelect, userAuthSchemaInstance, userAuthCollectionName)
-				const userInfoPromise = selectDataFromMongoDB(getUserInfoWhere, getUserInfoSelect, userInfoSchemaInstance, userInfoCollectionName)
-				const [userAuthResult, userInfoResult] = await Promise.all([userAuthPromise, userInfoPromise])
-				if (userAuthResult && userAuthResult.success && userInfoResult && userInfoResult.success) {
-					const userAuth = userAuthResult?.result
-					const userInfo = userInfoResult?.result
-					if (userInfo?.length === 1 && userInfo?.[0]) {
-						return { success: true, message: '获取用户信息成功', result: { ...userInfo[0], userCreateDateTime: userAuth[0].userCreateDateTime, roles: userAuth[0].roles } }
-					} else {
-						console.error('ERROR', '获取用户信息时失败，获取到的结果长度不为 1')
-						return { success: false, message: '获取用户信息时失败，结果异常' }
-					}
-				} else {
-					console.error('ERROR', '获取用户信息时失败，获取到的结果为空')
-					return { success: false, message: '获取用户信息时失败，结果为空' }
-				}
-			} catch (error) {
-				console.error('ERROR', '获取用户信息时失败，查询数据时出错：0', error)
-				return { success: false, message: '获取用户信息时失败' }
-			}
-		} else {
+		const { uid } = getUserInfoByUidRequest
+		if (uid === null || uid === undefined) {
 			console.error('ERROR', '获取用户信息时失败，uid 或 token 为空')
 			return { success: false, message: '获取用户信息时失败，必要的参数为空' }
+		}
+
+		const { collectionName: userAuthCollectionName, schemaInstance: userAuthSchemaInstance } = UserAuthSchema
+		type UserAuth = InferSchemaType<typeof userAuthSchemaInstance>
+		const userAuthWhere: QueryType<UserAuth> = { uid }
+		const userAuthSelect: SelectType<UserAuth> = {
+			UUID: 1, // UUID
+			userCreateDateTime: 1, // 用户创建日期
+			role: 1, // 用户的角色
+		}
+
+		const { collectionName: userInfoCollectionName, schemaInstance: userInfoSchemaInstance } = UserInfoSchema
+		type UserInfo = InferSchemaType<typeof userInfoSchemaInstance>
+		const getUserInfoWhere: QueryType<UserInfo> = { uid }
+		const getUserInfoSelect: SelectType<UserInfo> = {
+			label: 1, // 用户标签
+			username: 1, // 用户名
+			userNickname: 1, // 用户昵称
+			avatar: 1, // 用户头像
+			userBannerImage: 1, // 用户的背景图
+			signature: 1, // 用户的个性签名
+			gender: 1, // 用户的性别
+		}
+
+		try {
+			const session = await createAndStartSession()
+			const userAuthPromise = selectDataFromMongoDB<UserAuth>(userAuthWhere, userAuthSelect, userAuthSchemaInstance, userAuthCollectionName)
+			const userInfoPromise = selectDataFromMongoDB(getUserInfoWhere, getUserInfoSelect, userInfoSchemaInstance, userInfoCollectionName)
+			const [userAuthResult, userInfoResult] = await Promise.all([userAuthPromise, userInfoPromise])
+			if (!userAuthResult || !userAuthResult.success || !userInfoResult || !userInfoResult.success) {
+				await abortAndEndSession(session)
+				console.error('ERROR', '获取用户信息时失败，获取到的结果为空')
+				return { success: false, message: '获取用户信息时失败，结果为空' }
+			}
+			const userAuth = userAuthResult?.result
+			const uuid = userAuth?.[0]?.UUID
+			const userInfo = userInfoResult?.result
+			if (userInfo?.length !== 1 || !userInfo[0] || userAuth?.length !== 1 || !uuid) {
+				await abortAndEndSession(session)
+				console.error('ERROR', '获取用户信息时失败，获取到的结果长度不为 1')
+				return { success: false, message: '获取用户信息时失败，结果异常' }
+			}
+
+			let isSelf = uuid === selectorUuid // 查询的用户是否是自己。
+			let isFollowing = false; // 是否已关注该用户，默认没有被关注。
+			if ( selectorUuid && selectorToken && !isSelf && await checkUserTokenByUUID(selectorUuid, selectorToken)) { // 如果传递了 uuid 和 token，而且用户不是自己，且校验通过，则检查被获取信息的用户是否是已被关注。
+				const { collectionName: followingSchemaCollectionName, schemaInstance: followingSchemaInstance } = FollowingSchema
+				type Following = InferSchemaType<typeof followingSchemaInstance>
+
+				const followingWhere: QueryType<Following> = {
+					followerUuid: selectorUuid,
+					followingUuid: uuid,
+				}
+				const followingSelect: SelectType<Following> = {
+					followerUuid: 1,
+					followingUuid: 1,
+					followingType: 1,
+				}
+
+				const selectFollowingDataResult = await selectDataFromMongoDB<Following>(followingWhere, followingSelect, followingSchemaInstance, followingSchemaCollectionName, { session })
+				const followingResult = selectFollowingDataResult?.result
+				if (selectFollowingDataResult.success && followingResult.length === 1) {
+					isFollowing = true
+				}
+			}
+
+			await commitAndEndSession(session)
+			return {
+				success: true,
+				message: '获取用户信息成功',
+				result: {
+					...userInfo[0],
+					userCreateDateTime: userAuth[0].userCreateDateTime,
+					role: userAuth[0].role,
+					isFollowing,
+					isSelf,
+				}
+			}
+		} catch (error) {
+			console.error('ERROR', '获取用户信息时失败，查询数据时出错：0', error)
+			return { success: false, message: '获取用户信息时失败' }
 		}
 	} catch (error) {
 		console.error('ERROR', '获取用户信息时失败，未知错误：', error)
@@ -1069,7 +1115,8 @@ export const getUserSettingsService = async (uid: number, token: string): Promis
 				showCssDoodle: 1,
 				sharpAppearanceMode: 1,
 				flatAppearanceMode: 1,
-				userLinkAccountsPrivacySetting: 1,
+				userPrivaryVisibilitiesSetting: 1,
+				userLinkedAccountsVisibilitiesSetting: 1,
 				userWebsitePrivacySetting: 1,
 				editDateTime: 1,
 			}
@@ -1105,6 +1152,7 @@ export const getUserSettingsService = async (uid: number, token: string): Promis
  */
 export const updateOrCreateUserSettingsService = async (updateOrCreateUserSettingsRequest: UpdateOrCreateUserSettingsRequestDto, uid: number, token: string): Promise<UpdateOrCreateUserSettingsResponseDto> => {
 	try {
+		const now = new Date().getTime();
 		if (await checkUserToken(uid, token)) {
 			const UUID = await getUserUuid(uid) // DELETE ME 这是一个临时解决方法，Cookie 中应当存储 UUID
 			if (!UUID) {
@@ -1120,8 +1168,9 @@ export const updateOrCreateUserSettingsService = async (updateOrCreateUserSettin
 				}
 				const updateOrCreateUserSettingsUpdate: UpdateType<UserSettings> = {
 					...updateOrCreateUserSettingsRequest,
-					userLinkAccountsPrivacySetting: updateOrCreateUserSettingsRequest.userLinkAccountsPrivacySetting as UserSettings['userLinkAccountsPrivacySetting'], // TODO: Mongoose issue: #12420
-					editDateTime: new Date().getTime(),
+					userPrivaryVisibilitiesSetting: updateOrCreateUserSettingsRequest.userPrivaryVisibilitiesSetting as UserSettings['userPrivaryVisibilitiesSetting'], // TODO: Mongoose issue: #12420
+					userLinkedAccountsVisibilitiesSetting: updateOrCreateUserSettingsRequest.userLinkedAccountsVisibilitiesSetting as UserSettings['userLinkedAccountsVisibilitiesSetting'], // TODO: Mongoose issue: #12420
+					editDateTime: now
 				}
 				const updateResult = await findOneAndUpdateData4MongoDB(updateOrCreateUserSettingsWhere, updateOrCreateUserSettingsUpdate, schemaInstance, collectionName)
 				const userSettings = updateResult?.result?.[0]
@@ -2246,6 +2295,51 @@ export const checkUsernameService = async (checkUsernameRequest: CheckUsernameRe
 	}
 }
 
+/**
+ * 根据 UUID 校验用户是否已经存在
+ * @param checkUserExistsByUuidRequest 根据 UUID 校验用户是否已经存在的请求载荷
+ * @returns 根据 UUID 校验用户是否已经存在的请求响应
+ */
+export const checkUserExistsByUuidService = async (checkUserExistsByUuidRequest: CheckUserExistsByUuidRequestDto): Promise<CheckUserExistsByUuidResponseDto> => {
+	try {
+		if (!checkCheckUserExistsByUuidRequest(checkUserExistsByUuidRequest)) {
+			console.error('ERROR', '查询用户是否存在时失败：参数不合法')
+			return { success: false, exists: false, message: '查询用户是否存在时失败：参数不合法' }
+		}
+
+		const { uuid } = checkUserExistsByUuidRequest
+		const { collectionName, schemaInstance } = UserAuthSchema
+		type UserAuth = InferSchemaType<typeof schemaInstance>
+		const where: QueryType<UserAuth> = {
+			uuid,
+		}
+		const select: SelectType<UserAuth> = {
+			UUID: 1,
+		}
+
+		let result: DbPoolResultsType<UserAuth>
+		try {
+			result = await selectDataFromMongoDB(where, select, schemaInstance, collectionName)
+		} catch (error) {
+			console.error('ERROR', '根据 UUID 校验用户是否已经存在时出错：查询出错', error)
+			return { success: false, exists: false, message: '根据 UUID 校验用户是否已经存在时出错：查询出错' }
+		}
+
+		if (result && result.success && result.result) {
+			if (result.result?.length > 0) {
+				return { success: true, exists: true, message: '用户已存在' }
+			} else {
+				return { success: true, exists: false, message: '用户不存在' }
+			}
+		} else {
+			return { success: false, exists: false, message: '查询失败' }
+		}
+	} catch (error) {
+		console.error('ERROR', '查询用户是否存在时出错：未知错误', error)
+		return { success: false, exists: false, message: '查询用户是否存在时出错：未知错误' }
+	}
+}
+
 // /**
 //  * 根据 UID 封禁一个用户
 //  * @param blockUserByUIDRequest 封禁用户的请求载荷
@@ -2355,7 +2449,6 @@ export const checkUsernameService = async (checkUsernameRequest: CheckUsernameRe
 // 		return { success: false, message: '重新激活用户时出错，未知错误' }
 // 	}
 // }
-
 
 /**
  * 获取所有被封禁用户的信息
@@ -2640,7 +2733,7 @@ export const adminClearUserInfoService = async (adminClearUserInfoRequest: Admin
 			label: [] as UserInfo['label'], // TODO: Mongoose issue: #12420
 			userBirthday: -1,
 			userProfileMarkdown: '',
-			userLinkAccounts: [] as UserInfo['userLinkAccounts'], // TODO: Mongoose issue: #12420
+			userLinkedAccounts: [] as UserInfo['userLinkedAccounts'], // TODO: Mongoose issue: #12420
 			userWebsite: { websiteName: '', websiteUrl: '' },
 			isUpdatedAfterReview: false, // 清除信息的直接设为 false
 			editDateTime: new Date().getTime(),
@@ -2665,7 +2758,6 @@ export const adminClearUserInfoService = async (adminClearUserInfoRequest: Admin
 
 /**
  * 根据 UID 获取 UUID
- * // DELETE ME 这是一个临时的解决方案，以后 Cookie 中直接存储 UUID
  * @param uid 用户 UID
  * @returns UUID
  */
@@ -2694,6 +2786,40 @@ export const getUserUuid = async (uid: number): Promise<string | void> => {
 		}
 	} catch (error) {
 		console.error('ERROR', '通过 UID 获取 UUID 时出错：', error)
+		return
+	}
+}
+
+/**
+ * 根据 UUID 获取 UID
+ * @param uuid 用户 UUID
+ * @returns UID
+ */
+export const getUserUid = async (uuid: string): Promise<number | void> => {
+	try {
+		if (!uuid) {
+			console.error('ERROR', '通过 UUID 获取 UID 失败，UUID 不合法')
+			return
+		}
+		const { collectionName: userAuthCollectionName, schemaInstance: userAuthSchemaSchemaInstance } = UserAuthSchema
+		type UserAuth = InferSchemaType<typeof userAuthSchemaSchemaInstance>
+
+		const getUidWhere: QueryType<UserAuth> = {
+			UUID: uuid,
+		}
+
+		const getUidSelect: SelectType<UserAuth> = {
+			uid: 1,
+		}
+
+		const getUidResult = await selectDataFromMongoDB(getUidWhere, getUidSelect, userAuthSchemaSchemaInstance, userAuthCollectionName)
+		if (getUidResult.success && getUidResult.result?.length === 1) {
+			return getUidResult.result[0].uid
+		} else {
+			console.error('ERROR', '通过 UUID 获取 UID 失败，UID 不存在或结果长度不为 1')
+		}
+	} catch (error) {
+		console.error('ERROR', '通过 UUID 获取 UID 时出错：', error)
 		return
 	}
 }
@@ -2743,7 +2869,6 @@ const checkUserToken = async (uid: number, token: string): Promise<boolean> => {
 		return false
 	}
 }
-
 
 /**
  * 检查用户 Token，检查 Token 和用户 uuid 是否吻合，判断用户是否已注册
@@ -2947,6 +3072,7 @@ export const deleteTotpAuthenticatorByTotpVerificationCodeService = async (delet
 			const deleteTotpAuthenticatorByTotpVerificationCodeUpdate: UpdateType<UserTotpAuthenticator> = {
 				attempts: attempts,
 				lastAttemptTime: now,
+				editDateTime: now,
 			}
 			const updateAuthenticatorResult = await findOneAndUpdateData4MongoDB<UserTotpAuthenticator>(deleteTotpAuthenticatorByTotpVerificationCodeWhere, deleteTotpAuthenticatorByTotpVerificationCodeUpdate, userTotpAuthenticatorSchemaInstance, userTotpAuthenticatorCollectionName, { session })
 
@@ -3209,6 +3335,7 @@ export const confirmUserTotpAuthenticatorService = async (confirmUserTotpAuthent
 		}
 		const userAuthUpdate: UpdateType<UserAuth> = {
 			authenticatorType: 'totp',
+			editDateTime: now,
 		}
 		const updateUserAuthResult = await findOneAndUpdateData4MongoDB<UserAuthenticator>(userAuthWhere, userAuthUpdate, userAuthSchemaInstance, userAuthCollectionName, { session })
 
@@ -3848,7 +3975,7 @@ export const deleteUserEmailAuthenticatorService = async (deleteUserEmailAuthent
 			return { success: false, message: '用户删除 Email 2FA 时失败，用户关闭 2FA 失败' }
 		}
 
-		await commitSession(session)
+		await commitAndEndSession(session)
 		return { success: true, message: '用户删除 Email 2FA 成功' }
 	} catch (error) {
 		console.error('用户删除 Email 2FA 时出错，未知错误', error)
@@ -4011,28 +4138,43 @@ const checkUpdateUserEmailRequest = (updateUserEmailRequest: UpdateUserEmailRequ
 	)
 }
 
-// WARN // TODO 或许这些数据放到环境变量里更好？
-const ALLOWED_ACCOUNT_TYPE = [
-	'X', // Twitter → X
-	'qq',
-	'wechat',
-	'bili', // 哔哩哔哩
-	'niconico',
-	'youtube',
-	'otomadwiki', // 音 MAD 维基
-	'weibo', // 新浪微博
-	'NECM', // 网易云音乐
-	'discord',
-	'telegram',
-	'midishow',
-	'linkedin',
-	'facebook',
-	'ins', // Instagram
-	'douyin', // 抖音
-	'tiktok', // TikTok
-	'pixiv',
-	'coub',
-	'github',
+/**
+ * 允许关联的平台列表
+ * // TODO 或许这些数据放到环境变量里更好？
+ */
+const ALLOWED_PLATFORM_ID = [
+	'platform.twitter', // Twitter → X
+	'platform.qq',
+	'platform.wechat', // 微信
+	'platform.bilibili',
+	'platform.niconico',
+	'platform.youtube',
+	'platform.otomad_wiki', // 音 MAD 维基
+	'platform.weibo', // 新浪微博
+	'platform.tieba', // 百度贴吧
+	'platform.cloudmusic', // 网易云音乐
+	'platform.discord',
+	'platform.telegram',
+	'platform.midishow',
+	'platform.linkedin', // 领英（海外版）
+	'platform.facebook',
+	'platform.instagram',
+	'platform.douyin', // 抖音
+	'platform.tiktok', // TikTok（抖音海外版）
+	'platform.pixiv',
+	'platform.github',
+]
+
+/**
+ * 允许设置的隐私设置项
+ * // TODO 或许这些数据放到环境变量里更好？
+ */
+const ALLOWED_PRIVARY_ID = [
+	'privary.birthday', // 生日
+	'privary.age', // 年龄
+	'privary.follow', // 关注
+	'privary.fans', // 粉丝
+	'privary.favorites', // 收藏
 ]
 
 /**
@@ -4047,7 +4189,7 @@ const checkUpdateOrCreateUserInfoRequest = (updateOrCreateUserInfoRequest: Updat
 		return false
 	}
 
-	if (updateOrCreateUserInfoRequest?.userLinkAccounts?.some(account => !ALLOWED_ACCOUNT_TYPE.includes(account.accountType))) {
+	if (updateOrCreateUserInfoRequest?.userLinkedAccounts?.some(account => !ALLOWED_PLATFORM_ID.includes(account.platformId))) {
 		return false
 	}
 
@@ -4066,7 +4208,11 @@ const checkUpdateOrCreateUserSettingsRequest = (updateOrCreateUserSettingsReques
 		return false
 	}
 
-	if (updateOrCreateUserSettingsRequest?.userLinkAccountsPrivacySetting?.some(account => !ALLOWED_ACCOUNT_TYPE.includes(account.accountType))) {
+	if (updateOrCreateUserSettingsRequest?.userLinkedAccountsVisibilitiesSetting?.some(account => !ALLOWED_PLATFORM_ID.includes(account.platformId))) {
+		return false
+	}
+
+	if (updateOrCreateUserSettingsRequest?.userPrivaryVisibilitiesSetting?.some(account => !ALLOWED_PRIVARY_ID.includes(account.privaryId))) {
 		return false
 	}
 
@@ -4244,4 +4390,13 @@ const checkDeleteUserEmailAuthenticatorRequest = (deleteUserEmailAuthenticatorRe
 		!!deleteUserEmailAuthenticatorRequest.passwordHash
 		&& !!deleteUserEmailAuthenticatorRequest.verificationCode
 	)
+}
+
+/**
+ * 检查根据 UUID 校验用户是否已经存在的请求载荷
+ * @param checkUserExistsByUuidRequest 根据 UUID 校验用户是否已经存在的请求载荷
+ * @returns 检查结果，合法返回 true，不合法返回 false
+ */
+const checkCheckUserExistsByUuidRequest = (checkUserExistsByUuidRequest: CheckUserExistsByUuidRequestDto): boolean => {
+	return ( !!checkUserExistsByUuidRequest.uuid )
 }
