@@ -3,7 +3,7 @@ import { AddRegexRequestDto, AddRegexResponseDto, BlockKeywordRequestDto, BlockK
 import { checkUserExistsByUuidService, checkUserTokenByUuidService, getUserUuid } from "./UserService.js";
 import { QueryType, SelectType, UpdateType } from "../dbPool/DbClusterPoolTypes.js";
 import { abortAndEndSession, commitAndEndSession, createAndStartSession } from "../common/MongoDBSessionTool.js";
-import { findOneAndUpdateData4MongoDB, selectDataFromMongoDB } from "../dbPool/DbClusterPool.js";
+import { updateData4MongoDB, selectDataFromMongoDB, insertData2MongoDB, findOneAndUpdateData4MongoDB } from "../dbPool/DbClusterPool.js";
 import { BlockingSchema } from "../dbPool/schema/BlockSchema.js";
 
 // DELETE ME： 一定要重写一下
@@ -17,7 +17,7 @@ import { BlockingSchema } from "../dbPool/schema/BlockSchema.js";
  */
 export const BlockUserByUidService = async (blockUserByUidRequest: BlockUserByUidRequestDto, uuid: string, token: string): Promise<BlockUserByUidResponseDto> => {
 	try {
-		if (!checkBlockUserByUidRequest) {
+		if (!checkBlockUserByUidRequest(blockUserByUidRequest)) {
 			console.error('ERROR', '封禁用户请求载荷不合法')
 			return { success: false, message: '封禁用户请求载荷不合法' }
 		}
@@ -54,14 +54,18 @@ export const BlockUserByUidService = async (blockUserByUidRequest: BlockUserByUi
 		}
 
 		const blockingUserResult = await selectDataFromMongoDB<BlockingUser>(blockingUserWhere, blockingUserSelect, blockingUserSchemaInstance, blockingUserCollectionName)
-		const blockingUserData = blockingUserResult.result?.[0]
+		const blockingUserData = blockingUserResult.result?.[0] ?? {
+			UUID: [],
+			blockUuid: [],
+			createDateTime: now,
+		}
 
 		if (!blockingUserResult.success) {
 			console.error('ERROR', '封禁用户失败，查询数据库失败')
 			return { success: false, message: '封禁用户失败，查询数据库失败' }
 		}
 
-		if (!blockingUserData.blockUuid.includes(blockedUuid)) {
+		if (blockingUserData.blockUuid.includes(blockedUuid)) {
 			console.error('ERROR', '封禁用户失败，已经封禁过了')
 			return { success: false, message: '封禁用户失败，已经封禁过了' }
 		}
@@ -69,28 +73,17 @@ export const BlockUserByUidService = async (blockUserByUidRequest: BlockUserByUi
 		const blockUuid = [...new Set([...blockingUserData.blockUuid, blockedUuid])]
 
 		const blockingUserUpdateData: UpdateType<BlockingUser> = {
-			UUID: uuid,
 			blockUuid,
 			editDateTime: now,
 		}
 
-		const session = await createAndStartSession()
-		const blockingUserUpdateResult = await findOneAndUpdateData4MongoDB(blockingUserWhere, blockingUserUpdateData, blockingUserSchemaInstance, blockingUserCollectionName, {session})
-		const blockingUserUpdateResultData = blockingUserUpdateResult.result?.[0]
+		const blockingUserUpdateResult = await findOneAndUpdateData4MongoDB(blockingUserWhere, blockingUserUpdateData, blockingUserSchemaInstance, blockingUserCollectionName)
 
 		if (!blockingUserUpdateResult.success) {
 			console.error('ERROR', '封禁用户失败，更新数据库失败')
 			return { success: false, message: '封禁用户失败，更新数据库失败' }
 		}
-
-		if (blockingUserUpdateResultData) {
-			await commitAndEndSession(session)
-			return { success: true, message: '封禁用户成功', result: blockingUserUpdateResultData.blockUuid }
-		} else {
-			await abortAndEndSession(session)
-			console.error('ERROR', '封禁用户失败，更新数据库失败')
-			return { success: false, message: '封禁用户失败，更新数据库失败' }
-		}
+			return { success: true, message: '封禁用户成功', result: { blockUuid: blockUuid ?? [] } }
 
 	} catch (error) {
 		console.error('ERROR', '封禁用户错误，未知错误', error)
@@ -107,7 +100,7 @@ export const BlockUserByUidService = async (blockUserByUidRequest: BlockUserByUi
  */
 export const HideUserByUidService = async (hideUserByUidRequest: HideUserByUidRequestDto, uuid: string, token: string): Promise<HideUserByUidResponseDto> => {
 	try {
-		if (!hideUserByUidRequest) {
+		if (!checkHideUserByUidRequest(hideUserByUidRequest)) {
 			console.error('ERROR', '隐藏用户请求载荷不合法')
 			return { success: false, message: '隐藏用户请求载荷不合法' }
 		}
@@ -142,39 +135,33 @@ export const HideUserByUidService = async (hideUserByUidRequest: HideUserByUidRe
 		}
 
 		const blockingUserResult = await selectDataFromMongoDB<HidingUser>(blockingUserWhere, blockingUserSelect, hidingUserSchemaInstance, hidingUserCollectionName)
-		const blockingUserData = blockingUserResult.result?.[0]
+		const blockingUserData = blockingUserResult.result?.[0] ?? {
+			UUID: [],
+			hideUuid: [],
+		}
 
 		if (!blockingUserResult.success) {
 			console.error('ERROR', '隐藏用户失败，查询数据库失败')
 			return { success: false, message: '隐藏用户失败，查询数据库失败' }
 		}
-		if (!blockingUserData.hideUuid.includes(hidedUuid)) {
+		if (blockingUserData.hideUuid.includes(hidedUuid)) {
 			console.error('ERROR', '隐藏用户失败，已经隐藏过了')
 			return { success: false, message: '隐藏用户失败，已经隐藏过了' }
 		}
 
 		const hideUuid = [...new Set([...blockingUserData.hideUuid, hidedUuid])]
-		const blockingUserUpdateData: UpdateType<HidingUser> = {
+		const hidingUserUpdateData: UpdateType<HidingUser> = {
 			hideUuid,
 			editDateTime: now,
 		}
 
-		const session = await createAndStartSession()
-		const blockingUserUpdateResult = await findOneAndUpdateData4MongoDB(blockingUserWhere, blockingUserUpdateData, hidingUserSchemaInstance, hidingUserCollectionName, {session})
-		const blockingUserUpdateResultData = blockingUserUpdateResult.result?.[0]
+		const blockingUserUpdateResult = await findOneAndUpdateData4MongoDB(blockingUserWhere, hidingUserUpdateData, hidingUserSchemaInstance, hidingUserCollectionName)
+
 		if (!blockingUserUpdateResult.success) {
 			console.error('ERROR', '隐藏用户失败，更新数据库失败')
 			return { success: false, message: '隐藏用户失败，更新数据库失败' }
 		}
-
-		if (blockingUserUpdateResultData) {
-			await commitAndEndSession(session)
-			return { success: true, message: '隐藏用户成功', result: blockingUserUpdateResultData.blockUuid }
-		} else {
-			await abortAndEndSession(session)
-			console.error('ERROR', '隐藏用户失败，更新数据库失败')
-			return { success: false, message: '隐藏用户失败，更新数据库失败' }
-		}
+		return { success: true, message: '隐藏用户成功', result: { hideUuid: hideUuid ?? [] } }
 
 	} catch (error) {
 		console.error('ERROR', '隐藏用户错误，未知错误', error)
@@ -187,7 +174,7 @@ export const HideUserByUidService = async (hideUserByUidRequest: HideUserByUidRe
  */
 export const BlockKeywordService = async (blockKeywordRequest: BlockKeywordRequestDto, uuid: string, token: string): Promise<BlockKeywordResponseDto> => {
 	try {
-		if (!blockKeywordRequest.blockKeyword) {
+		if (!checkBlockKeywordRequest(blockKeywordRequest)) {
 			console.error('ERROR', '封禁关键词请求载荷不合法')
 			return { success: false, message: '封禁关键词请求载荷不合法' }
 		}
@@ -218,7 +205,7 @@ export const BlockKeywordService = async (blockKeywordRequest: BlockKeywordReque
 			return { success: false, message: '封禁关键词失败，查询数据库失败' }
 		}
 
-		if (!blockingKeywordData.blockKeyword.includes(blockKeyword)) {
+		if (blockingKeywordData.blockKeyword.includes(blockKeyword)) {
 			console.error('ERROR', '封禁关键词失败，已经封禁过了')
 			return { success: false, message: '封禁关键词失败，已经封禁过了' }
 		}
@@ -226,28 +213,18 @@ export const BlockKeywordService = async (blockKeywordRequest: BlockKeywordReque
 		const keyword = [...new Set([...blockingKeywordData.blockKeyword, blockKeyword])]
 
 		const blockingUserUpdateData: UpdateType<BlockingKeyword> = {
-			UUID: uuid,
 			blockKeyword: keyword,
 			editDateTime: now,
 		}
 
-		const session = await createAndStartSession()
-		const blockingUserUpdateResult = await findOneAndUpdateData4MongoDB(blockingKeywordWhere, blockingUserUpdateData, blockingKeywordSchemaInstance, blockingKeywordCollectionName, {session})
-		const blockingUserUpdateResultData = blockingUserUpdateResult.result?.[0]
+		const blockingUserUpdateResult = await findOneAndUpdateData4MongoDB(blockingKeywordWhere, blockingUserUpdateData, blockingKeywordSchemaInstance, blockingKeywordCollectionName)
 
 		if (!blockingUserUpdateResult.success) {
 			console.error('ERROR', '封禁关键词失败，更新数据库失败')
 			return { success: false, message: '封禁关键词失败，更新数据库失败' }
 		}
-		if (blockingUserUpdateResultData) {
-			await commitAndEndSession(session)
-			return { success: true, message: '封禁关键词成功', result: blockingUserUpdateResultData.blockKeyword }
-		}
-		else {
-			await abortAndEndSession(session)
-			console.error('ERROR', '封禁关键词失败，更新数据库失败')
-			return { success: false, message: '封禁关键词失败，更新数据库失败' }
-		}
+		return { success: true, message: '封禁关键词成功', result: { blockKeyword: keyword ?? [] } }
+
 	} catch (error) {
 		console.error('ERROR', '封禁关键词错误，未知错误', error)
 		return { success: false, message: '封禁关键词失败，未知错误' }
@@ -263,7 +240,7 @@ export const BlockKeywordService = async (blockKeywordRequest: BlockKeywordReque
  */
 export const BlockTagService = async (blockTagRequest: BlockTagRequestDto, uuid: string, token: string): Promise<BlockTagResponseDto> => {
 	try {
-		if (!blockTagRequest.tagId) {
+		if (!checkBlockTagRequest(blockTagRequest)) {
 			console.error('ERROR', '封禁标签请求载荷不合法')
 			return { success: false, message: '封禁标签请求载荷不合法' }
 		}
@@ -283,7 +260,7 @@ export const BlockTagService = async (blockTagRequest: BlockTagRequestDto, uuid:
 		}
 		const blockingTagSelect: SelectType<BlockingTag> = {
 			UUID: 1,
-			blockTag: 1
+			tagId: 1
 		}
 
 		const blockingTagResult = await selectDataFromMongoDB<BlockingTag>(blockingTagWhere, blockingTagSelect, blockingTagSchemaInstance, blockingTagCollectionName)
@@ -294,36 +271,25 @@ export const BlockTagService = async (blockTagRequest: BlockTagRequestDto, uuid:
 			return { success: false, message: '封禁标签失败，查询数据库失败' }
 		}
 
-		if (!blockingTagData.blockTag.includes(tagId)) {
+		if (blockingTagData.tagId.includes(tagId)) {
 			console.error('ERROR', '封禁标签失败，已经封禁过了')
 			return { success: false, message: '封禁标签失败，已经封禁过了' }
 		}
 
-		const blockTag = [...new Set([...blockingTagData.blockTag, tagId])]
-
+		const blockTag = [...new Set([...blockingTagData.tagId, tagId])]
 		const blockingUserUpdateData: UpdateType<BlockingTag> = {
 			UUID: uuid,
-			blockTag,
+			tagId: blockTag,
 			editDateTime: now,
 		}
 
-		const session = await createAndStartSession()
-		const blockingUserUpdateResult = await findOneAndUpdateData4MongoDB(blockingTagWhere, blockingUserUpdateData, blockingTagSchemaInstance, blockingTagCollectionName, {session})
-		const blockingUserUpdateResultData = blockingUserUpdateResult.result?.[0]
+		const blockingUserUpdateResult = await findOneAndUpdateData4MongoDB(blockingTagWhere, blockingUserUpdateData, blockingTagSchemaInstance, blockingTagCollectionName)
 
 		if (!blockingUserUpdateResult.success) {
 			console.error('ERROR', '封禁标签失败，更新数据库失败')
 			return { success: false, message: '封禁标签失败，更新数据库失败' }
 		}
-		if (blockingUserUpdateResultData) {
-			await commitAndEndSession(session)
-			return { success: true, message: '封禁标签成功', result: blockingUserUpdateResultData.blockTagId }
-		}
-		else {
-			await abortAndEndSession(session)
-			console.error('ERROR', '封禁标签失败，更新数据库失败')
-			return { success: false, message: '封禁标签失败，更新数据库失败' }
-		}
+		return { success: true, message: '封禁标签成功', result: { tagId: blockTag ?? [] } }
 
 	} catch (error) {
 		console.error('ERROR', '封禁标签错误，未知错误', error)
@@ -340,7 +306,7 @@ export const BlockTagService = async (blockTagRequest: BlockTagRequestDto, uuid:
  */
 export const AddRegexService = async (addRegexRequest: AddRegexRequestDto, uuid: string, token: string): Promise<AddRegexResponseDto> => {
 	try {
-		if (!addRegexRequest.blockRegex) {
+		if (!checkAddRegexRequest(addRegexRequest)) {
 			console.error('ERROR', '封禁正则表达式请求载荷不合法')
 			return { success: false, message: '封禁正则表达式请求载荷不合法' }
 		}
@@ -371,7 +337,7 @@ export const AddRegexService = async (addRegexRequest: AddRegexRequestDto, uuid:
 			return { success: false, message: '封禁正则表达式失败，查询数据库失败' }
 		}
 
-		if (!blockingRegexData.blockRegex.includes(blockRegex)) {
+		if (blockingRegexData.blockRegex.includes(blockRegex)) {
 			console.error('ERROR', '封禁正则表达式失败，已经封禁过了')
 			return { success: false, message: '封禁正则表达式失败，已经封禁过了' }
 		}
@@ -379,28 +345,18 @@ export const AddRegexService = async (addRegexRequest: AddRegexRequestDto, uuid:
 		const regex = [...new Set([...blockingRegexData.blockRegex, blockRegex])]
 
 		const blockingUserUpdateData: UpdateType<BlockingRegex> = {
-			UUID: uuid,
 			blockRegex: regex,
 			editDateTime: now,
 		}
 
-		const session = await createAndStartSession()
-		const blockingUserUpdateResult = await findOneAndUpdateData4MongoDB(blockingRegexWhere, blockingUserUpdateData, blockingRegexSchemaInstance, blockingRegexCollectionName, {session})
-		const blockingUserUpdateResultData = blockingUserUpdateResult.result?.[0]
+		const blockingUserUpdateResult = await findOneAndUpdateData4MongoDB(blockingRegexWhere, blockingUserUpdateData, blockingRegexSchemaInstance, blockingRegexCollectionName)
+
 		if (!blockingUserUpdateResult.success) {
 			console.error('ERROR', '封禁正则表达式失败，更新数据库失败')
 			return { success: false, message: '封禁正则表达式失败，更新数据库失败' }
 		}
+		return { success: true, message: '封禁正则表达式成功', result: { blockRegex: regex ?? [] } }
 
-		if (blockingUserUpdateResultData) {
-			await commitAndEndSession(session)
-			return { success: true, message: '封禁正则表达式成功', result: blockingUserUpdateResultData.blockKeyword }
-		}
-		else {
-			await abortAndEndSession(session)
-			console.error('ERROR', '封禁正则表达式失败，更新数据库失败')
-			return { success: false, message: '封禁正则表达式失败，更新数据库失败' }
-		}
 	} catch (error) {
 		console.error('ERROR', '封禁正则表达式错误，未知错误', error)
 		return { success: false, message: '封禁正则表达式失败，未知错误' }
@@ -466,28 +422,17 @@ export const UnBlockUserByUidService = async (unblockUserByUidRequest: UnblockUs
 
 		const blockUuid = blockingUserData.blockUuid.filter((uuid) => uuid !== unBlockedUuid)
 		const blockingUserUpdateData: UpdateType<BlockingUser> = {
-			UUID: uuid,
 			blockUuid,
 			editDateTime: now,
 		}
 
-		const session = await createAndStartSession()
-		const blockingUserUpdateResult = await findOneAndUpdateData4MongoDB(blockingUserWhere, blockingUserUpdateData, blockingUserSchemaInstance, blockingUserCollectionName, {session})
-		const blockingUserUpdateResultData = blockingUserUpdateResult.result?.[0]
+		const blockingUserUpdateResult = await findOneAndUpdateData4MongoDB(blockingUserWhere, blockingUserUpdateData, blockingUserSchemaInstance, blockingUserCollectionName)
 
 		if (!blockingUserUpdateResult.success) {
 			console.error('ERROR', '解封用户失败，更新数据库失败')
 			return { success: false, message: '解封用户失败，更新数据库失败' }
 		}
-
-		if (blockingUserUpdateResultData) {
-			await commitAndEndSession(session)
-			return { success: true, message: '解封用户成功', result: blockingUserUpdateResultData.blockUuid }
-		} else {
-			await abortAndEndSession(session)
-			console.error('ERROR', '解封用户失败，更新数据库失败')
-			return { success: false, message: '解封用户失败，更新数据库失败' }
-		}
+		return { success: true, message: '解封用户成功', result: { blockUuid: blockUuid ?? [] } }
 
 	} catch (error) {
 		console.error('ERROR', '解封用户错误，未知错误', error)
@@ -540,29 +485,19 @@ export const UnBlockKeywordService = async (UnblockKeywordRequest: UnblockKeywor
 			return { success: false, message: '解封关键词失败，不在黑名单' }
 		}
 
-		const keyword = blockingKeywordData.blockKeyword.filter((keyword) => keyword !== keyword)
+		const keyword = blockingKeywordData.blockKeyword.filter((kw) => kw !== blockKeyword)
 		const blockingUserUpdateData: UpdateType<BlockingKeyword> = {
-			UUID: uuid,
 			blockKeyword: keyword,
 			editDateTime: now,
 		}
-		const session = await createAndStartSession()
-		const blockingUserUpdateResult = await findOneAndUpdateData4MongoDB(blockingKeywordWhere, blockingUserUpdateData, blockingKeywordSchemaInstance, blockingKeywordCollectionName, {session})
-		const blockingUserUpdateResultData = blockingUserUpdateResult.result?.[0]
+		const blockingUserUpdateResult = await updateData4MongoDB(blockingKeywordWhere, blockingUserUpdateData, blockingKeywordSchemaInstance, blockingKeywordCollectionName)
 
 		if (!blockingUserUpdateResult.success) {
 			console.error('ERROR', '解封关键词失败，更新数据库失败')
 			return { success: false, message: '解封关键词失败，更新数据库失败' }
 		}
 
-		if (blockingUserUpdateResultData) {
-			await commitAndEndSession(session)
-			return { success: true, message: '解封关键词成功', result: blockingUserUpdateResultData.blockKeyword }
-		} else {
-			await abortAndEndSession(session)
-			console.error('ERROR', '解封关键词失败，更新数据库失败')
-			return { success: false, message: '解封关键词失败，更新数据库失败' }
-		}
+		return { success: true, message: '解封关键词成功', result: { blockKeyword: keyword ?? [] } }
 
 	} catch (error) {
 		console.error('ERROR', '解封关键词错误，未知错误', error)
@@ -629,29 +564,17 @@ export const ShowUserByUidService = async (showUserByUidRequest: ShowUserByUidRe
 
 		const hideUuid = blockingUserData.hideUuid.filter((uuid) => uuid !== showUuid)
 		const blockingUserUpdateData: UpdateType<HidingUser> = {
-			UUID: uuid,
 			hideUuid,
 			editDateTime: now,
 		}
 
-		const session = await createAndStartSession()
-		const blockingUserUpdateResult = await findOneAndUpdateData4MongoDB(blockingUserWhere, blockingUserUpdateData, hidingUserSchemaInstance, hidingUserCollectionName, {session})
-		const blockingUserUpdateResultData = blockingUserUpdateResult.result?.[0]
+		const blockingUserUpdateResult = await updateData4MongoDB(blockingUserWhere, blockingUserUpdateData, hidingUserSchemaInstance, hidingUserCollectionName)
 
 		if (!blockingUserUpdateResult.success) {
 			console.error('ERROR', '显示用户失败，更新数据库失败')
 			return { success: false, message: '显示用户失败，更新数据库失败' }
 		}
-
-		if (blockingUserUpdateResultData) {
-			await commitAndEndSession(session)
-			return { success: true, message: '显示用户成功', result: blockingUserUpdateResultData.blockUuid }
-		}
-		else {
-			await abortAndEndSession(session)
-			console.error('ERROR', '显示用户失败，更新数据库失败')
-			return { success: false, message: '显示用户失败，更新数据库失败' }
-		}
+		return { success: true, message: '显示用户成功', result: { hideUuid: hideUuid ?? [] } }
 
 	} catch (error) {
 		console.error('ERROR', '显示用户错误，未知错误', error)
@@ -688,7 +611,7 @@ export const UnBlockTagService = async (blockTagRequest: UnblockTagRequestDto, u
 		}
 		const blockingTagSelect: SelectType<BlockingTag> = {
 			UUID: 1,
-			blockTag: 1
+			tagId: 1
 		}
 
 		const blockingTagResult = await selectDataFromMongoDB<BlockingTag>(blockingTagWhere, blockingTagSelect, blockingTagSchemaInstance, blockingTagCollectionName)
@@ -699,34 +622,26 @@ export const UnBlockTagService = async (blockTagRequest: UnblockTagRequestDto, u
 			return { success: false, message: '解封标签失败，查询数据库失败' }
 		}
 
-		if (!blockingTagData.blockTag.includes(tagId)) {
+		if (!blockingTagData.tagId.includes(tagId)) {
 			console.error('ERROR', '解封标签失败，不在黑名单')
 			return { success: false, message: '解封标签失败，不在黑名单' }
 		}
 
-		const blockTag = blockingTagData.blockTag.filter((tagId) => tagId !== tagId)
+		const blockTag = blockingTagData.tagId.filter((tag) => tag !== tagId)
 		const blockingUserUpdateData: UpdateType<BlockingTag> = {
-			UUID: uuid,
-			blockTag,
+			tagId: blockTag,
 			editDateTime: now,
 		}
 
-		const session = await createAndStartSession()
-		const blockingUserUpdateResult = await findOneAndUpdateData4MongoDB(blockingTagWhere, blockingUserUpdateData, blockingTagSchemaInstance, blockingTagCollectionName, {session})
-		const blockingUserUpdateResultData = blockingUserUpdateResult.result?.[0]
+		const blockingUserUpdateResult = await updateData4MongoDB(blockingTagWhere, blockingUserUpdateData, blockingTagSchemaInstance, blockingTagCollectionName)
 
 		if (!blockingUserUpdateResult.success) {
 			console.error('ERROR', '解封标签失败，更新数据库失败')
 			return { success: false, message: '解封标签失败，更新数据库失败' }
 		}
-		if (blockingUserUpdateResultData) {
-			await commitAndEndSession(session)
-			return { success: true, message: '解封标签成功', result: blockingUserUpdateResultData.blockTagId }
-		} else {
-			await abortAndEndSession(session)
-			console.error('ERROR', '解封标签失败，更新数据库失败')
-			return { success: false, message: '解封标签失败，更新数据库失败' }
-		}
+
+		return { success: true, message: '解封标签成功', result: { tagId: blockTag ?? [] } }
+
 	} catch (error) {
 		console.error('ERROR', '解封标签错误，未知错误', error)
 		return { success: false, message: '解封标签失败，未知错误' }
@@ -778,29 +693,20 @@ export const RemoveRegexService = async (removeRegexRequest: RemoveRegexRequestD
 			return { success: false, message: '删除正则表达式失败，不在黑名单' }
 		}
 
-		const regex = blockingRegexData.blockRegex.filter((regex) => regex !== regex)
+		const regex = blockingRegexData.blockRegex.filter((reg) => reg !== blockRegex)
 		const blockingUserUpdateData: UpdateType<BlockingRegex> = {
-			UUID: uuid,
 			blockRegex: regex,
 			editDateTime: now,
 		}
 
-		const session = await createAndStartSession()
-		const blockingUserUpdateResult = await findOneAndUpdateData4MongoDB(blockingRegexWhere, blockingUserUpdateData, blockingRegexSchemaInstance, blockingRegexCollectionName, {session})
-		const blockingUserUpdateResultData = blockingUserUpdateResult.result?.[0]
+		const blockingUserUpdateResult = await updateData4MongoDB(blockingRegexWhere, blockingUserUpdateData, blockingRegexSchemaInstance, blockingRegexCollectionName)
 
 		if (!blockingUserUpdateResult.success) {
 			console.error('ERROR', '删除正则表达式失败，更新数据库失败')
 			return { success: false, message: '删除正则表达式失败，更新数据库失败' }
 		}
-		if (blockingUserUpdateResultData) {
-			await commitAndEndSession(session)
-			return { success: true, message: '删除正则表达式成功', result: blockingUserUpdateResultData.blockKeyword }
-		} else {
-			await abortAndEndSession(session)
-			console.error('ERROR', '删除正则表达式失败，更新数据库失败')
-			return { success: false, message: '删除正则表达式失败，更新数据库失败' }
-		}
+
+		return { success: true, message: '删除正则表达式成功', result: { blockRegex: regex ?? [] } }
 
 	} catch (error) {
 		console.error('ERROR', '删除正则表达式错误，未知错误', error)
@@ -829,20 +735,26 @@ export const GetBlockListService = async (uuid: string, token: string): Promise<
 		const blockingUserSelect: SelectType<BlockingUser> = {
 			blockUuid: 1,
 			hideUuid: 1,
-			blockTag: 1,
+			tagId: 1,
 			blockKeyword: 1,
 			blockRegex: 1,
 		}
 
 		const blockingUserResult = await selectDataFromMongoDB<BlockingUser>(blockingUserWhere, blockingUserSelect, blockingUserSchemaInstance, blockingUserCollectionName)
-		const blockingUserData = blockingUserResult.result?.[0]
+		const blockingUserData = blockingUserResult.result?.[0] ?? {
+			blockUuid: [],
+			hideUuid: [],
+			tagId: [],
+			blockKeyword: [],
+			blockRegex: [],
+		}
 
 		const result = {
-			blockUuid: blockingUserData.blockUuid,
-			hideUuid: blockingUserData.hideUuid,
-			tagId: blockingUserData.blockTag,
-			blockKeyword: blockingUserData.blockKeyword, // Map blockKeyword to blockKeywords
-			blockRegex: blockingUserData.blockRegex, // Map blockRegex to regex
+			blockUuid: blockingUserData.blockUuid ?? [],
+			hideUuid: blockingUserData.hideUuid ?? [],
+			tagId: blockingUserData.tagId ?? [],
+			blockKeyword: blockingUserData.blockKeyword ?? [],
+			blockRegex: blockingUserData.blockRegex ?? [],
 		};
 
 		if (!blockingUserResult.success) {
@@ -887,12 +799,28 @@ export const checkHideUserByUidRequest = (hideUserByUidRequest: HideUserByUidReq
  * 检测封禁关键词的请求载荷
  */
 export const checkBlockKeywordRequest = (blockKeywordRequest: BlockKeywordRequestDto): boolean => {
-	if (!blockKeywordRequest.blockKeyword) {
-		console.error('ERROR', '封禁关键词请求载荷不合法')
-		return false
+	// 检查关键词是否存在
+	if (!blockKeywordRequest?.blockKeyword) {
+			console.error('ERROR', '封禁关键词请求载荷不合法')
+			return false
 	}
+
+	const keyword = blockKeywordRequest.blockKeyword
+	const validKeywordRegex = /^[a-zA-Z0-9\u4e00-\u9fa5\s.,!?@#$%&*()_+-=[\]{}|;:'"`~<>]+$/
+
+	// 检查多个条件
+	if (
+			keyword.trim().length === 0 || // 空字符串或纯空格
+			keyword.length > 100 || // 长度超限
+			!validKeywordRegex.test(keyword) // 包含非法字符
+	) {
+			console.error('ERROR', '封禁关键词请求载荷不合法')
+			return false
+	}
+
 	return true
 }
+
 
 /**
  * 检测封禁标签的请求载荷
@@ -902,5 +830,37 @@ export const checkBlockTagRequest = (blockTagRequest: BlockTagRequestDto): boole
 		console.error('ERROR', '封禁标签请求载荷不合法')
 		return false
 	}
+	return true
+}
+
+/**
+ * 检测添加正则表达式的请求载荷
+ */
+export const checkAddRegexRequest = (addRegexRequest: AddRegexRequestDto): boolean => {
+	// 检查正则表达式是否存在
+	if (!addRegexRequest?.blockRegex) {
+			console.error('ERROR', '添加正则表达式请求载荷不合法')
+			return false
+	}
+
+	const regex = addRegexRequest.blockRegex
+
+	// 检查多个条件
+	if (
+			regex.trim().length === 0 || // 空字符串或纯空格
+			regex.length > 500 // 长度超限
+	) {
+			console.error('ERROR', '添加正则表达式请求载荷不合法')
+			return false
+	}
+
+	// 验证是否为有效的正则表达式
+	try {
+			new RegExp(regex)
+	} catch (e) {
+			console.error('ERROR', '添加正则表达式请求载荷不合法')
+			return false
+	}
+
 	return true
 }

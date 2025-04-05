@@ -15,7 +15,7 @@ class BlockUserSchemaFactory {
 		/** 系统专用字段-最后编辑时间 - 非空 */
 		blockKeyword: { type: [String], default: [] },
 		/** 系统专用字段-最后编辑时间 - 非空 */
-		blockTag: { type: [Number], default: [] },
+		tagId: { type: [Number], default: [] },
 		/** 系统专用字段-最后编辑时间 - 非空 */
 		blockRegex: { type: [String], default: [] },
 		/** 正则表达式标志 */
