@@ -7,7 +7,7 @@ import {
 	adminClearUserInfoController,
 	adminGetUserInfoController,
 	approveUserInfoController,
-	blockUserByUIDController,
+	// blockUserByUIDController,
 	checkInvitationCodeController,
 	checkUsernameController,
 	checkUserTokenController,
@@ -18,7 +18,7 @@ import {
 	getUserAvatarUploadSignedUrlController,
 	getUserInfoByUidController,
 	getUserSettingsController,
-	reactivateUserByUIDController,
+	// reactivateUserByUIDController,
 	requestSendChangeEmailVerificationCodeController,
 	requestSendChangePasswordVerificationCodeController,
 	requestSendVerificationCodeController,
@@ -45,6 +45,8 @@ import {
 import { adminDeleteVideoCommentController, cancelVideoCommentDownvoteController, cancelVideoCommentUpvoteController, deleteSelfVideoCommentController, emitVideoCommentController, emitVideoCommentDownvoteController, emitVideoCommentUpvoteController, getVideoCommentListByKvidController } from '../controller/VideoCommentController.js'
 import { approvePendingReviewVideoController, checkVideoExistController, deleteVideoByKvidController, getPendingReviewVideoController, getThumbVideoController, getVideoByKvidController, getVideoByUidController, getVideoCoverUploadSignedUrlController, getVideoFileTusEndpointController, searchVideoByKeywordController, searchVideoByVideoTagIdController, updateVideoController } from '../controller/VideoController.js'
 import { createVideoTagController, getVideoTagByTagIdController, searchVideoTagController } from '../controller/VideoTagController.js'
+import { adminGetUserRolesByUidController, adminUpdateUserRoleController, createRbacApiPathController, createRbacRoleController, deleteRbacApiPathController, deleteRbacRoleController, getRbacApiPathController, getRbacRoleController, updateApiPathPermissionsForRoleController } from '../controller/RbacController.js'
+import { getStgEnvBackEndSecretController } from '../controller/ConsoleSecretController.js'
 import { followingUploaderController, unfollowingUploaderController } from '../controller/FeedController.js'
 import { AddRegexController, BlockKeywordController, BlockTagController, BlockUserByUidController, HideUserByUidController, RemoveRegexController, ShowUserByUidController, UnblockKeywordController, UnblockTagController, UnblockUserByUidController } from '../controller/BlockController.js'
 
@@ -272,19 +274,19 @@ router.post('/user/update/password', updateUserPasswordController) // 更新用�
 router.get('/user/checkUsername', checkUsernameController) // 检查用户名是否可用
 // https://localhost:9999/user/checkUsername?username=xxxxxxxx
 
-router.post('/user/blockUser', blockUserByUIDController) // 根据 UID 封禁一个用户 // WARN: 仅限管理员
-// https://localhost:9999/user/blockUser
-// cookie: uid, token
-// {
-// 	"criminalUid": XXXX
-// }
+// router.post('/user/blockUser', blockUserByUIDController) // 根据 UID 封禁一个用户 // WARN: 仅限管理员
+// // https://localhost:9999/user/blockUser
+// // cookie: uid, token
+// // {
+// // 	"criminalUid": XXXX
+// // }
 
-router.post('/user/reactivateUser', reactivateUserByUIDController) // 根据 UID 重新激活一个用户 // WARN: 仅限管理员
-// https://localhost:9999/user/reactivateUser
-// cookie: uid, token
-// {
-// 	"uid": XXXX
-// }
+// router.post('/user/reactivateUser', reactivateUserByUIDController) // 根据 UID 重新激活一个用户 // WARN: 仅限管理员
+// // https://localhost:9999/user/reactivateUser
+// // cookie: uid, token
+// // {
+// // 	"uid": XXXX
+// // }
 
 router.get('/user/blocked/info', getBlockedUserController) // 获取所有被封禁用户的信息 // WARN: 仅限管理员
 // https://localhost:9999/user/blocked/info
@@ -642,6 +644,8 @@ router.get('/favorites', getFavoritesController) // 获取当前登录用户的�
 
 
 
+
+
 router.post('/feed/following', followingUploaderController) // 关注一个用户
 // https://localhost:9999/feed/following
 // cookie: uuid, token
@@ -659,6 +663,165 @@ router.post('/feed/unfollowing', unfollowingUploaderController) // 取消关注�
 
 
 
+
+
+
+
+
+
+
+router.post('/rbac/createRbacApiPath', createRbacApiPathController) // 创建 RBAC API 路径
+// https://localhost:9999/rbac/createRbacApiPath
+// cookie: uuid, token
+// {
+// 	"apiPath": "/luo/tian/yi",
+// 	"apiPathType": "tian-yi",
+// 	"apiPathColor": "#66CCFFFF",
+// 	"apiPathDescription": "这里是简介"
+// }
+
+router.delete('/rbac/deleteRbacApiPath', deleteRbacApiPathController) // 删除 RBAC API 路径
+// https://localhost:9999/rbac/deleteRbacApiPath
+// cookie: uuid, token
+// {
+// 	"apiPath": "/luo/tian/yi"
+// }
+
+router.get('/rbac/getRbacApiPath', getRbacApiPathController) // 获取 RBAC API 路径
+// https://localhost:9999/rbac/getRbacApiPath
+// cookie: uuid, token
+//
+// Query:
+// apiPath
+// apiPathType
+// apiPathColor
+// apiPathDescription
+// page
+// pageSize
+
+router.post('/rbac/createRbacRole', createRbacRoleController) // 创建 RBAC 角色
+// https://localhost:9999/rbac/createRbacRole
+// cookie: uuid, token
+// {
+// 	"roleName": "administrator",
+// 	"apiPathType": "administrator",
+// 	"apiPathColor": "#66CCFFFF",
+// 	"apiPathDescription": "这是一个管理员角色，拥有绝大部分内容的管理权限，除了分配角色和其他 ROOT 角色专属的权限。"
+// }
+
+router.delete('/rbac/deleteRbacRole', deleteRbacRoleController) // 删除 RBAC 角色
+// https://localhost:9999/rbac/deleteRbacRole
+// cookie: uuid, token
+// {
+// 	"roleName": "administrator"
+// }
+
+router.get('/rbac/getRbacRole', getRbacRoleController) // 获取 RBAC 角色
+// https://localhost:9999/rbac/getRbacRole
+// cookie: uuid, token
+//
+// Query:
+// roleName
+// roleType
+// roleColor
+// roleDescription
+// page
+// pageSize
+
+router.post('/rbac/updateApiPathPermissionsForRole', updateApiPathPermissionsForRoleController) // 为角色更新 API 路径权限
+// https://localhost:9999/rbac/updateApiPathPermissionsForRole
+// cookie: uuid, token
+// {
+// 	"roleName": "administrator",
+// 	"apiPathPermissions": [
+// 		"/luo/tian/yi"
+// 	]
+// }
+
+router.post('/rbac/adminUpdateUserRole', adminUpdateUserRoleController) // 管理员更新用户角色
+// https://localhost:9999/rbac/adminUpdateUserRole
+// cookie: uuid, token
+// {
+// 	"uuid": "xxxxxxxxxxxxxxxxxxxxxxxxxx",
+// 	"newRoles": [
+// 		"administrator",
+// 		"user"
+// 	]
+// }
+
+router.get('/rbac/adminGetUserRolesByUid', adminGetUserRolesByUidController) // 通过 UID 获取一个用户的角色
+// https://localhost:9999/rbac/adminGetUserRolesByUid
+// cookie: uuid, token
+//
+// Query:
+// uid
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+router.get('/secret/getStgEnvBackEndSecret', getStgEnvBackEndSecretController) // 获取预生产环境后端环境变量机密
+// https://localhost:9999/secret/getStgEnvBackEndSecret
+// cookie: uuid, token
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// router.post('/02/koa/user/settings/userSettings/save', saveUserSettingsByUUID)
+// // http://localhost:9999/02/koa/user/settings/userSettings/save
+// //
+// // {
+// // 	"uuid": "u00001",
+// // 	"systemStyle": "s1",
+// // 	"systemColor": "#66CCFF",
+// // 	"backgroundAnimation": "true",
+// // 	"settingPageLastEnter": "PornHub"
+// // }
+
+// router.put('/02/koa/user/settings/userSettings/update', updateUserSettingsByUUID)
+// // http://localhost:9999/02/koa/user/settings/userSettings/update
+// //
+// // {
+// // 	"uuid": "u00001",
+// // 	"systemStyle": "s1",
+// // 	"systemColor": "#66CCFF",
+// // 	"backgroundAnimation": "true",
+// // 	"settingPageLastEnter": "PornHub"
+// // }
+
+// router.get('/02/koa/user/settings/userSettings/get', getUserSettingsByUUID)
+// // http://localhost:9999/02/koa/user/settings/userSettings/get?uuid=u00001
 
 
 

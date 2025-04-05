@@ -1,3 +1,4 @@
+import { isPassRbacCheck } from '../service/RbacService.js'
 import { approvePendingReviewVideoService, checkVideoExistByKvidService, deleteVideoByKvidService, getPendingReviewVideoService, getThumbVideoService, getVideoByKvidService, getVideoByUidRequestService, getVideoCoverUploadSignedUrlService, getVideoFileTusEndpointService, searchVideoByKeywordService, searchVideoByVideoTagIdService, updateVideoService } from '../service/VideoService.js'
 import { koaCtx, koaNext } from '../type/koaTypes.js'
 import { ApprovePendingReviewVideoRequestDto, CheckVideoExistRequestDto, DeleteVideoRequestDto, GetVideoByKvidRequestDto, GetVideoByUidRequestDto, GetVideoFileTusEndpointRequestDto, SearchVideoByKeywordRequestDto, SearchVideoByVideoTagIdRequestDto, UploadVideoRequestDto } from './VideoControllerDto.js'
@@ -11,6 +12,11 @@ import { ApprovePendingReviewVideoRequestDto, CheckVideoExistRequestDto, DeleteV
 export const updateVideoController = async (ctx: koaCtx, next: koaNext) => {
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
+		return
+	}
 
 	const data = ctx.request.body as Partial<UploadVideoRequestDto>
 	const uploadVideoRequest: UploadVideoRequestDto = {
@@ -124,6 +130,11 @@ export const getVideoFileTusEndpointController = async (ctx: koaCtx, next: koaNe
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
 
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
 	const getVideoFileTusEndpointRequest: GetVideoFileTusEndpointRequestDto = {
 		uploadLength: parseInt(ctx.get('Upload-Length'), 10),
 		uploadMetadata: ctx.get('Upload-Metadata') || '',
@@ -181,6 +192,11 @@ export const deleteVideoByKvidController = async (ctx: koaCtx, next: koaNext) =>
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
 
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
 	const data = ctx.request.body as Partial<DeleteVideoRequestDto>
 	const deleteVideoRequest: DeleteVideoRequestDto = {
 		videoId: data.videoId ?? -1,
@@ -201,6 +217,11 @@ export const getPendingReviewVideoController = async (ctx: koaCtx, next: koaNext
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
 
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
 	ctx.body = await getPendingReviewVideoService(uid, token)
 	await next()
 }
@@ -214,6 +235,11 @@ export const getPendingReviewVideoController = async (ctx: koaCtx, next: koaNext
 export const approvePendingReviewVideoController = async (ctx: koaCtx, next: koaNext) => {
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
+		return
+	}
 
 	const data = ctx.request.body as Partial<ApprovePendingReviewVideoRequestDto>
 	const approvePendingReviewVideoRequest: ApprovePendingReviewVideoRequestDto = {

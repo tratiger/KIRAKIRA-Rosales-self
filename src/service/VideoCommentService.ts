@@ -5,7 +5,7 @@ import { findOneAndPlusByMongodbId, insertData2MongoDB, selectDataFromMongoDB, u
 import { QueryType, SelectType } from '../dbPool/DbClusterPoolTypes.js'
 import { RemovedVideoCommentSchema, VideoCommentDownvoteSchema, VideoCommentSchema, VideoCommentUpvoteSchema } from '../dbPool/schema/VideoCommentSchema.js'
 import { getNextSequenceValueService } from './SequenceValueService.js'
-import { checkUserRoleService, checkUserTokenByUuidService, checkUserTokenService, getUserInfoByUidService, getUserUuid } from './UserService.js'
+import { checkUserTokenByUuidService, checkUserTokenService, getUserInfoByUidService, getUserUuid } from './UserService.js'
 
 /**
  * 用户发送视频评论
@@ -18,11 +18,6 @@ export const emitVideoCommentService = async (emitVideoCommentRequest: EmitVideo
 	try {
 		if (checkEmitVideoCommentRequest(emitVideoCommentRequest)) {
 			if ((await checkUserTokenService(uid, token)).success) {
-				if (await checkUserRoleService(uid, 'blocked')) {
-					console.error('ERROR', '评论发送失败，用户已封禁')
-					return { success: false, message: '评论发送失败，用户已封禁' }
-				}
-
 				const UUID = await getUserUuid(uid) // DELETE ME 这是一个临时解决方法，Cookie 中应当存储 UUID
 				if (!UUID) {
 					console.error('ERROR', '评论发送失败，UUID 不存在', { uid })
@@ -957,11 +952,6 @@ export const adminDeleteVideoCommentService = async (adminDeleteVideoCommentRequ
 		if (!(await checkUserTokenService(adminUid, adminToken)).success) {
 			console.error('管理员删除视频评论失败，用户校验未通过')
 			return { success: false, message: '管理员删除视频评论失败，用户校验未通过' }
-		}
-
-		if (!(await checkUserRoleService(adminUid, 'admin'))) {
-			console.error('管理员删除视频评论失败，用户权限不足')
-			return { success: false, message: '管理员删除视频评论失败，用户权限不足' }
 		}
 
 		const adminUUID = await getUserUuid(adminUid) // DELETE ME 这是一个临时解决方法，Cookie 中应当存储 UUID

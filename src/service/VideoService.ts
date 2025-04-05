@@ -15,7 +15,7 @@ import { EsSchema2TsType } from '../elasticsearchPool/ElasticsearchClusterPoolTy
 import { VideoDocument } from '../elasticsearchPool/template/VideoDocument.js'
 import { createOrUpdateBrowsingHistoryService } from './BrowsingHistoryService.js'
 import { getNextSequenceValueEjectService } from './SequenceValueService.js'
-import { checkUserRoleService, checkUserTokenByUuidService, checkUserTokenService, getUserUuid } from './UserService.js'
+import { checkUserTokenByUuidService, checkUserTokenService, getUserUuid } from './UserService.js'
 import { FollowingSchema } from '../dbPool/schema/FeedSchema.js'
 
 /**
@@ -36,18 +36,6 @@ export const updateVideoService = async (uploadVideoRequest: UploadVideoRequestD
 				console.error('ERROR', '上传视频失败, UID 与 cookie 不相符')
 				return { success: false, message: '上传视频失败, 账户未对齐' }
 			}
-
-			if (await checkUserRoleService(uid, 'blocked')) {
-				console.error('ERROR', '上传视频失败，用户已封禁')
-				return { success: false, message: '上传视频失败，用户已封禁' }
-			}
-
-			// DELETE ME: 该验证应当被移除
-			if (!await checkUserRoleService(uid, 'admin')) {
-				console.error('ERROR', '上传视频失败，仅限管理员上传')
-				return { success: false, message: '上传视频失败，仅限管理员上传' }
-			}
-
 
 			const UUID = await getUserUuid(uid) // DELETE ME 这是一个临时解决方法，Cookie 中应当存储 UUID
 			if (!UUID) {
@@ -533,17 +521,6 @@ export const searchVideoByKeywordService = async (searchVideoByKeywordRequest: S
 export const getVideoFileTusEndpointService = async (uid: number, token: string, getVideoFileTusEndpointRequest: GetVideoFileTusEndpointRequestDto): Promise<string | undefined> => {
 	try {
 		if ((await checkUserTokenService(uid, token)).success) {
-			if (await checkUserRoleService(uid, 'blocked')) {
-				console.error('ERROR', '无法创建 Cloudflare Stream TUS Endpoint, 用户已封禁')
-				return undefined
-			}
-
-			// DELETE ME: 该验证应当被移除
-			if (!await checkUserRoleService(uid, 'admin')) {
-				console.error('ERROR', '无法创建 Cloudflare Stream TUS Endpoint, 仅限管理员上传')
-				return undefined
-			}
-
 			const streamTusEndpointUrl = process.env.CF_STREAM_TUS_ENDPOINT_URL
 			const streamToken = process.env.CF_STREAM_TOKEN
 
@@ -727,86 +704,81 @@ export const deleteVideoByKvidService = async (deleteVideoRequest: DeleteVideoRe
 					return { success: false, message: '删除一个视频失败，adminUUID 不存在' }
 				}
 
-				if (await checkUserRoleService(adminUid, 'admin')) { // must have admin role
-					const videoId = deleteVideoRequest.videoId
-					const nowDate = new Date().getTime()
+				const videoId = deleteVideoRequest.videoId
+				const nowDate = new Date().getTime()
 
-					const { collectionName: videoCollectionName, schemaInstance: videoSchemaInstance } = VideoSchema
-					type Video = InferSchemaType<typeof videoSchemaInstance>
-					const deleteWhere: QueryType<Video> = {
+				const { collectionName: videoCollectionName, schemaInstance: videoSchemaInstance } = VideoSchema
+				type Video = InferSchemaType<typeof videoSchemaInstance>
+				const deleteWhere: QueryType<Video> = {
+					videoId,
+				}
+
+				const { indexName: esIndexName } = VideoDocument
+				const conditions = {
+					kvid: videoId,
+				}
+
+				const { collectionName: removedVideoCollectionName, schemaInstance: removedVideoSchemaInstance } = RemovedVideoSchema
+				type RemovedVideo = InferSchemaType<typeof removedVideoSchemaInstance>
+
+				// 启动事务
+				const session = await mongoose.startSession()
+				session.startTransaction()
+
+				const option = { session }
+				try {
+					const getVideoByKvidRequest: GetVideoByKvidRequestDto = {
 						videoId,
 					}
-
-					const { indexName: esIndexName } = VideoDocument
-					const conditions = {
-						kvid: videoId,
-					}
-
-					const { collectionName: removedVideoCollectionName, schemaInstance: removedVideoSchemaInstance } = RemovedVideoSchema
-					type RemovedVideo = InferSchemaType<typeof removedVideoSchemaInstance>
-
-					// 启动事务
-					const session = await mongoose.startSession()
-					session.startTransaction()
-
-					const option = { session }
-					try {
-						const getVideoByKvidRequest: GetVideoByKvidRequestDto = {
-							videoId,
+					const videoResult = await getVideoByKvidService(getVideoByKvidRequest)
+					const videoData = videoResult.video
+					if (videoResult.success && videoData) {
+						const removedVideoData: RemovedVideo = {
+							...videoData as Video, // TODO: Mongoose issue: #12420
+							pendingReview: false, // 已删除的视频就不需要审核了...
+							_operatorUUID_: adminUUID,
+							_operatorUid_: adminUid,
+							editDateTime: nowDate,
 						}
-						const videoResult = await getVideoByKvidService(getVideoByKvidRequest)
-						const videoData = videoResult.video
-						if (videoResult.success && videoData) {
-							const removedVideoData: RemovedVideo = {
-								...videoData as Video, // TODO: Mongoose issue: #12420
-								pendingReview: false, // 已删除的视频就不需要审核了...
-								_operatorUUID_: adminUUID,
-								_operatorUid_: adminUid,
-								editDateTime: nowDate,
-							}
-							const saveRemovedVideo = await insertData2MongoDB(removedVideoData, removedVideoSchemaInstance, removedVideoCollectionName, option)
-							if (saveRemovedVideo.success) {
-								const deleteResult = await deleteDataFromMongoDB<Video>(deleteWhere, videoSchemaInstance, videoCollectionName, option)
-								const deleteFromElasticsearchResult = await deleteDataFromElasticsearchCluster(esClient, esIndexName, conditions)
-								if (deleteResult.success && deleteFromElasticsearchResult) {
-									await session.commitTransaction()
-									session.endSession()
-									return { success: true, message: '删除视频成功' }
-								} else {
-									if (session.inTransaction()) {
-										await session.abortTransaction()
-									}
-									session.endSession()
-									console.error('ERROR', '删除一个视频失败，删除视频失败')
-									return { success: false, message: '删除一个视频失败，删除视频失败' }
-								}
+						const saveRemovedVideo = await insertData2MongoDB(removedVideoData, removedVideoSchemaInstance, removedVideoCollectionName, option)
+						if (saveRemovedVideo.success) {
+							const deleteResult = await deleteDataFromMongoDB<Video>(deleteWhere, videoSchemaInstance, videoCollectionName, option)
+							const deleteFromElasticsearchResult = await deleteDataFromElasticsearchCluster(esClient, esIndexName, conditions)
+							if (deleteResult.success && deleteFromElasticsearchResult) {
+								await session.commitTransaction()
+								session.endSession()
+								return { success: true, message: '删除视频成功' }
 							} else {
 								if (session.inTransaction()) {
 									await session.abortTransaction()
 								}
 								session.endSession()
-								console.error('ERROR', '删除一个视频失败，保存副本失败')
-								return { success: false, message: '删除一个视频失败，保存副本失败' }
+								console.error('ERROR', '删除一个视频失败，删除视频失败')
+								return { success: false, message: '删除一个视频失败，删除视频失败' }
 							}
 						} else {
 							if (session.inTransaction()) {
 								await session.abortTransaction()
 							}
 							session.endSession()
-							console.error('ERROR', '删除一个视频失败，查询视频数据失败')
-							return { success: false, message: '删除一个视频失败，查询视频数据失败' }
+							console.error('ERROR', '删除一个视频失败，保存副本失败')
+							return { success: false, message: '删除一个视频失败，保存副本失败' }
 						}
-					} catch (error) {
+					} else {
 						if (session.inTransaction()) {
 							await session.abortTransaction()
 						}
 						session.endSession()
-						console.error('ERROR', '删除一个视频时出错，获取视频失败！')
-						return { success: false, message: '删除一个视频时出错，获取视频失败' }
+						console.error('ERROR', '删除一个视频失败，查询视频数据失败')
+						return { success: false, message: '删除一个视频失败，查询视频数据失败' }
 					}
-				} else {
-					console.error('ERROR', '删除一个视频失败，用户权限错误！')
-					return { success: false, message: '删除一个视频失败，用户权限错误！' }
+				} catch (error) {
+					if (session.inTransaction()) {
+						await session.abortTransaction()
+					}
+					session.endSession()
+					console.error('ERROR', '删除一个视频时出错，获取视频失败！')
+					return { success: false, message: '删除一个视频时出错，获取视频失败' }
 				}
 			} else {
 				console.error('ERROR', '删除一个视频失败，非法用户！')
@@ -834,11 +806,6 @@ export const getPendingReviewVideoService = async (adminUid: number, adminToken:
 		if (!(await checkUserTokenService(adminUid, adminToken)).success) {
 			console.error('ERROR', '获取待审核视频列表失败，用户校验失败！')
 			return { success: false, message: '获取待审核视频列表失败，用户校验失败！', videosCount: 0, videos: [] }
-		}
-
-		if (!(await checkUserRoleService(adminUid, 'admin'))) {
-			console.error('ERROR', '获取待审核视频列表失败，用户权限不足！')
-			return { success: false, message: '获取待审核视频列表失败，用户权限不足！', videosCount: 0, videos: [] }
 		}
 
 		const { collectionName: videoCollectionName, schemaInstance: videoSchemaInstance } = VideoSchema
@@ -930,12 +897,6 @@ export const approvePendingReviewVideoService = async (approvePendingReviewVideo
 			console.error('ERROR', '通过一个待审核视频失败，用户校验失败！')
 			return { success: false, message: '通过一个待审核视频失败，用户校验失败！' }
 		}
-
-		if (!(await checkUserRoleService(adminUid, 'admin'))) {
-			console.error('ERROR', '通过一个待审核视频失败，用户权限不足！')
-			return { success: false, message: '通过一个待审核视频失败，用户权限不足！' }
-		}
-
 
 		try {
 			const { videoId } = approvePendingReviewVideoRequest
