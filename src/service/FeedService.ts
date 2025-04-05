@@ -154,7 +154,7 @@ export const unfollowingUploaderService = async (unfollowingUploaderRequest: Unf
 		const selectUnfollowingDataResult = await selectDataFromMongoDB<Following>(followingWhere, followingSelect, followingSchemaInstance, followingCollectionName, { session })
 		const selectUnfollowingData = selectUnfollowingDataResult.result?.[0]
 
-		if (!selectUnfollowingDataResult.success || selectUnfollowingDataResult.result.length !== 1 || selectUnfollowingData) {
+		if (!selectUnfollowingDataResult.success || selectUnfollowingDataResult.result.length !== 1 || !selectUnfollowingData) {
 			await abortAndEndSession(session)
 			console.error('ERROR', '取消关注用户失败，读取关注数据失败。')
 			return { success: false, message: '取消关注用户失败，读取关注数据失败。' }

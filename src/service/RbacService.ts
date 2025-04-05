@@ -761,9 +761,6 @@ export const adminGetUserRolesByUidService = async (adminGetUserRolesByUidReques
 		}>(userAuthSchemaInstance, userAuthCollectionName, adminGetUserRolesPipeline)
 		const adminGerUserRolesData = adminGerUserRolesResult.result?.[0]
 
-		console.log('uuuuuu', uid)
-		console.log('rrrrrrrr', adminGerUserRolesResult.result)
-
 		if (!adminGerUserRolesResult.success || !adminGerUserRolesData) {
 			console.error('ERROR', '通过 UID 获取一个用户的角色失败，查询数据失败')
 			return { success: false, message: '通过 UID 获取一个用户的角色失败，查询数据失败' }
