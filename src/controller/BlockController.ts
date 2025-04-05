@@ -7,7 +7,7 @@ import { AddRegexRequestDto, BlockKeywordRequestDto, BlockTagRequestDto, BlockUs
  * @param ctx context
  * @param next context
  */
-export const BlockUserByUidController = async (ctx: koaCtx, next: koaNext) => {
+export const blockUserByUidController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<BlockUserByUidRequestDto>
 	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
@@ -24,7 +24,7 @@ export const BlockUserByUidController = async (ctx: koaCtx, next: koaNext) => {
  * @param ctx context
  * @param next context
  */
-export const HideUserByUidController = async (ctx: koaCtx, next: koaNext) => {
+export const hideUserByUidController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<HideUserByUidRequestDto>
 	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
@@ -41,7 +41,7 @@ export const HideUserByUidController = async (ctx: koaCtx, next: koaNext) => {
  * @param ctx context
  * @param next context
  */
-export const BlockKeywordController = async (ctx: koaCtx, next: koaNext) => {
+export const blockKeywordController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<BlockKeywordRequestDto>
 	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
@@ -58,7 +58,7 @@ export const BlockKeywordController = async (ctx: koaCtx, next: koaNext) => {
  * @param ctx context
  * @param next context
  */
-export const BlockTagController = async (ctx: koaCtx, next: koaNext) => {
+export const blockTagController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<BlockTagRequestDto>
 	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
@@ -75,7 +75,7 @@ export const BlockTagController = async (ctx: koaCtx, next: koaNext) => {
  * @param ctx context
  * @param next context
  */
-export const AddRegexController = async (ctx: koaCtx, next: koaNext) => {
+export const addRegexController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<AddRegexRequestDto>
 	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
@@ -92,7 +92,7 @@ export const AddRegexController = async (ctx: koaCtx, next: koaNext) => {
  * @param ctx context
  * @param next context
  */
-export const UnblockUserByUidController = async (ctx: koaCtx, next: koaNext) => {
+export const unblockUserByUidController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<UnblockUserByUidRequestDto>
 	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
@@ -109,7 +109,7 @@ export const UnblockUserByUidController = async (ctx: koaCtx, next: koaNext) => 
  * @param ctx context
  * @param next context
  */
-export const ShowUserByUidController = async (ctx: koaCtx, next: koaNext) => {
+export const showUserByUidController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<ShowUserByUidRequestDto>
 	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
@@ -126,7 +126,7 @@ export const ShowUserByUidController = async (ctx: koaCtx, next: koaNext) => {
  * @param ctx context
  * @param next context
  */
-export const UnblockKeywordController = async (ctx: koaCtx, next: koaNext) => {
+export const unblockKeywordController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<BlockKeywordRequestDto>
 	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
@@ -143,7 +143,7 @@ export const UnblockKeywordController = async (ctx: koaCtx, next: koaNext) => {
  * @param ctx context
  * @param next context
  */
-export const UnblockTagController = async (ctx: koaCtx, next: koaNext) => {
+export const unblockTagController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<UnblockTagRequestDto>
 	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
@@ -160,7 +160,7 @@ export const UnblockTagController = async (ctx: koaCtx, next: koaNext) => {
  * @param ctx context
  * @param next context
  */
-export const RemoveRegexController = async (ctx: koaCtx, next: koaNext) => {
+export const removeRegexController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<RemoveRegexRequestDto>
 	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
@@ -176,7 +176,7 @@ export const RemoveRegexController = async (ctx: koaCtx, next: koaNext) => {
  * @param ctx context
  * @param next context
  */
-export const GetBlockUserListController = async (ctx: koaCtx, next: koaNext) => {
+export const getBlockUserListController = async (ctx: koaCtx, next: koaNext) => {
 	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
 	ctx.body = await GetBlockListService(uuid, token)

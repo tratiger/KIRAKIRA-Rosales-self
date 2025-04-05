@@ -48,7 +48,7 @@ import { createVideoTagController, getVideoTagByTagIdController, searchVideoTagC
 import { adminGetUserRolesByUidController, adminUpdateUserRoleController, createRbacApiPathController, createRbacRoleController, deleteRbacApiPathController, deleteRbacRoleController, getRbacApiPathController, getRbacRoleController, updateApiPathPermissionsForRoleController } from '../controller/RbacController.js'
 import { getStgEnvBackEndSecretController } from '../controller/ConsoleSecretController.js'
 import { followingUploaderController, unfollowingUploaderController } from '../controller/FeedController.js'
-import { AddRegexController, BlockKeywordController, BlockTagController, BlockUserByUidController, HideUserByUidController, RemoveRegexController, ShowUserByUidController, UnblockKeywordController, UnblockTagController, UnblockUserByUidController } from '../controller/BlockController.js'
+import { addRegexController, blockKeywordController, blockTagController, blockUserByUidController, getBlockUserListController, hideUserByUidController, removeRegexController, showUserByUidController, unblockKeywordController, unblockTagController, unblockUserByUidController } from '../controller/BlockController.js'
 
 const router = new Router()
 
@@ -384,7 +384,7 @@ router.delete('/block/delete/regex', RemoveRegexController) // 用户解封正�
 //	"blockRegex": "XXXXXX"
 // }
 
-router.get('/block/list', getBlockedUserController) // 获取黑名单列表
+router.get('/block/list', getBlockUserListController) // 获取黑名单列表
 // https://localhost:9999/block/list
 // cookie: UUID, token
 
