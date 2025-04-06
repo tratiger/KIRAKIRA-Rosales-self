@@ -26,6 +26,12 @@ export const BlockUserByUidService = async (blockUserByUidRequest: BlockUserByUi
 		const blockedUuid = await getUserUuid(blockUid) as string
 
 		const now = new Date().getTime()
+
+		if (blockedUuid === uuid) {
+			console.error('ERROR', '封禁用户失败，不能封禁自己')
+			return { success: false, message: '封禁用户失败，不能封禁自己' }
+		}
+
 		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
 			console.error('ERROR', '封禁用户失败，非法用户')
 			return { success: false, message: '封禁用户失败，非法用户' }
@@ -35,11 +41,6 @@ export const BlockUserByUidService = async (blockUserByUidRequest: BlockUserByUi
 		if (!checkBlockUuidResult.success || (checkBlockUuidResult.success && !checkBlockUuidResult.exists)) {
 			console.error('ERROR', '封禁用户失败，被封禁用户不存在')
 			return { success: false, message: '封禁用户失败，被封禁用户不存在' }
-		}
-
-		if (blockedUuid === uuid) {
-			console.error('ERROR', '封禁用户失败，不能封禁自己')
-			return { success: false, message: '封禁用户失败，不能封禁自己' }
 		}
 
 		const { collectionName: blockingUserCollectionName, schemaInstance: blockingUserSchemaInstance } = BlockingSchema
@@ -109,6 +110,11 @@ export const HideUserByUidService = async (hideUserByUidRequest: HideUserByUidRe
 		const hidedUuid = await getUserUuid(hideUid) as string
 		const now = new Date().getTime()
 
+		if (hidedUuid === uuid) {
+			console.error('ERROR', '隐藏用户失败，不能隐藏自己')
+			return { success: false, message: '隐藏用户失败，不能隐藏自己' }
+		}
+
 		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
 			console.error('ERROR', '隐藏用户失败，非法用户')
 			return { success: false, message: '隐藏用户失败，非法用户' }
@@ -117,11 +123,6 @@ export const HideUserByUidService = async (hideUserByUidRequest: HideUserByUidRe
 		if (!checkHideUuidResult.success || (checkHideUuidResult.success && !checkHideUuidResult.exists)) {
 			console.error('ERROR', '隐藏用户失败，被隐藏用户不存在')
 			return { success: false, message: '隐藏用户失败，被隐藏用户不存在' }
-		}
-
-		if (hidedUuid === uuid) {
-			console.error('ERROR', '隐藏用户失败，不能隐藏自己')
-			return { success: false, message: '隐藏用户失败，不能隐藏自己' }
 		}
 
 		const { collectionName: hidingUserCollectionName, schemaInstance: hidingUserSchemaInstance } = BlockingSchema
@@ -380,6 +381,11 @@ export const UnBlockUserByUidService = async (unblockUserByUidRequest: UnblockUs
 		const { blockUid } = unblockUserByUidRequest
 		const unBlockedUuid = await getUserUuid(blockUid) as string
 
+		if (unBlockedUuid === uuid) {
+			console.error('ERROR', '解封用户失败，不能解封自己')
+			return { success: false, message: '解封用户失败，不能解封自己' }
+		}
+
 		const now = new Date().getTime()
 		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
 			console.error('ERROR', '解封用户失败，非法用户')
@@ -390,11 +396,6 @@ export const UnBlockUserByUidService = async (unblockUserByUidRequest: UnblockUs
 		if (!checkUnBlockUuidResult.success || (checkUnBlockUuidResult.success && !checkUnBlockUuidResult.exists)) {
 			console.error('ERROR', '解封用户失败，被解封用户不存在')
 			return { success: false, message: '解封用户失败，被解封用户不存在' }
-		}
-
-		if (unBlockedUuid === uuid) {
-			console.error('ERROR', '解封用户失败，不能解封自己')
-			return { success: false, message: '解封用户失败，不能解封自己' }
 		}
 
 		const { collectionName: blockingUserCollectionName, schemaInstance: blockingUserSchemaInstance } = BlockingSchema
@@ -496,7 +497,6 @@ export const UnBlockKeywordService = async (UnblockKeywordRequest: UnblockKeywor
 			console.error('ERROR', '解封关键词失败，更新数据库失败')
 			return { success: false, message: '解封关键词失败，更新数据库失败' }
 		}
-
 		return { success: true, message: '解封关键词成功', result: { blockKeyword: keyword ?? [] } }
 
 	} catch (error) {
@@ -521,8 +521,13 @@ export const ShowUserByUidService = async (showUserByUidRequest: ShowUserByUidRe
 
 		const { hideUid } = showUserByUidRequest
 		const showUuid = await getUserUuid(hideUid) as string
-		const now = new Date().getTime()
 
+		if (showUuid === uuid) {
+			console.error('ERROR', '显示用户失败，不能显示自己')
+			return { success: false, message: '显示用户失败，不能显示自己' }
+		}
+
+		const now = new Date().getTime()
 		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
 			console.error('ERROR', '显示用户失败，非法用户')
 			return { success: false, message: '显示用户失败，非法用户' }
@@ -532,11 +537,6 @@ export const ShowUserByUidService = async (showUserByUidRequest: ShowUserByUidRe
 		if (!checkShowUuidResult.success || (checkShowUuidResult.success && !checkShowUuidResult.exists)) {
 			console.error('ERROR', '显示用户失败，被显示用户不存在')
 			return { success: false, message: '显示用户失败，被显示用户不存在' }
-		}
-
-		if (showUuid === uuid) {
-			console.error('ERROR', '显示用户失败，不能显示自己')
-			return { success: false, message: '显示用户失败，不能显示自己' }
 		}
 
 		const { collectionName: hidingUserCollectionName, schemaInstance: hidingUserSchemaInstance } = BlockingSchema
@@ -705,7 +705,6 @@ export const RemoveRegexService = async (removeRegexRequest: RemoveRegexRequestD
 			console.error('ERROR', '删除正则表达式失败，更新数据库失败')
 			return { success: false, message: '删除正则表达式失败，更新数据库失败' }
 		}
-
 		return { success: true, message: '删除正则表达式成功', result: { blockRegex: regex ?? [] } }
 
 	} catch (error) {
@@ -755,13 +754,12 @@ export const GetBlockListService = async (uuid: string, token: string): Promise<
 			tagId: blockingUserData.tagId ?? [],
 			blockKeyword: blockingUserData.blockKeyword ?? [],
 			blockRegex: blockingUserData.blockRegex ?? [],
-		};
+		}
 
 		if (!blockingUserResult.success) {
 			console.error('ERROR', '获取封禁列表失败，查询数据库失败')
 			return { success: false, message: '获取封禁列表失败，查询数据库失败' }
 		}
-
 		return { success: true, message: '获取封禁列表成功', result }
 
 	} catch (error) {
