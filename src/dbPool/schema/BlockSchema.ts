@@ -1,20 +1,20 @@
 import { Schema } from 'mongoose';
 
 /**
- * 用户封禁用户数据
+ * 用户屏蔽用户数据
  */
 class BlockSchemaFactory {
   /** MongoDB Schema */
   schema = {
     /** 用户的 UUID - 非空 */
     UUID: { type: String, required: true, index: true },
-		/** 被封禁的用户 */
+		/** 被屏蔽的用户 */
     blockUuid: { type: [String], default: [] },
-		/** 系统专用字段-最后编辑时间 - 非空 */
-		hideUuid: { type: [String], default: [] },
-		/** 系统专用字段-最后编辑时间 - 非空 */
+		/** 被隐藏的用户 */
+		muteUuid: { type: [String], default: [] },
+		/** 被屏蔽的关键词 */
 		blockKeyword: { type: [String], default: [] },
-		/** 被封禁的标签 */
+		/** 被屏蔽的标签 */
 		tagId: { type: [Number], default: [] },
 		/** 正则表达式 */
 		blockRegex: { type: [String], default: [] },
@@ -24,7 +24,7 @@ class BlockSchemaFactory {
 		editDateTime: { type: Number, required: true },
   }
   /** MongoDB 集合名 */
- 	collectionName = 'blocking-user'
+ 	collectionName = 'blocking'
   /** Mongoose Schema 实例 */
   schemaInstance = new Schema(this.schema)
 }

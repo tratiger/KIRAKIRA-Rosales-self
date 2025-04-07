@@ -1,9 +1,9 @@
-import { AddRegexService, BlockKeywordService, BlockTagService, BlockUserByUidService, GetBlockListService, HideUserByUidService, RemoveRegexService, ShowUserByUidService, UnBlockKeywordService, UnBlockTagService, UnBlockUserByUidService } from '../service/BlockService.js'
+import { AddRegexService, BlockKeywordService, BlockTagService, BlockUserByUidService, GetBlockListService, MuteUserByUidService, RemoveRegexService, ShowUserByUidService, UnBlockKeywordService, UnBlockTagService, UnBlockUserByUidService } from '../service/BlockService.js'
 import { koaCtx, koaNext } from '../type/koaTypes.js'
-import { AddRegexRequestDto, BlockKeywordRequestDto, BlockTagRequestDto, BlockUserByUidRequestDto, HideUserByUidRequestDto, RemoveRegexRequestDto, ShowUserByUidRequestDto, UnblockTagRequestDto, UnblockUserByUidRequestDto } from './BlockControllerDto.js'
+import { AddRegexRequestDto, BlockKeywordRequestDto, BlockTagRequestDto, BlockUserByUidRequestDto, MuteUserByUidRequestDto, RemoveRegexRequestDto, ShowUserByUidRequestDto, UnblockTagRequestDto, UnblockUserByUidRequestDto } from './BlockControllerDto.js'
 
 /**
- * 封禁用户
+ * 屏蔽用户
  * @param ctx context
  * @param next context
  */
@@ -24,20 +24,20 @@ export const blockUserByUidController = async (ctx: koaCtx, next: koaNext) => {
  * @param ctx context
  * @param next context
  */
-export const hideUserByUidController = async (ctx: koaCtx, next: koaNext) => {
-	const data = ctx.request.body as Partial<HideUserByUidRequestDto>
+export const muteUserByUidController = async (ctx: koaCtx, next: koaNext) => {
+	const data = ctx.request.body as Partial<MuteUserByUidRequestDto>
 	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
-	const HideUserByUidData = {
-		hideUid: data.hideUid ?? -1,
+	const MuteUserByUidData = {
+		muteUid: data.muteUid ?? -1,
 	}
 
-	ctx.body = await HideUserByUidService(HideUserByUidData, uuid, token)
+	ctx.body = await MuteUserByUidService(MuteUserByUidData, uuid, token)
 	await next()
 }
 
 /**
- * 封禁关键词
+ * 屏蔽关键词
  * @param ctx context
  * @param next context
  */
@@ -54,7 +54,7 @@ export const blockKeywordController = async (ctx: koaCtx, next: koaNext) => {
 }
 
 /**
- * 封禁标签
+ * 屏蔽标签
  * @param ctx context
  * @param next context
  */
@@ -114,7 +114,7 @@ export const showUserByUidController = async (ctx: koaCtx, next: koaNext) => {
 	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
 	const ShowUserByUidData = {
-		hideUid: data.hideUid ?? -1,
+		muteUid: data.muteUid ?? -1,
 	}
 
 	ctx.body = await ShowUserByUidService(ShowUserByUidData, uuid, token)
@@ -172,7 +172,7 @@ export const removeRegexController = async (ctx: koaCtx, next: koaNext) => {
 }
 
 /**
- * 获取封禁用户列表
+ * 获取屏蔽用户列表
  * @param ctx context
  * @param next context
  */
