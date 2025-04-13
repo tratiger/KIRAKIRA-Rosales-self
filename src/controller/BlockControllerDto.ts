@@ -124,6 +124,7 @@ export type RemoveRegexRequestDto = {
 	/** 正则表达式的标志 - 非空 */
 	// flag: string;
 }
+
 /**
  * 删除正则表达式的请求响应
  */
@@ -252,4 +253,30 @@ export type GetBlockListResponseDto = {
 		/** 当前的正则表达式 */
 		blockRegex: string[];
 	}
+}
+
+/**
+ * 检查是否被屏蔽的请求载荷
+ */
+export type CheckIsBlockedRequestDto = {
+	/** 请求的内容 */
+	type: 'block' | 'mute' | 'tag' | 'content';
+	/** 被屏蔽的内容 */
+	content?: string;
+	/** 用户的 UID  */
+	Uid?: number;
+	/** 标签 ID */
+	tagId?: number;
+}
+
+/**
+ * 检查是否被屏蔽的请求响应
+ */
+export type CheckIsBlockedResponseDto = {
+	/** 是否请求成功 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 是否被屏蔽 */
+	isBlocked: boolean;
 }

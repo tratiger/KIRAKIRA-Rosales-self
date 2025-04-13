@@ -1,31 +1,21 @@
 import { Schema } from 'mongoose';
 
 /**
- * 用户屏蔽用户数据
- */
-class BlockSchemaFactory {
-  /** MongoDB Schema */
-  schema = {
-    /** 用户的 UUID - 非空 */
-    UUID: { type: String, required: true, index: true },
-		/** 被屏蔽的用户 */
-    blockUuid: { type: [String], default: [] },
-		/** 被隐藏的用户 */
-		muteUuid: { type: [String], default: [] },
-		/** 被屏蔽的关键词 */
-		blockKeyword: { type: [String], default: [] },
-		/** 被屏蔽的标签 */
-		tagId: { type: [Number], default: [] },
-		/** 正则表达式 */
-		blockRegex: { type: [String], default: [] },
-		/** 正则表达式标志 */
-		// flag: { type: [String], default: [] },
-		/** 系统专用字段-最后编辑时间 - 非空 */
-		editDateTime: { type: Number, required: true },
-  }
-  /** MongoDB 集合名 */
- 	collectionName = 'blocking'
-  /** Mongoose Schema 实例 */
-  schemaInstance = new Schema(this.schema)
+	* 用户屏蔽用户数据
+	*/
+class BlockListSchemaFactory {
+	schema = {
+			blockId: { type: Number, required: true, unique: true },
+			type: { type: String, required: true, index: true },
+			value: { type: String, required: true, index: true },
+			reason: { type: String, required: false },
+			operatorUid: { type: Number, required: true },
+			operatorUUID: { type: String, required: true },
+			createDateTime: { type: Number, required: true, index: true }, // 添加索引以提高排序性能
+			editDateTime: { type: Number, required: true },
+	};
+	collectionName = 'blocklist'; // 集合名
+	schemaInstance = new Schema(this.schema);
 }
-export const BlockingSchema = new BlockSchemaFactory()
+// 导出 Schema 实例
+export const BlockListSchema = new BlockListSchemaFactory();
