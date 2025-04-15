@@ -1,7 +1,7 @@
 import { Schema } from 'mongoose';
 
 /**
-	* 用户屏蔽用户数据
+	* 用户屏蔽数据
 	*/
 class BlockListSchemaFactory {
 	schema = {
@@ -23,4 +23,24 @@ class BlockListSchemaFactory {
 	/** Mongoose Schema 实例 */
 	schemaInstance = new Schema(this.schema)
 }
-export const BlockListSchema = new BlockListSchemaFactory();
+export const BlockListSchema = new BlockListSchemaFactory()
+
+/**
+ * 用户取消屏蔽数据
+ */
+class UnblockListSchemaFactory {
+	schema = {
+		/** 原来屏蔽的合集 */
+		...BlockListSchema.schema,
+		/** 操作者 UUID - 非空 */
+		_operatorUUID_: { type: String, required: true },
+		/** 操作者 UID - 非空 */
+		_operatorUid_: { type: Number, required: true },
+	}
+	/** MongoDB 集合名 */
+	collectionName = 'unblocklist'
+	/** Mongoose Schema 实例 */
+	schemaInstance = new Schema(this.schema)
+}
+export const UnblockListSchema = new UnblockListSchemaFactory()
+
