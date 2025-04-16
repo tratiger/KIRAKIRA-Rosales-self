@@ -431,6 +431,355 @@ export const unBlockUserService = async (uuid: string, token: string, UnblockUse
 	}
 }
 
+/**
+ * 显示用户
+ * @param uuid 用户 UUID
+ * @param token 用户 Token
+ * @param ShowUserByUidRequestDto 显示用户的请求载荷
+ * @returns 显示用户的请求响应
+ */
+export const showUserService = async (uuid: string, token: string, ShowUserByUidRequest: ShowUserByUidRequestDto): Promise<ShowUserByUidResponseDto> => {
+	try {
+		if (!checkMuteUserByUidRequest(ShowUserByUidRequest)) {
+			return { success: false, message: '显示用户失败，显示用户请求载荷不合法' }
+		}
+
+		const { muteUid } = ShowUserByUidRequest
+		const userUuid = await getUserUuid(muteUid)
+		const operatorUid = await getUserUid(uuid)
+
+		if (!userUuid) {
+			console.error('ERROR', '显示用户失败，用户不存在')
+			return { success: false, message: '显示用户失败，用户不存在' }
+		}
+		if (!operatorUid) {
+			console.error('ERROR', '显示用户失败，用户不存在')
+			return { success: false, message: '显示用户失败，用户不存在' }
+		}
+		if (userUuid === uuid) {
+			console.error('ERROR', '显示用户失败，不能显示自己')
+			return { success: false, message: '显示用户失败，不能显示自己' }
+		}
+
+		if (!checkUserTokenByUuidService(uuid, token)) {
+			console.error('ERROR', '显示用户失败，用户 Token 不合法')
+			return { success: false, message: '显示用户失败，用户 Token 不合法' }
+		}
+
+		const { collectionName: unblockUserCollectionName, schemaInstance: unblockUserSchemaInstance } = UnblockListSchema
+		type UnblockListSchemaType = InferSchemaType<typeof unblockUserSchemaInstance>
+		const unblockListWhere: QueryType<UnblockListSchemaType> = {
+			type: 'unblock',
+			value: userUuid,
+			operatorUUID: uuid,
+		}
+
+		const unblockListSelect: SelectType<UnblockListSchemaType> = {
+			type: 1,
+			value: 1,
+			Uid: 1,
+			operatorUid: 1,
+			operatorUUID: 1,
+		}
+
+		// 启动事务
+		const session = await createAndStartSession()
+
+		const selectResult = await selectDataFromMongoDB<UnblockListSchemaType>(unblockListWhere, unblockListSelect, unblockUserSchemaInstance, unblockUserCollectionName, {session})
+		if (!selectResult.success) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '显示用户失败，数据库错误')
+			return { success: false, message: '显示用户失败，数据库错误' }
+		}
+		if (selectResult.result.length === 0) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '显示用户失败，用户未被隐藏')
+			return { success: false, message: '显示用户失败，用户未被隐藏' }
+		}
+
+		const { collectionName: blockUserCollectionName, schemaInstance: blockUserSchemaInstance } = UnblockListSchema
+		type BlockListSchemaType = InferSchemaType<typeof blockUserSchemaInstance>
+		const blockListData: BlockListSchemaType = {
+			...selectResult.result[0],
+			_operatorUid_: operatorUid,
+			_operatorUUID_: uuid,
+		}
+		const insertResult = await insertData2MongoDB<BlockListSchemaType>(blockListData, blockUserSchemaInstance, blockUserCollectionName, {session})
+		if (!insertResult) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '显示用户失败，数据库错误')
+			return { success: false, message: '显示用户失败，数据库错误' }
+		}
+
+		const deleteResult = await deleteDataFromMongoDB<UnblockListSchemaType>(unblockListWhere, unblockUserSchemaInstance, unblockUserCollectionName, {session})
+		if (!deleteResult) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '显示用户失败，数据库错误')
+			return { success: false, message: '显示用户失败，数据库错误' }
+		}
+		await commitAndEndSession(session)
+		return { success: true, message: '显示用户成功' }
+	}
+	catch (error) {
+		console.error('ERROR', '显示用户失败，未知错误', error)
+		return { success: false, message: '显示用户失败，未知错误' }
+	}
+}
+
+/**
+ * 取消屏蔽标签
+ * @param uuid 用户 UUID
+ * @param token 用户 Token
+ * @param UnblockTagRequestDto 取消屏蔽标签的请求载荷
+ * @returns 取消屏蔽标签的请求响应
+ */
+export const unBlockTagService = async (uuid: string, token: string, UnblockTagRequest: UnblockTagRequestDto): Promise<UnblockTagResponseDto> => {
+	try {
+		if (!checkBlockTagRequest(UnblockTagRequest)) {
+			return { success: false, message: '取消屏蔽标签失败，取消屏蔽标签请求载荷不合法' }
+		}
+
+		const tagId = UnblockTagRequest.tagId.toString()
+		const operatorUid = await getUserUid(uuid)
+
+		if (!operatorUid) {
+			console.error('ERROR', '取消屏蔽标签失败，用户不存在')
+			return { success: false, message: '取消屏蔽标签失败，用户不存在' }
+		}
+
+		if (!checkUserTokenByUuidService(uuid, token)) {
+			console.error('ERROR', '取消屏蔽标签失败，用户 Token 不合法')
+			return { success: false, message: '取消屏蔽标签失败，用户 Token 不合法' }
+		}
+
+		const { collectionName: blockUserCollectionName, schemaInstance: blockUserSchemaInstance } = BlockListSchema
+		type BlockListSchemaType = InferSchemaType<typeof blockUserSchemaInstance>
+		const blockListWhere: QueryType<BlockListSchemaType> = {
+			type: 'tag',
+			value: tagId,
+			operatorUUID: uuid,
+		}
+
+		const blockListSelect: SelectType<BlockListSchemaType> = {
+			type: 1,
+			value: 1,
+			operatorUid: 1,
+			operatorUUID: 1,
+		}
+
+		// 启动事务
+		const session = await createAndStartSession()
+
+		const selectResult = await selectDataFromMongoDB<BlockListSchemaType>(blockListWhere, blockListSelect, blockUserSchemaInstance, blockUserCollectionName, {session})
+		if (!selectResult.success) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '取消屏蔽标签失败，数据库错误')
+			return { success: false, message: '取消屏蔽标签失败，数据库错误' }
+		}
+		if (selectResult.result.length === 0) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '取消屏蔽标签失败，标签未被屏蔽')
+			return { success: false, message: '取消屏蔽标签失败，标签未被屏蔽' }
+		}
+
+		const { collectionName: unblockUserCollectionName, schemaInstance: unblockUserSchemaInstance } = UnblockListSchema
+		type UnblockListSchemaType = InferSchemaType<typeof unblockUserSchemaInstance>
+		const unblockListData: UnblockListSchemaType = {
+			...selectResult.result[0],
+			_operatorUid_: operatorUid,
+			_operatorUUID_: uuid,
+		}
+		const insertResult = await insertData2MongoDB<UnblockListSchemaType>(unblockListData, unblockUserSchemaInstance, unblockUserCollectionName, {session})
+		if (!insertResult) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '取消屏蔽标签失败，数据库错误')
+			return { success: false, message: '取消屏蔽标签失败，数据库错误' }
+		}
+
+		const deleteResult = await deleteDataFromMongoDB<BlockListSchemaType>(blockListWhere, blockUserSchemaInstance, blockUserCollectionName, {session})
+		if (!deleteResult) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '取消屏蔽标签失败，数据库错误')
+			return { success: false, message: '取消屏蔽标签失败，数据库错误' }
+		}
+		await commitAndEndSession(session)
+		return { success: true, message: '取消屏蔽标签成功' }
+	}
+	catch (error) {
+		console.error('ERROR', '取消屏蔽标签失败，未知错误', error)
+		return { success: false, message: '取消屏蔽标签失败，未知错误' }
+	}
+}
+
+/**
+ * 取消屏蔽关键词
+ * @param uuid 用户 UUID
+ * @param token 用户 Token
+ * @param UnblockKeywordRequestDto 取消屏蔽关键词的请求载荷
+ * @returns 取消屏蔽关键词的请求响应
+ */
+export const unBlockKeywordService = async (uuid: string, token: string, UnblockKeywordRequest: UnblockKeywordRequestDto): Promise<UnblockKeywordResponseDto> => {
+	try {
+		if (!checkBlockKeywordRequest(UnblockKeywordRequest)) {
+			return { success: false, message: '取消屏蔽关键词失败，取消屏蔽关键词请求载荷不合法' }
+		}
+
+		const keyword = UnblockKeywordRequest.blockKeyword
+		const operatorUid = await getUserUid(uuid)
+
+		if (!operatorUid) {
+			console.error('ERROR', '取消屏蔽关键词失败，用户不存在')
+			return { success: false, message: '取消屏蔽关键词失败，用户不存在' }
+		}
+
+		if (!checkUserTokenByUuidService(uuid, token)) {
+			console.error('ERROR', '取消屏蔽关键词失败，用户 Token 不合法')
+			return { success: false, message: '取消屏蔽关键词失败，用户 Token 不合法' }
+		}
+
+		const { collectionName: blockUserCollectionName, schemaInstance: blockUserSchemaInstance } = BlockListSchema
+		type BlockListSchemaType = InferSchemaType<typeof blockUserSchemaInstance>
+		const blockListWhere: QueryType<BlockListSchemaType> = {
+			type: 'keyword',
+			value: keyword,
+			operatorUUID: uuid,
+		}
+
+		const blockListSelect: SelectType<BlockListSchemaType> = {
+			type: 1,
+			value: 1,
+			operatorUid: 1,
+			operatorUUID: 1,
+		}
+
+		// 启动事务
+		const session = await createAndStartSession()
+
+		const selectResult = await selectDataFromMongoDB<BlockListSchemaType>(blockListWhere, blockListSelect, blockUserSchemaInstance, blockUserCollectionName, {session})
+		if (!selectResult.success) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '取消屏蔽关键词失败，数据库错误')
+			return { success: false, message: '取消屏蔽关键词失败，数据库错误' }
+		}
+		if (selectResult.result.length === 0) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '取消屏蔽关键词失败，关键词未被屏蔽')
+			return { success: false, message: '取消屏蔽关键词失败，关键词未被屏蔽' }
+		}
+
+		const { collectionName: unblockUserCollectionName, schemaInstance: unblockUserSchemaInstance } = UnblockListSchema
+		type UnblockListSchemaType = InferSchemaType<typeof unblockUserSchemaInstance>
+		const unblockListData: UnblockListSchemaType = {
+			...selectResult.result[0],
+			_operatorUid_: operatorUid,
+			_operatorUUID_: uuid,
+		}
+		const insertResult = await insertData2MongoDB<UnblockListSchemaType>(unblockListData, unblockUserSchemaInstance, unblockUserCollectionName, {session})
+		if (!insertResult) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '取消屏蔽关键词失败，数据库错误')
+			return { success: false, message: '取消屏蔽关键词失败，数据库错误' }
+		}
+
+		const deleteResult = await deleteDataFromMongoDB<BlockListSchemaType>(blockListWhere, blockUserSchemaInstance, blockUserCollectionName, {session})
+		if (!deleteResult) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '取消屏蔽关键词失败，数据库错误')
+			return { success: false, message: '取消屏蔽关键词失败，数据库错误' }
+		}
+		await commitAndEndSession(session)
+		return { success: true, message: '取消屏蔽关键词成功' }
+	}
+	catch (error) {
+		console.error('ERROR', '取消屏蔽关键词失败，未知错误', error)
+		return { success: false, message: '取消屏蔽关键词失败，未知错误' }
+	}
+}
+
+/**
+ * 删除正则表达式
+ * @param uuid 用户 UUID
+ * @param token 用户 Token
+ * @param RemoveRegexResponseDto 删除正则表达式的请求载荷
+ * @returns 删除正则表达式的请求响应
+ */
+export const removeRegexService = async (uuid: string, token: string, RemoveRegexRequest: RemoveRegexRequestDto): Promise<RemoveRegexResponseDto> => {
+	try {
+		if (!checkAddRegexRequest(RemoveRegexRequest)) {
+			return { success: false, message: '删除正则表达式失败，删除正则表达式请求载荷不合法' }
+		}
+
+		const regex = RemoveRegexRequest.blockRegex
+		const operatorUid = await getUserUid(uuid)
+
+		if (!operatorUid) {
+			console.error('ERROR', '删除正则表达式失败，用户不存在')
+			return { success: false, message: '删除正则表达式失败，用户不存在' }
+		}
+
+		if (!checkUserTokenByUuidService(uuid, token)) {
+			console.error('ERROR', '删除正则表达式失败，用户 Token 不合法')
+			return { success: false, message: '删除正则表达式失败，用户 Token 不合法' }
+		}
+
+		const { collectionName: blockUserCollectionName, schemaInstance: blockUserSchemaInstance } = BlockListSchema
+		type BlockListSchemaType = InferSchemaType<typeof blockUserSchemaInstance>
+		const blockListWhere: QueryType<BlockListSchemaType> = {
+			type: 'regex',
+			value: regex,
+			operatorUUID: uuid,
+		}
+
+		const blockListSelect: SelectType<BlockListSchemaType> = {
+			type: 1,
+			value: 1,
+			operatorUid: 1,
+			operatorUUID: 1,
+		}
+
+		// 启动事务
+		const session = await createAndStartSession()
+
+		const selectResult = await selectDataFromMongoDB<BlockListSchemaType>(blockListWhere, blockListSelect, blockUserSchemaInstance, blockUserCollectionName, {session})
+		if (!selectResult.success) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '删除正则表达式失败，数据库错误')
+			return { success: false, message: '删除正则表达式失败，数据库错误' }
+		}
+		if (selectResult.result.length === 0) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '删除正则表达式失败，正则表达式未被屏蔽')
+			return { success: false, message: '删除正则表达式失败，正则表达式未被屏蔽' }
+		}
+
+		const { collectionName: unblockUserCollectionName, schemaInstance: unblockUserSchemaInstance } = UnblockListSchema
+		type UnblockListSchemaType = InferSchemaType<typeof unblockUserSchemaInstance>
+		const unblockListData: UnblockListSchemaType = {
+			...selectResult.result[0],
+			_operatorUid_: operatorUid,
+			_operatorUUID_: uuid,
+		}
+		const insertResult = await insertData2MongoDB<UnblockListSchemaType>(unblockListData, unblockUserSchemaInstance, unblockUserCollectionName, {session})
+		if (!insertResult) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '删除正则表达式失败，数据库错误')
+			return { success: false, message: '删除正则表达式失败，数据库错误' }
+		}
+
+		const deleteResult = await deleteDataFromMongoDB<BlockListSchemaType>(blockListWhere, blockUserSchemaInstance, blockUserCollectionName, {session})
+		if (!deleteResult) {
+			await abortAndEndSession(session)
+			console.error('ERROR', '删除正则表达式失败，数据库错误')
+			return { success: false, message: '删除正则表达式失败，数据库错误' }
+		}
+		await commitAndEndSession(session)
+		return { success: true, message: '删除正则表达式成功' }
+	}
+	catch (error) {
+		console.error('ERROR', '删除正则表达式失败，未知错误', error)
+		return { success: false, message: '删除正则表达式失败，未知错误' }
+	}
+}
 
 /**
  * 检测屏蔽用户的请求载荷

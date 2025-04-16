@@ -111,7 +111,7 @@ export type RemoveRegexResponseDto = {
 }
 
 /**
- * 解封用户的请求载荷
+ * 取消屏蔽用户的请求载荷
  */
 export type UnblockUserByUidRequestDto = {
 	/** 被屏蔽的用户的 UID - 非空 */
@@ -137,7 +137,7 @@ export type ShowUserByUidResponseDto = {
 }
 
 /**
- * 解封用户的请求响应
+ * 取消屏蔽用户的请求响应
  */
 export type UnblockUserByUidResponseDto = {
 	/** 是否请求成功 */
@@ -147,7 +147,7 @@ export type UnblockUserByUidResponseDto = {
 }
 
 /**
- * 解封标签的请求载荷
+ * 取消屏蔽标签的请求载荷
  */
 export type UnblockTagRequestDto = {
 	/* 屏蔽的标签 ID - 非空 */
@@ -155,7 +155,7 @@ export type UnblockTagRequestDto = {
 }
 
 /**
- * 解封标签的请求响应
+ * 取消屏蔽标签的请求响应
  */
 export type UnblockTagResponseDto = {
 	/** 是否请求成功 */
@@ -165,7 +165,7 @@ export type UnblockTagResponseDto = {
 }
 
 /**
- * 解封关键词的请求载荷
+ * 取消屏蔽关键词的请求载荷
  */
 export type UnblockKeywordRequestDto = {
 	/** 屏蔽的关键词 - 非空 */
@@ -173,7 +173,7 @@ export type UnblockKeywordRequestDto = {
 }
 
 /**
- * 解封关键词的请求响应
+ * 取消屏蔽关键词的请求响应
  */
 export type UnblockKeywordResponseDto = {
 	/** 是否请求成功 */
