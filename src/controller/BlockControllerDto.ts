@@ -188,10 +188,28 @@ export type UnblockKeywordResponseDto = {
 export type GetBlockListRequestDto = {
 	/** 屏蔽的类型 - 非空 */
 	type: 'block' | 'mute' | 'tag' | 'regex' | 'keyword';
-	/** 页数 - 非空 */
-	page: number;
-	/** 每页的数量 - 非空 */
-	pageSize: number;
+	/** 分页查询 */
+	pagination: {
+		/** 当前在第几页 */
+		page: number;
+		/** 一页显示多少条 */
+		pageSize: number;
+	};
+}
+
+export type BlocklistResult = {
+	/** 被屏蔽用户 UID */
+	uid?: number;
+	/** 屏蔽类型 */
+	type: string;
+	/** 屏蔽值 */
+	value: string;
+	/** 屏蔽时间 */
+	createDateTime: number;
+	/** 被屏蔽用户昵称 */
+	userNickname?: string;
+	/** 被屏蔽用户头像 */
+	avatar?: string;
 }
 
 /**
@@ -202,19 +220,10 @@ export type GetBlockListResponseDto = {
 	success: boolean;
 	/** 附加的文本消息 */
 	message?: string;
+	/** 黑名单数量 */
+	blocklistCount?: number;
 	/** 屏蔽用户列表 */
-	result?: {
-		/** 当前被屏蔽的用户的 UUID */
-		blockUuid?: string[];
-		/** 当前被隐藏的用户的 UID */
-		muteUuid?: string[];
-		/** 当前被屏蔽的标签的 ID */
-		tagId?: number[];
-		/** 当前被屏蔽的关键词 */
-		blockKeyword?: string[];
-		/** 当前的正则表达式 */
-		blockRegex?: string[];
-	}
+	result?: BlocklistResult[];
 }
 
 /**

@@ -99,7 +99,7 @@ export type GetVideoCommentByKvidRequestDto = {
 		page: number;
 		/** 一页显示多少条 */
 		pageSize: number;
-	};
+	}
 }
 
 type VideoCommentIdDto = {
