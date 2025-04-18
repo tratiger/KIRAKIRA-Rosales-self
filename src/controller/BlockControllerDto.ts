@@ -227,19 +227,46 @@ export type GetBlockListResponseDto = {
 }
 
 /**
- * 检查是否被屏蔽的请求载荷
+ * 检查内容是否被屏蔽的请求载荷
  */
-export type CheckIsBlockedRequestDto = {
-	/** 请求的内容 */
-	type: 'block' | 'mute' | 'tag' | 'content';
-	/** 被屏蔽的内容 */
-	content?: string;
-	/** 用户的 UID  */
-	Uid?: number;
-	/** 标签 ID */
-	tagId?: number;
+export type CheckContentIsBlockedRequestDto = {
+	/** 检查的内容 */
+	content: string;
 }
 
+/**
+ * 检查标签是否被屏蔽的请求载荷
+ */
+export type CheckTagIsBlockedRequestDto = {
+	/** 检查的标签 ID */
+	tagId: number[];
+}
+
+/**
+ * 检查用户是否被屏蔽的请求载荷
+ */
+export type CheckUserIsBlockedRequestDto = {
+	/** 检查的用户 UID */
+	uid: number;
+}
+
+/**
+ * 检测是否被其他用户屏蔽的请求载荷
+ */
+export type CheckIsBlockedByOtherUserRequestDto = {
+	/** 检查的内容 */
+	targetUid: number;
+}
+
+/** 检测是否被其他用户屏蔽的请求响应 */
+export type CheckIsBlockedByOtherUserResponseDto = {
+	/** 是否请求成功 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 是否被屏蔽 */
+	isBlocked: boolean;
+}
 /**
  * 检查是否被屏蔽的请求响应
  */
@@ -250,4 +277,18 @@ export type CheckIsBlockedResponseDto = {
 	message?: string;
 	/** 是否被屏蔽 */
 	isBlocked: boolean;
+}
+
+/**
+ * 检查用户是否被屏蔽的请求响应
+ */
+export type CheckUserIsBlockedResponseDto = {
+	/** 是否请求成功 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 是否被屏蔽 */
+	isBlocked: boolean;
+	/** 是否被隐藏 */
+	isMuted: boolean;
 }
