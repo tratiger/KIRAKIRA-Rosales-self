@@ -431,6 +431,7 @@ export const unBlockUserService = async (UnblockUserByUidRequest: UnblockUserByU
 			...selectResult.result[0],
 			_operatorUid_: operatorUid,
 			_operatorUUID_: uuid,
+			createDateTime: new Date().getTime(),
 		}
 		const insertResult = await insertData2MongoDB<UnblockListSchemaType>(unblockListData, unblockUserSchemaInstance, unblockUserCollectionName, {session})
 		if (!insertResult) {
@@ -489,15 +490,15 @@ export const showUserService = async (ShowUserByUidRequest: ShowUserByUidRequest
 			return { success: false, message: '显示用户失败，用户 Token 不合法' }
 		}
 
-		const { collectionName: unblockUserCollectionName, schemaInstance: unblockUserSchemaInstance } = UnblockListSchema
-		type UnblockListSchemaType = InferSchemaType<typeof unblockUserSchemaInstance>
-		const unblockListWhere: QueryType<UnblockListSchemaType> = {
-			type: 'unblock',
+		const { collectionName: blockUserCollectionName, schemaInstance: blockUserSchemaInstance } = BlockListSchema
+		type BlockListSchemaType = InferSchemaType<typeof blockUserSchemaInstance>
+		const blockListWhere: QueryType<BlockListSchemaType> = {
+			type: 'mute',
 			value: userUuid,
 			operatorUUID: uuid,
 		}
 
-		const unblockListSelect: SelectType<UnblockListSchemaType> = {
+		const blockListSelect: SelectType<BlockListSchemaType> = {
 			type: 1,
 			value: 1,
 			Uid: 1,
@@ -508,7 +509,7 @@ export const showUserService = async (ShowUserByUidRequest: ShowUserByUidRequest
 		// 启动事务
 		const session = await createAndStartSession()
 
-		const selectResult = await selectDataFromMongoDB<UnblockListSchemaType>(unblockListWhere, unblockListSelect, unblockUserSchemaInstance, unblockUserCollectionName, {session})
+		const selectResult = await selectDataFromMongoDB<BlockListSchemaType>(blockListWhere, blockListSelect, blockUserSchemaInstance, blockUserCollectionName, {session})
 		if (!selectResult.success) {
 			await abortAndEndSession(session)
 			console.error('ERROR', '显示用户失败，查询数据失败')
@@ -520,21 +521,22 @@ export const showUserService = async (ShowUserByUidRequest: ShowUserByUidRequest
 			return { success: false, message: '显示用户失败，用户未被隐藏' }
 		}
 
-		const { collectionName: blockUserCollectionName, schemaInstance: blockUserSchemaInstance } = UnblockListSchema
-		type BlockListSchemaType = InferSchemaType<typeof blockUserSchemaInstance>
-		const blockListData: BlockListSchemaType = {
+		const { collectionName: unblockUserCollectionName, schemaInstance: unblockUserSchemaInstance } = UnblockListSchema
+		type UnblockListSchemaType = InferSchemaType<typeof unblockUserSchemaInstance>
+		const unblockListData: UnblockListSchemaType = {
 			...selectResult.result[0],
 			_operatorUid_: operatorUid,
 			_operatorUUID_: uuid,
+			createDateTime: new Date().getTime(),
 		}
-		const insertResult = await insertData2MongoDB<BlockListSchemaType>(blockListData, blockUserSchemaInstance, blockUserCollectionName, {session})
+		const insertResult = await insertData2MongoDB<UnblockListSchemaType>(unblockListData, unblockUserSchemaInstance, unblockUserCollectionName, {session})
 		if (!insertResult) {
 			await abortAndEndSession(session)
 			console.error('ERROR', '显示用户失败，查询数据失败')
 			return { success: false, message: '显示用户失败，查询数据失败' }
 		}
 
-		const deleteResult = await deleteDataFromMongoDB<UnblockListSchemaType>(unblockListWhere, unblockUserSchemaInstance, unblockUserCollectionName, {session})
+		const deleteResult = await deleteDataFromMongoDB<BlockListSchemaType>(blockListWhere, blockUserSchemaInstance, blockUserCollectionName, {session})
 		if (!deleteResult) {
 			await abortAndEndSession(session)
 			console.error('ERROR', '显示用户失败，查询数据失败')
@@ -611,6 +613,7 @@ export const unBlockTagService = async (UnblockTagRequest: UnblockTagRequestDto,
 			...selectResult.result[0],
 			_operatorUid_: operatorUid,
 			_operatorUUID_: uuid,
+			createDateTime: new Date().getTime(),
 		}
 		const insertResult = await insertData2MongoDB<UnblockListSchemaType>(unblockListData, unblockUserSchemaInstance, unblockUserCollectionName, {session})
 		if (!insertResult) {
@@ -696,6 +699,7 @@ export const unBlockKeywordService = async (UnblockKeywordRequest: UnblockKeywor
 			...selectResult.result[0],
 			_operatorUid_: operatorUid,
 			_operatorUUID_: uuid,
+			createDateTime: new Date().getTime(),
 		}
 		const insertResult = await insertData2MongoDB<UnblockListSchemaType>(unblockListData, unblockUserSchemaInstance, unblockUserCollectionName, {session})
 		if (!insertResult) {
@@ -781,6 +785,7 @@ export const removeRegexService = async (RemoveRegexRequest: RemoveRegexRequestD
 			...selectResult.result[0],
 			_operatorUid_: operatorUid,
 			_operatorUUID_: uuid,
+			createDateTime: new Date().getTime(),
 		}
 		const insertResult = await insertData2MongoDB<UnblockListSchemaType>(unblockListData, unblockUserSchemaInstance, unblockUserCollectionName, {session})
 		if (!insertResult) {
@@ -813,16 +818,21 @@ export const removeRegexService = async (RemoveRegexRequest: RemoveRegexRequestD
 export const getBlockListService = async (GetBlockListRequest: GetBlockListRequestDto, uuid: string, token: string): Promise<GetBlockListResponseDto> => {
 	try {
 		if (!checkGetBlockListRequest(GetBlockListRequest)) {
-			return { success: false, message: '获取黑名单失败，获取黑名单请求载荷不合法' }
+			return { success: false, message: '获取黑名单失败，获取黑名单请求载荷不合法', blocklistCount: -1 }
 		}
 		if (uuid !== undefined && uuid !== null && token) {
 			if (!checkUserTokenByUuidService(uuid, token)) {
 				console.error('ERROR', '获取黑名单失败，用户 Token 不合法')
-				return { success: false, message: '获取黑名单失败，用户 Token 不合法' }
+				return { success: false, message: '获取黑名单失败，用户 Token 不合法', blocklistCount: -1 }
 			}
 		}
 
 		const { type } = GetBlockListRequest
+		if (!['mute', 'block', 'keyword', 'tag', 'regex'].includes(type)) {
+			console.error('ERROR', '获取黑名单失败，黑名单类型不合法')
+			return { success: false, message: '获取黑名单失败，黑名单类型不合法' }
+		}
+
 		let pageSize = undefined
 		let skip = 0
 		if (GetBlockListRequest.pagination && GetBlockListRequest.pagination.page > 0 && GetBlockListRequest.pagination.pageSize > 0) {
@@ -858,7 +868,7 @@ export const getBlockListService = async (GetBlockListRequest: GetBlockListReque
 				{
 					$lookup: {
 						from: 'user-infos',
-						localField: 'UUID',
+						localField: 'value',
 						foreignField: 'UUID',
 						as: 'user_info_data',
 					}
@@ -871,10 +881,11 @@ export const getBlockListService = async (GetBlockListRequest: GetBlockListReque
 				},
 				{
 					$project: {
-						uid: 1,
 						type: 1,
 						value: 1,
 						createDateTime: 1,
+						uid: '$user_info_data.uid',
+						username: '$user_info_data.username',
 						userNickname: '$user_info_data.userNickname',
 						avatar: '$user_info_data.avatar',
 					}
@@ -1275,13 +1286,12 @@ const checkAddRegexRequest = (addRegexRequest: AddRegexRequestDto): boolean => {
 
 /**
  * 检测获取黑名单的请求载荷
- * @param getBlockListRequest 获取黑名单的请求载荷
+ * @param request 获取黑名单的请求载荷
  * @returns 合法返回 true, 不合法返回 false
  */
-const checkGetBlockListRequest = (getBlockListRequest: GetBlockListRequestDto): boolean => {
-	const blockType = ['keyword', 'regex', 'tag', 'block', 'mute']
+const checkGetBlockListRequest = (GetBlockListRequest: GetBlockListRequestDto) => {
 	return (
-		getBlockListRequest.type !== undefined && getBlockListRequest.type !== null && blockType.includes(getBlockListRequest.type as string)
+		GetBlockListRequest.type !== undefined && GetBlockListRequest.type !== null
 	)
 }
 

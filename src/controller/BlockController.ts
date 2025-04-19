@@ -1,6 +1,6 @@
 import { addRegexService, blockKeywordService, blockTagService, blockUserByUidService, getBlockListService, muteUserByUidService, removeRegexService, showUserService, unBlockKeywordService, unBlockTagService, unBlockUserService } from '../service/BlockService.js'
 import { koaCtx, koaNext } from '../type/koaTypes.js'
-import { AddRegexRequestDto, BlockKeywordRequestDto, BlockTagRequestDto, BlockUserByUidRequestDto, MuteUserByUidRequestDto, RemoveRegexRequestDto, ShowUserByUidRequestDto, UnblockTagRequestDto, UnblockUserByUidRequestDto } from './BlockControllerDto.js'
+import { AddRegexRequestDto, BlockKeywordRequestDto, BlockTagRequestDto, BlockUserByUidRequestDto, GetBlockListRequestDto, MuteUserByUidRequestDto, RemoveRegexRequestDto, ShowUserByUidRequestDto, UnblockTagRequestDto, UnblockUserByUidRequestDto } from './BlockControllerDto.js'
 
 /**
  * 屏蔽用户
@@ -177,17 +177,19 @@ export const removeRegexController = async (ctx: koaCtx, next: koaNext) => {
  * @param next context
  */
 export const getBlockUserListController = async (ctx: koaCtx, next: koaNext) => {
-	const data = ctx.request.query as Partial<{ page: string, pageSize: string, type: string }>
-	const { page, pageSize, type } = data
+	const data = ctx.request.body as Partial<GetBlockListRequestDto>
+	const page = ctx.query.page as string
+	const pageSize = ctx.query.pageSize as string
 	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
 	const GetBlockListData = {
-		type: type as string ?? '',
+		type: data.type as string ?? '',
 		pagination: {
 			page: parseInt(page, 10) ?? 0,
 			pageSize: parseInt(pageSize, 10) ?? Infinity,
 		},
 	}
+
 	ctx.body = await getBlockListService(GetBlockListData, uuid, token)
 	await next()
 }

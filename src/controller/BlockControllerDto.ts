@@ -197,7 +197,7 @@ export type GetBlockListRequestDto = {
 	};
 }
 
-export type BlocklistResult = {
+export type GetBlocklistResult = {
 	/** 被屏蔽用户 UID */
 	uid?: number;
 	/** 屏蔽类型 */
@@ -206,6 +206,8 @@ export type BlocklistResult = {
 	value: string;
 	/** 屏蔽时间 */
 	createDateTime: number;
+	/** 被屏蔽用户名 */
+	username?: string;
 	/** 被屏蔽用户昵称 */
 	userNickname?: string;
 	/** 被屏蔽用户头像 */
@@ -223,7 +225,7 @@ export type GetBlockListResponseDto = {
 	/** 黑名单数量 */
 	blocklistCount?: number;
 	/** 屏蔽用户列表 */
-	result?: BlocklistResult[];
+	result?: GetBlocklistResult[];
 }
 
 /**

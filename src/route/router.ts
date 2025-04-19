@@ -386,14 +386,10 @@ router.delete('/block/delete/regex', removeRegexController) // 用户解封正�
 // }
 
 router.get('/block/list', getBlockUserListController) // 获取黑名单列表
-// https://localhost:9999/block/list
+// https://localhost:9999/block/list?page=0&pageSize=10
 // cookie: UUID, token
 // {
-// 	"type": "XXXXXX",
-// 	"pagination": {
-// 		"page": 1,
-// 		"pageSize": 20
-// 	}
+// 	"type": "XXXXXX"
 // }
 
 

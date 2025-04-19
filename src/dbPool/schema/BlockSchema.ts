@@ -36,6 +36,8 @@ class UnblockListSchemaFactory {
 		_operatorUUID_: { type: String, required: true },
 		/** 操作者 UID - 非空 */
 		_operatorUid_: { type: Number, required: true },
+		/** 系统专用字段-最后编辑时间 - 非空 */
+		createDateTime: { type: Number, required: true },
 	}
 	/** MongoDB 集合名 */
 	collectionName = 'unblocklist'
