@@ -187,7 +187,7 @@ export type UnblockKeywordResponseDto = {
  */
 export type GetBlockListRequestDto = {
 	/** 屏蔽的类型 - 非空 */
-	type: 'block' | 'mute' | 'tag' | 'regex' | 'keyword';
+	type: string;
 	/** 分页查询 */
 	pagination: {
 		/** 当前在第几页 */

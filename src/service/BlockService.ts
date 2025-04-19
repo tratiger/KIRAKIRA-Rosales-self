@@ -14,7 +14,7 @@ import { get } from "http";
  * @param token 用户 Token
  * @param blockUserByUidRequest 屏蔽用户的请求载荷
  */
-export const blockUserByUidService = async (uuid: string, token: string, blockUserByUidRequest: BlockUserByUidRequestDto): Promise<BlockUserByUidResponseDto> => {
+export const blockUserByUidService = async (blockUserByUidRequest: BlockUserByUidRequestDto, uuid: string, token: string): Promise<BlockUserByUidResponseDto> => {
 	try {
 		if (!checkBlockUserByUidRequest(blockUserByUidRequest)) {
 			return { success: false, message: '屏蔽用户请求载荷不合法' }
@@ -85,7 +85,7 @@ export const blockUserByUidService = async (uuid: string, token: string, blockUs
 /**
  * 隐藏用户
  */
-export const muteUserByUidService = async (uuid: string, token: string, blockUserByUidRequest: MuteUserByUidRequestDto): Promise<MuteUserByUidResponseDto> => {
+export const muteUserByUidService = async (blockUserByUidRequest: MuteUserByUidRequestDto, uuid: string, token: string): Promise<MuteUserByUidResponseDto> => {
 	try {
 		if (!checkMuteUserByUidRequest(blockUserByUidRequest)) {
 			return { success: false, message: '隐藏用户失败，隐藏用户请求载荷不合法' }
@@ -154,7 +154,7 @@ export const muteUserByUidService = async (uuid: string, token: string, blockUse
 /**
  * 屏蔽关键词
  */
-export const blockKeywordService = async (uuid: string, token: string, blockKeywordRequest: BlockKeywordRequestDto): Promise<BlockKeywordResponseDto> => {
+export const blockKeywordService = async (blockKeywordRequest: BlockKeywordRequestDto, uuid: string, token: string): Promise<BlockKeywordResponseDto> => {
 	try {
 		if (!checkBlockKeywordRequest(blockKeywordRequest)) {
 			return { success: false, message: '屏蔽关键词失败，屏蔽关键词请求载荷不合法' }
@@ -218,7 +218,7 @@ export const blockKeywordService = async (uuid: string, token: string, blockKeyw
  * @param blockTagRequest 屏蔽标签的请求载荷
  * @returns 屏蔽标签的请求响应
  */
-export const blockTagService = async (uuid: string, token: string, blockTagRequest: BlockTagRequestDto): Promise<BlockTagResponseDto> => {
+export const blockTagService = async (blockTagRequest: BlockTagRequestDto, uuid: string, token: string): Promise<BlockTagResponseDto> => {
 	try {
 		if (!checkBlockTagRequest(blockTagRequest)) {
 			return { success: false, message: '屏蔽标签请求载荷不合法' }
@@ -283,7 +283,7 @@ export const blockTagService = async (uuid: string, token: string, blockTagReque
  * @param addRegexRequest 添加正则表达式的请求载荷
  * @returns 添加正则表达式的请求响应
  */
-export const addRegexService = async (uuid: string, token: string, addRegexRequest: AddRegexRequestDto): Promise<AddRegexResponseDto> => {
+export const addRegexService = async (addRegexRequest: AddRegexRequestDto, uuid: string, token: string): Promise<AddRegexResponseDto> => {
 	try {
 		if (!checkAddRegexRequest(addRegexRequest)) {
 			return { success: false, message: '添加正则表达式请求载荷不合法' }
@@ -346,7 +346,7 @@ export const addRegexService = async (uuid: string, token: string, addRegexReque
  * @param UnblockUserByUidRequestDto 取消屏蔽用户的请求载荷
  * @returns 取消屏蔽用户的请求响应
  */
-export const unBlockUserService = async (uuid: string, token: string, UnblockUserByUidRequest: UnblockUserByUidRequestDto): Promise<UnblockUserByUidResponseDto> => {
+export const unBlockUserService = async (UnblockUserByUidRequest: UnblockUserByUidRequestDto, uuid: string, token: string): Promise<UnblockUserByUidResponseDto> => {
 	try {
 		if (!checkBlockUserByUidRequest(UnblockUserByUidRequest)) {
 			return { success: false, message: '取消屏蔽用户失败，取消屏蔽用户请求载荷不合法' }
@@ -441,7 +441,7 @@ export const unBlockUserService = async (uuid: string, token: string, UnblockUse
  * @param ShowUserByUidRequestDto 显示用户的请求载荷
  * @returns 显示用户的请求响应
  */
-export const showUserService = async (uuid: string, token: string, ShowUserByUidRequest: ShowUserByUidRequestDto): Promise<ShowUserByUidResponseDto> => {
+export const showUserService = async (ShowUserByUidRequest: ShowUserByUidRequestDto, uuid: string, token: string): Promise<ShowUserByUidResponseDto> => {
 	try {
 		if (!checkMuteUserByUidRequest(ShowUserByUidRequest)) {
 			return { success: false, message: '显示用户失败，显示用户请求载荷不合法' }
@@ -536,7 +536,7 @@ export const showUserService = async (uuid: string, token: string, ShowUserByUid
  * @param UnblockTagRequestDto 取消屏蔽标签的请求载荷
  * @returns 取消屏蔽标签的请求响应
  */
-export const unBlockTagService = async (uuid: string, token: string, UnblockTagRequest: UnblockTagRequestDto): Promise<UnblockTagResponseDto> => {
+export const unBlockTagService = async (UnblockTagRequest: UnblockTagRequestDto, uuid: string, token: string): Promise<UnblockTagResponseDto> => {
 	try {
 		if (!checkBlockTagRequest(UnblockTagRequest)) {
 			return { success: false, message: '取消屏蔽标签失败，取消屏蔽标签请求载荷不合法' }
@@ -621,7 +621,7 @@ export const unBlockTagService = async (uuid: string, token: string, UnblockTagR
  * @param UnblockKeywordRequestDto 取消屏蔽关键词的请求载荷
  * @returns 取消屏蔽关键词的请求响应
  */
-export const unBlockKeywordService = async (uuid: string, token: string, UnblockKeywordRequest: UnblockKeywordRequestDto): Promise<UnblockKeywordResponseDto> => {
+export const unBlockKeywordService = async (UnblockKeywordRequest: UnblockKeywordRequestDto, uuid: string, token: string): Promise<UnblockKeywordResponseDto> => {
 	try {
 		if (!checkBlockKeywordRequest(UnblockKeywordRequest)) {
 			return { success: false, message: '取消屏蔽关键词失败，取消屏蔽关键词请求载荷不合法' }
@@ -706,7 +706,7 @@ export const unBlockKeywordService = async (uuid: string, token: string, Unblock
  * @param RemoveRegexResponseDto 删除正则表达式的请求载荷
  * @returns 删除正则表达式的请求响应
  */
-export const removeRegexService = async (uuid: string, token: string, RemoveRegexRequest: RemoveRegexRequestDto): Promise<RemoveRegexResponseDto> => {
+export const removeRegexService = async (RemoveRegexRequest: RemoveRegexRequestDto, uuid: string, token: string): Promise<RemoveRegexResponseDto> => {
 	try {
 		if (!checkAddRegexRequest(RemoveRegexRequest)) {
 			return { success: false, message: '删除正则表达式失败，删除正则表达式请求载荷不合法' }
@@ -1065,9 +1065,11 @@ export const checkBlockUserService = async (CheckIsBlockedRequest: CheckUserIsBl
 
 		if (blockData.includes(uid)) {
 			const isBlocked = true
+			return { success: true, message: '检查用户是否被屏蔽或隐藏成功，未被屏蔽或隐藏', isBlocked, isMuted }
 		}
 		if (muteData.includes(uid)) {
 			const isMuted = true
+			return { success: true, message: '检查用户是否被屏蔽或隐藏成功，未被屏蔽或隐藏', isBlocked, isMuted }
 		}
 
 		return { success: true, message: '检查用户是否被屏蔽或隐藏成功，未被屏蔽或隐藏', isBlocked, isMuted }
@@ -1225,8 +1227,9 @@ const checkAddRegexRequest = (addRegexRequest: AddRegexRequestDto): boolean => {
  * @returns 合法返回 true, 不合法返回 false
  */
 const checkGetBlockListRequest = (getBlockListRequest: GetBlockListRequestDto): boolean => {
+	const blockType = ['keyword', 'regex', 'tag', 'block', 'mute']
 	return (
-		getBlockListRequest.type !== undefined && getBlockListRequest.type !== null
+		getBlockListRequest.type !== undefined && getBlockListRequest.type !== null && blockType.includes(getBlockListRequest.type as string)
 	)
 }
 

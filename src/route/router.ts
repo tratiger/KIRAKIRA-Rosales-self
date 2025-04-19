@@ -48,6 +48,7 @@ import { createVideoTagController, getVideoTagByTagIdController, searchVideoTagC
 import { adminGetUserRolesByUidController, adminUpdateUserRoleController, createRbacApiPathController, createRbacRoleController, deleteRbacApiPathController, deleteRbacRoleController, getRbacApiPathController, getRbacRoleController, updateApiPathPermissionsForRoleController } from '../controller/RbacController.js'
 import { getStgEnvBackEndSecretController } from '../controller/ConsoleSecretController.js'
 import { followingUploaderController, unfollowingUploaderController } from '../controller/FeedController.js'
+import { addRegexController, blockKeywordController, blockTagController, blockUserByUidController, getBlockUserListController, muteUserByUidController, removeRegexController, showUserByUidController, unblockKeywordController, unblockTagController, unblockUserByUidController } from '../controller/BlockController.js'
 // import { addRegexController, blockKeywordController, blockTagController, blockUserByUidController, getBlockUserListController, muteUserByUidController, removeRegexController, showUserByUidController, unblockKeywordController, unblockTagController, unblockUserByUidController } from '../controller/BlockController.js'
 
 const router = new Router()
@@ -315,78 +316,85 @@ router.post('/user/adminClearUserInfo', adminClearUserInfoController) // 管理�
 
 
 
-// router.post('/block/user', blockUserByUidController) // 用户屏蔽用户
-// // https://localhost:9999/block/user
-// // cookie: UUID, token
-// // {
-// // 	"blockUid": XXXX
-// // }
+router.post('/block/user', blockUserByUidController) // 用户屏蔽用户
+// https://localhost:9999/block/user
+// cookie: UUID, token
+// {
+// 	"blockUid": XXXX
+// }
 
-// router.post('/block/muteuser', muteUserByUidController) // 用户隐藏用户
-// // https://localhost:9999/block/muteuser
-// // cookie: UUID, token
-// // {
-// //	"muteUid": XXXX
-// // }
+router.post('/block/muteuser', muteUserByUidController) // 用户隐藏用户
+// https://localhost:9999/block/muteuser
+// cookie: UUID, token
+// {
+//	"muteUid": XXXX
+// }
 
-// router.post('/block/keyword', blockKeywordController) // 用户屏蔽关键词
-// // https://localhost:9999/block/keyword
-// // cookie: UUID, token
-// // {
-// // 	"blockKeyword": "XXXXXX"
-// // }
+router.post('/block/keyword', blockKeywordController) // 用户屏蔽关键词
+// https://localhost:9999/block/keyword
+// cookie: UUID, token
+// {
+// 	"blockKeyword": "XXXXXX"
+// }
 
-// router.post('/block/tag', blockTagController) // 用户屏蔽标签
-// // https://localhost:9999/block/tag
-// // cookie: UUID, token
-// // {
-// //	"blockTag": XXXX
-// // }
+router.post('/block/tag', blockTagController) // 用户屏蔽标签
+// https://localhost:9999/block/tag
+// cookie: UUID, token
+// {
+//	"blockTag": XXXX
+// }
 
-// router.post('/block/regex', addRegexController) // 用户添加正则表达式
-// // https://localhost:9999/block/regex
-// // cookie: UUID, token
-// // {
-// //	"blockRegex": "XXXXXX"
-// // }
+router.post('/block/regex', addRegexController) // 用户添加正则表达式
+// https://localhost:9999/block/regex
+// cookie: UUID, token
+// {
+//	"blockRegex": "XXXXXX"
+// }
 
-// router.delete('/block/delete/user', unblockUserByUidController) // 用户解封用户
-// // https://localhost:9999/block/delete/user
-// // cookie: UUID, token
-// // {
-// //	"blockUid": XXXX
-// // }
+router.delete('/block/delete/user', unblockUserByUidController) // 用户解封用户
+// https://localhost:9999/block/delete/user
+// cookie: UUID, token
+// {
+//	"blockUid": XXXX
+// }
 
-// router.delete('/block/delete/muteuser', showUserByUidController) // 用户取消隐藏用户
-// // https://localhost:9999/block/delete/muteuser
-// // {
-// //	"muteUid": XXXX
-// // }
+router.delete('/block/delete/muteuser', showUserByUidController) // 用户取消隐藏用户
+// https://localhost:9999/block/delete/muteuser
+// {
+//	"muteUid": XXXX
+// }
 
-// router.delete('/block/delete/keyword', unblockKeywordController) // 用户解封关键词
-// // https://localhost:9999/block/delete/keyword
-// // cookie: UUID, token
-// // {
-// //	"blockKeyword": "XXXXXX"
-// // }
+router.delete('/block/delete/keyword', unblockKeywordController) // 用户解封关键词
+// https://localhost:9999/block/delete/keyword
+// cookie: UUID, token
+// {
+//	"blockKeyword": "XXXXXX"
+// }
 
-// router.delete('/block/delete/tag', unblockTagController) // 用户解封标签
-// // https://localhost:9999/block/delete/tag
-// // cookie: UUID, token
-// // {
-// //	"blockTag": XXXX
-// // }
+router.delete('/block/delete/tag', unblockTagController) // 用户解封标签
+// https://localhost:9999/block/delete/tag
+// cookie: UUID, token
+// {
+//	"blockTag": XXXX
+// }
 
-// router.delete('/block/delete/regex', removeRegexController) // 用户解封正则表达式
-// // https://localhost:9999/block/delete/regex
-// // cookie: UUID, token
-// // {
-// //	"blockRegex": "XXXXXX"
-// // }
+router.delete('/block/delete/regex', removeRegexController) // 用户解封正则表达式
+// https://localhost:9999/block/delete/regex
+// cookie: UUID, token
+// {
+//	"blockRegex": "XXXXXX"
+// }
 
-// router.get('/block/list', getBlockUserListController) // 获取黑名单列表
-// // https://localhost:9999/block/list
-// // cookie: UUID, token
+router.get('/block/list', getBlockUserListController) // 获取黑名单列表
+// https://localhost:9999/block/list
+// cookie: UUID, token
+// {
+// 	"type": "XXXXXX",
+// 	"pagination": {
+// 		"page": 1,
+// 		"pageSize": 20
+// 	}
+// }
 
 
 
