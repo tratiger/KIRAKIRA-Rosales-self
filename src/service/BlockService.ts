@@ -1,9 +1,9 @@
 import { InferSchemaType, PipelineStage } from "mongoose";
 import { AddRegexRequestDto, AddRegexResponseDto, BlockKeywordRequestDto, BlockKeywordResponseDto, BlockTagRequestDto, BlockTagResponseDto, BlockUserByUidRequestDto, BlockUserByUidResponseDto, CheckContentIsBlockedRequestDto, CheckIsBlockedByOtherUserRequestDto, CheckIsBlockedByOtherUserResponseDto, CheckIsBlockedResponseDto, CheckTagIsBlockedRequestDto, CheckUserIsBlockedRequestDto, CheckUserIsBlockedResponseDto, GetBlockListRequestDto, GetBlockListResponseDto, MuteUserByUidRequestDto, MuteUserByUidResponseDto, RemoveRegexRequestDto, RemoveRegexResponseDto, ShowUserByUidRequestDto, ShowUserByUidResponseDto, UnblockKeywordRequestDto, UnblockKeywordResponseDto, UnblockTagRequestDto, UnblockTagResponseDto, UnblockUserByUidRequestDto, UnblockUserByUidResponseDto } from "../controller/BlockControllerDto.js";
-import { checkUserExistsByUIDService, checkUserExistsByUuidService, checkUserTokenByUuidService, getUserUid, getUserUuid } from "./UserService.js";
-import { QueryType, SelectType, UpdateType } from "../dbPool/DbClusterPoolTypes.js";
+import { checkUserExistsByUIDService, checkUserTokenByUuidService, getUserUid, getUserUuid } from "./UserService.js";
+import { QueryType, SelectType } from "../dbPool/DbClusterPoolTypes.js";
 import { abortAndEndSession, commitAndEndSession, createAndStartSession } from "../common/MongoDBSessionTool.js";
-import { updateData4MongoDB, selectDataFromMongoDB, insertData2MongoDB, findOneAndUpdateData4MongoDB, deleteDataFromMongoDB, selectDataByAggregateFromMongoDB } from "../dbPool/DbClusterPool.js";
+import { selectDataFromMongoDB, insertData2MongoDB, deleteDataFromMongoDB, selectDataByAggregateFromMongoDB } from "../dbPool/DbClusterPool.js";
 import { BlockListSchema, UnblockListSchema } from "../dbPool/schema/BlockSchema.js";
 import { Session } from "inspector";
 import { get } from "http";
@@ -42,6 +42,10 @@ export const blockUserByUidService = async (blockUserByUidRequest: BlockUserByUi
 		if (!checkUserTokenByUuidService(uuid, token)) {
 			console.error('ERROR', '屏蔽用户失败，用户 Token 不合法')
 			return { success: false, message: '屏蔽用户失败，用户 Token 不合法' }
+		}
+
+		if (await getBlocklistCount('block', uuid) > 500) {
+			return { success: false, message: '屏蔽用户失败，屏蔽列表已达上限' } // TODO: 增加粉丝数判断
 		}
 
 		const now = new Date().getTime()
@@ -113,6 +117,10 @@ export const muteUserByUidService = async (blockUserByUidRequest: MuteUserByUidR
 			return { success: false, message: '隐藏用户失败，用户 Token 不合法' }
 		}
 
+		if (await getBlocklistCount('mute', uuid) > 500) {
+			return { success: false, message: '隐藏用户失败，隐藏列表已达上限' } // TODO: 增加粉丝数判断
+		}
+
 		const now = new Date().getTime()
 		const { collectionName: blockUserCollectionName, schemaInstance: blockUserSchemaInstance } = BlockListSchema
 		type BlockListSchemaType = InferSchemaType<typeof blockUserSchemaInstance>
@@ -171,6 +179,10 @@ export const blockKeywordService = async (blockKeywordRequest: BlockKeywordReque
 		if (!checkUserTokenByUuidService(uuid, token)) {
 			console.error('ERROR', '屏蔽关键词失败，用户 Token 不合法')
 			return { success: false, message: '屏蔽关键词失败，用户 Token 不合法' }
+		}
+
+		if (await getBlocklistCount('keyword', uuid) > 200) {
+			return { success: false, message: '屏蔽关键词失败，屏蔽列表已达上限' }
 		}
 
 		const now = new Date().getTime()
@@ -237,6 +249,10 @@ export const blockTagService = async (blockTagRequest: BlockTagRequestDto, uuid:
 			return { success: false, message: '屏蔽标签失败，用户 Token 不合法' }
 		}
 
+		if (await getBlocklistCount('tag', uuid) > 100) {
+			return { success: false, message: '屏蔽标签失败，屏蔽列表已达上限' }
+		}
+
 		const now = new Date().getTime()
 		const { collectionName: blockUserCollectionName, schemaInstance: blockUserSchemaInstance } = BlockListSchema
 		type BlockListSchemaType = InferSchemaType<typeof blockUserSchemaInstance>
@@ -300,6 +316,10 @@ export const addRegexService = async (addRegexRequest: AddRegexRequestDto, uuid:
 		if (!checkUserTokenByUuidService(uuid, token)) {
 			console.error('ERROR', '添加正则表达式失败，用户 Token 不合法')
 			return { success: false, message: '添加正则表达式失败，用户 Token 不合法' }
+		}
+
+		if (await getBlocklistCount('regex', uuid) > 15) {
+			return { success: false, message: '添加正则表达式失败，屏蔽列表已达上限' }
 		}
 
 		const now = new Date().getTime()
@@ -1129,6 +1149,38 @@ export const checkIsBlockedByOtherUserService = async (CheckIsBlockedRequest: Ch
 	} catch (error) {
 		console.error('ERROR', '检查是否被其他用户屏蔽失败，未知错误', error)
 		return { success: false, message: '检查是否被其他用户屏蔽失败，未知错误', isBlocked: false }
+	}
+}
+
+/**
+ * 获取对应类型的黑名单数量
+ */
+const getBlocklistCount = async (blocklistType: string, uuid: string): Promise<number> => {
+	try {
+		const { collectionName: blockUserCollectionName, schemaInstance: blockUserSchemaInstance } = BlockListSchema
+		type BlockListSchemaType = InferSchemaType<typeof blockUserSchemaInstance>
+		const countBlocklistPipeline: PipelineStage[] = [
+			{
+				$match: {
+					type: blocklistType,
+				},
+			},
+			{
+				$count: 'totalCount',
+			},
+		]
+		const blockSelect: SelectType<BlockListSchemaType> = {
+			Uid: 1,
+		}
+		const BlocklistCountResult = await selectDataByAggregateFromMongoDB(blockUserSchemaInstance, blockUserCollectionName, countBlocklistPipeline)
+		if (!BlocklistCountResult.success) {
+			console.error('ERROR', '获取黑名单数量失败，查询数据失败')
+			return 0
+		}
+		return BlocklistCountResult.result?.[0]?.totalCount
+	} catch (error) {
+		console.error('ERROR', '获取黑名单数量失败，未知错误', error)
+		return 0
 	}
 }
 
