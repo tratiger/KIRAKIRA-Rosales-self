@@ -59,22 +59,25 @@ export SERVER_ROOT_URL="kirakira.moe"
 > 如有必要，你可以在 package.json 中修改打包路径。请参阅 [开发文档](https://github.com/KIRAKIRA-DOUGA/KIRAKIRA-Rosales/tree/develop/docs)。
 
 #### 启动本地后端开发服务器
-请按下键盘按键 <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd>，然后选择 `npm: dev`。
-
-你也可以在程序根目录中执行以下命令来启动：
+你可以在程序根目录中执行以下命令来启动
 
 ```bash
 npm run dev
 ```
 
-#### 启动本地后端开发热重载服务器
-请按下键盘按键 <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd>，然后选择 `npm: dev-hot`。
+也可以按下键盘按键 <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd>，然后选择 `npm: dev`。
 
-你也可以在程序根目录中执行以下命令来启动：
+
+
+
+#### 启动本地后端开发热重载服务器
+你可以在程序根目录中执行以下命令来启动
 
 ```bash
 npm run dev-hot
 ```
+
+也可以按下键盘按键 <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd>，然后选择 `npm: dev`。
 
 成功执行以上命令后，你应该会获得一个监听 9999 端口的 KIRAKIRA-Rosales 开发服务器。🎉  
 在此基础上，你可以审阅、编写或贡献代码，参与 KIRAKIRA 项目开发。
@@ -101,7 +104,7 @@ npm run dev-hot
 按下键盘按键 <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd>，然后选择 `npm: build`。
 
 ```bash
-npm run dev
+npm run build
 ```
 
 ### 打包为容器镜像（最佳实践）
