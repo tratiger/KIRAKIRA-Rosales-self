@@ -404,6 +404,8 @@ export const getSelfUserInfoController = async (ctx: koaCtx, next: koaNext) => {
 
 /**
  * 获取用户信息
+ * 该接口还接受可选的 Cookie 中的 uuid 和 token 数据，一旦传递则可以在请求响应中获取发起请求者是否关注该用户。
+ *
  * @param ctx context
  * @param next context
  * @return GetUserInfoByUidResponseDto 通过 uid 获取到的用户信息，如果获取成功则 success: true，不成功则 success: false

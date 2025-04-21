@@ -193,6 +193,7 @@ router.post('/user/self', getSelfUserInfoController) // 获取当前登录的用
 
 router.get('/user/info', getUserInfoByUidController) // 根据 uid 获取用户信息
 // https://localhost:9999/user/info?uid=10
+// optional: cookie: uuid, token
 
 router.get('/user/exists', userExistsCheckByUIDController) // 检查用户是否存在
 // https://localhost:9999/user/exists?uid=10
