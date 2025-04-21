@@ -3,7 +3,7 @@ import { CreateOrUpdateBrowsingHistoryRequestDto, CreateOrUpdateBrowsingHistoryR
 import { selectDataByAggregateFromMongoDB, findOneAndUpdateData4MongoDB } from '../dbPool/DbClusterPool.js'
 import { QueryType } from '../dbPool/DbClusterPoolTypes.js'
 import { BrowsingHistorySchema } from '../dbPool/schema/BrowsingHistorySchema.js'
-import { checkUserTokenByUuidService, checkUserTokenService, getUserUid, getUserUuid } from './UserService.js'
+import { checkUserTokenByUuidService, checkUserTokenService, getUserUid } from './UserService.js'
 
 /**
  * 更新或创建用户浏览历史
@@ -32,7 +32,7 @@ export const createOrUpdateBrowsingHistoryService = async (createOrUpdateBrowsin
 			return { success: false, message: '更新或创建用户浏览历史时出错，用户校验失败' }
 		}
 
-		const uid = await getUserUid(createOrUpdateBrowsingHistoryRequest.uuid) 
+		const uid = await getUserUid(uuid) 
 		if (uid === undefined || typeof uid !== 'number' || uid <= 0) {
 			console.error('ERROR', '更新或创建用户浏览历史时出错，UID 不存在', { uuid })
 			return { success: false, message: '更新或创建用户浏览历史时出错，UID 不存在' }
@@ -43,6 +43,7 @@ export const createOrUpdateBrowsingHistoryService = async (createOrUpdateBrowsin
 
 		// 搜索数据
 		const BrowsingHistoryWhere: QueryType<BrowsingHistoryType> = {
+			UUID: uuid,
 			uid,
 			category,
 			id,
