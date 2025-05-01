@@ -10,9 +10,9 @@ import { get } from "http";
 
 /**
  * 屏蔽用户
+ * @param blockUserByUidRequest 屏蔽用户的请求载荷
  * @param uuid 用户 UUID
  * @param token 用户 Token
- * @param blockUserByUidRequest 屏蔽用户的请求载荷
  */
 export const blockUserByUidService = async (blockUserByUidRequest: BlockUserByUidRequestDto, uuid: string, token: string): Promise<BlockUserByUidResponseDto> => {
 	try {
@@ -74,7 +74,7 @@ export const blockUserByUidService = async (blockUserByUidRequest: BlockUserByUi
 		}
 
 		const insertResult = await insertData2MongoDB<BlockListSchemaType>(blockListData, blockUserSchemaInstance, blockUserCollectionName)
-		if (!insertResult) {
+		if (!insertResult.success) {
 			console.error('ERROR', '屏蔽用户失败，查询数据失败')
 			return { success: false, message: '屏蔽用户失败，查询数据失败' }
 		}
@@ -88,14 +88,18 @@ export const blockUserByUidService = async (blockUserByUidRequest: BlockUserByUi
 
 /**
  * 隐藏用户
+ * @param blockTagRequest 屏蔽关键词的请求载荷
+ * @param uuid 用户 UUID
+ * @param token 用户 Token
+ * @returns 屏蔽关键词的请求响应
  */
-export const muteUserByUidService = async (blockUserByUidRequest: MuteUserByUidRequestDto, uuid: string, token: string): Promise<MuteUserByUidResponseDto> => {
+export const muteUserByUidService = async (muteUserByUidRequest: MuteUserByUidRequestDto, uuid: string, token: string): Promise<MuteUserByUidResponseDto> => {
 	try {
-		if (!checkMuteUserByUidRequest(blockUserByUidRequest)) {
+		if (!checkMuteUserByUidRequest(muteUserByUidRequest)) {
 			return { success: false, message: '隐藏用户失败，隐藏用户请求载荷不合法' }
 		}
 
-		const { muteUid } = blockUserByUidRequest
+		const { muteUid } = muteUserByUidRequest
 		if (!checkUserExistsByUIDService({ uid: muteUid })) {
 			console.error('ERROR', '隐藏用户失败，用户不存在')
 			return { success: false, message: '隐藏用户失败，用户不存在' }
@@ -147,7 +151,7 @@ export const muteUserByUidService = async (blockUserByUidRequest: MuteUserByUidR
 		}
 
 		const insertResult = await insertData2MongoDB<BlockListSchemaType>(blockListData, blockUserSchemaInstance, blockUserCollectionName)
-		if (!insertResult) {
+		if (!insertResult.success) {
 			console.error('ERROR', '隐藏用户失败，查询数据失败')
 			return { success: false, message: '隐藏用户失败，查询数据失败' }
 		}
@@ -161,6 +165,10 @@ export const muteUserByUidService = async (blockUserByUidRequest: MuteUserByUidR
 
 /**
  * 屏蔽关键词
+ * @param blockTagRequest 屏蔽关键词的请求载荷
+ * @param uuid 用户 UUID
+ * @param token 用户 Token
+ * @returns 屏蔽关键词的请求响应
  */
 export const blockKeywordService = async (blockKeywordRequest: BlockKeywordRequestDto, uuid: string, token: string): Promise<BlockKeywordResponseDto> => {
 	try {
@@ -212,7 +220,7 @@ export const blockKeywordService = async (blockKeywordRequest: BlockKeywordReque
 		}
 
 		const insertResult = await insertData2MongoDB<BlockListSchemaType>(blockListData, blockUserSchemaInstance, blockUserCollectionName)
-		if (!insertResult) {
+		if (!insertResult.success) {
 			return { success: false, message: '屏蔽关键词失败' }
 		}
 		return { success: true, message: '屏蔽关键词成功' }
@@ -225,9 +233,9 @@ export const blockKeywordService = async (blockKeywordRequest: BlockKeywordReque
 
 /**
  * 屏蔽标签
+ * @param blockTagRequest 屏蔽标签的请求载荷
  * @param uuid 用户 UUID
  * @param token 用户 Token
- * @param blockTagRequest 屏蔽标签的请求载荷
  * @returns 屏蔽标签的请求响应
  */
 export const blockTagService = async (blockTagRequest: BlockTagRequestDto, uuid: string, token: string): Promise<BlockTagResponseDto> => {
@@ -280,7 +288,7 @@ export const blockTagService = async (blockTagRequest: BlockTagRequestDto, uuid:
 		}
 
 		const insertResult = await insertData2MongoDB<BlockListSchemaType>(blockListData, blockUserSchemaInstance, blockUserCollectionName)
-		if (!insertResult) {
+		if (!insertResult.success) {
 			console.error('ERROR', '屏蔽标签失败，查询数据失败')
 			return { success: false, message: '屏蔽标签失败，查询数据失败' }
 		}
@@ -294,9 +302,9 @@ export const blockTagService = async (blockTagRequest: BlockTagRequestDto, uuid:
 
 /**
  * 添加正则表达式
+ * @param addRegexRequest 添加正则表达式的请求载荷
  * @param uuid 用户 UUID
  * @param token 用户 Token
- * @param addRegexRequest 添加正则表达式的请求载荷
  * @returns 添加正则表达式的请求响应
  */
 export const addRegexService = async (addRegexRequest: AddRegexRequestDto, uuid: string, token: string): Promise<AddRegexResponseDto> => {
@@ -318,7 +326,7 @@ export const addRegexService = async (addRegexRequest: AddRegexRequestDto, uuid:
 			return { success: false, message: '添加正则表达式失败，用户 Token 不合法' }
 		}
 
-		if (await getBlocklistCount('regex', uuid) > 15) {
+		if (await getBlocklistCount('regex', uuid) > 3) {
 			return { success: false, message: '添加正则表达式失败，屏蔽列表已达上限' }
 		}
 
@@ -348,7 +356,7 @@ export const addRegexService = async (addRegexRequest: AddRegexRequestDto, uuid:
 		}
 
 		const insertResult = await insertData2MongoDB<BlockListSchemaType>(blockListData, blockUserSchemaInstance, blockUserCollectionName)
-		if (!insertResult) {
+		if (!insertResult.success) {
 			return { success: false, message: '添加正则表达式失败' }
 		}
 		return { success: true, message: '添加正则表达式成功' }
@@ -361,18 +369,18 @@ export const addRegexService = async (addRegexRequest: AddRegexRequestDto, uuid:
 
 /**
  * 取消屏蔽用户
+ * @param unblockUserByUidRequest 取消屏蔽用户的请求载荷
  * @param uuid 用户 UUID
  * @param token 用户 Token
- * @param UnblockUserByUidRequestDto 取消屏蔽用户的请求载荷
  * @returns 取消屏蔽用户的请求响应
  */
-export const unBlockUserService = async (UnblockUserByUidRequest: UnblockUserByUidRequestDto, uuid: string, token: string): Promise<UnblockUserByUidResponseDto> => {
+export const unBlockUserService = async (unblockUserByUidRequest: UnblockUserByUidRequestDto, uuid: string, token: string): Promise<UnblockUserByUidResponseDto> => {
 	try {
-		if (!checkBlockUserByUidRequest(UnblockUserByUidRequest)) {
+		if (!checkBlockUserByUidRequest(unblockUserByUidRequest)) {
 			return { success: false, message: '取消屏蔽用户失败，取消屏蔽用户请求载荷不合法' }
 		}
 
-		const { blockUid } = UnblockUserByUidRequest
+		const { blockUid } = unblockUserByUidRequest
 		if (!checkUserExistsByUIDService({ uid: blockUid })) {
 			console.error('ERROR', '取消屏蔽用户失败，用户不存在')
 			return { success: false, message: '取消屏蔽用户失败，用户不存在' }
@@ -457,18 +465,18 @@ export const unBlockUserService = async (UnblockUserByUidRequest: UnblockUserByU
 
 /**
  * 显示用户
+ * @param ShowUserByUidRequestDto 显示用户的请求载荷
  * @param uuid 用户 UUID
  * @param token 用户 Token
- * @param ShowUserByUidRequestDto 显示用户的请求载荷
  * @returns 显示用户的请求响应
  */
-export const showUserService = async (ShowUserByUidRequest: ShowUserByUidRequestDto, uuid: string, token: string): Promise<ShowUserByUidResponseDto> => {
+export const showUserService = async (showUserByUidRequest: ShowUserByUidRequestDto, uuid: string, token: string): Promise<ShowUserByUidResponseDto> => {
 	try {
-		if (!checkMuteUserByUidRequest(ShowUserByUidRequest)) {
+		if (!checkMuteUserByUidRequest(showUserByUidRequest)) {
 			return { success: false, message: '显示用户失败，显示用户请求载荷不合法' }
 		}
 
-		const { muteUid } = ShowUserByUidRequest
+		const { muteUid } = showUserByUidRequest
 		if (!checkUserExistsByUIDService({ uid: muteUid })) {
 			console.error('ERROR', '显示用户失败，用户不存在')
 			return { success: false, message: '显示用户失败，用户不存在' }
@@ -553,18 +561,18 @@ export const showUserService = async (ShowUserByUidRequest: ShowUserByUidRequest
 
 /**
  * 取消屏蔽标签
+ * @param unblockTagRequest 取消屏蔽标签的请求载荷
  * @param uuid 用户 UUID
  * @param token 用户 Token
- * @param UnblockTagRequestDto 取消屏蔽标签的请求载荷
  * @returns 取消屏蔽标签的请求响应
  */
-export const unBlockTagService = async (UnblockTagRequest: UnblockTagRequestDto, uuid: string, token: string): Promise<UnblockTagResponseDto> => {
+export const unBlockTagService = async (unblockTagRequest: UnblockTagRequestDto, uuid: string, token: string): Promise<UnblockTagResponseDto> => {
 	try {
-		if (!checkBlockTagRequest(UnblockTagRequest)) {
+		if (!checkBlockTagRequest(unblockTagRequest)) {
 			return { success: false, message: '取消屏蔽标签失败，取消屏蔽标签请求载荷不合法' }
 		}
 
-		const tagId = UnblockTagRequest.tagId.toString()
+		const tagId = unblockTagRequest.tagId.toString()
 		const operatorUid = await getUserUid(uuid)
 
 		if (!operatorUid) {
@@ -639,18 +647,18 @@ export const unBlockTagService = async (UnblockTagRequest: UnblockTagRequestDto,
 
 /**
  * 取消屏蔽关键词
+ * @param unblockKeywordRequest 取消屏蔽关键词的请求载荷
  * @param uuid 用户 UUID
  * @param token 用户 Token
- * @param UnblockKeywordRequestDto 取消屏蔽关键词的请求载荷
  * @returns 取消屏蔽关键词的请求响应
  */
-export const unBlockKeywordService = async (UnblockKeywordRequest: UnblockKeywordRequestDto, uuid: string, token: string): Promise<UnblockKeywordResponseDto> => {
+export const unBlockKeywordService = async (unblockKeywordRequest: UnblockKeywordRequestDto, uuid: string, token: string): Promise<UnblockKeywordResponseDto> => {
 	try {
-		if (!checkBlockKeywordRequest(UnblockKeywordRequest)) {
+		if (!checkBlockKeywordRequest(unblockKeywordRequest)) {
 			return { success: false, message: '取消屏蔽关键词失败，取消屏蔽关键词请求载荷不合法' }
 		}
 
-		const keyword = UnblockKeywordRequest.blockKeyword
+		const { blockKeyword: keyword } = unblockKeywordRequest
 		const operatorUid = await getUserUid(uuid)
 
 		if (!operatorUid) {
@@ -725,18 +733,18 @@ export const unBlockKeywordService = async (UnblockKeywordRequest: UnblockKeywor
 
 /**
  * 删除正则表达式
+ * @param removeRegexRequest 删除正则表达式的请求载荷
  * @param uuid 用户 UUID
  * @param token 用户 Token
- * @param RemoveRegexResponseDto 删除正则表达式的请求载荷
  * @returns 删除正则表达式的请求响应
  */
-export const removeRegexService = async (RemoveRegexRequest: RemoveRegexRequestDto, uuid: string, token: string): Promise<RemoveRegexResponseDto> => {
+export const removeRegexService = async (removeRegexRequest: RemoveRegexRequestDto, uuid: string, token: string): Promise<RemoveRegexResponseDto> => {
 	try {
-		if (!checkAddRegexRequest(RemoveRegexRequest)) {
+		if (!checkAddRegexRequest(removeRegexRequest)) {
 			return { success: false, message: '删除正则表达式失败，删除正则表达式请求载荷不合法' }
 		}
 
-		const regex = RemoveRegexRequest.blockRegex
+		const { blockRegex: regex } = removeRegexRequest
 		const operatorUid = await getUserUid(uuid)
 
 		if (!operatorUid) {
@@ -811,13 +819,14 @@ export const removeRegexService = async (RemoveRegexRequest: RemoveRegexRequestD
 
 /**
  * 获取用户的黑名单
+ * @param getBlockListRequest 获取用户的黑名单的请求载荷
  * @param uuid 用户 UUID
  * @param token 用户 Token
  * @returns 用户的黑名单
  */
-export const getBlockListService = async (GetBlockListRequest: GetBlockListRequestDto, uuid: string, token: string): Promise<GetBlockListResponseDto> => {
+export const getBlockListService = async (getBlockListRequest: GetBlockListRequestDto, uuid: string, token: string): Promise<GetBlockListResponseDto> => {
 	try {
-		if (!checkGetBlockListRequest(GetBlockListRequest)) {
+		if (!checkGetBlockListRequest(getBlockListRequest)) {
 			return { success: false, message: '获取黑名单失败，获取黑名单请求载荷不合法', blocklistCount: -1 }
 		}
 		if (uuid !== undefined && uuid !== null && token) {
@@ -827,7 +836,7 @@ export const getBlockListService = async (GetBlockListRequest: GetBlockListReque
 			}
 		}
 
-		const { type } = GetBlockListRequest
+		const { type } = getBlockListRequest
 		if (!['mute', 'block', 'keyword', 'tag', 'regex'].includes(type)) {
 			console.error('ERROR', '获取黑名单失败，黑名单类型不合法')
 			return { success: false, message: '获取黑名单失败，黑名单类型不合法' }
@@ -835,9 +844,9 @@ export const getBlockListService = async (GetBlockListRequest: GetBlockListReque
 
 		let pageSize = undefined
 		let skip = 0
-		if (GetBlockListRequest.pagination && GetBlockListRequest.pagination.page > 0 && GetBlockListRequest.pagination.pageSize > 0) {
-			skip = (GetBlockListRequest.pagination.page - 1) * GetBlockListRequest.pagination.pageSize
-			pageSize = GetBlockListRequest.pagination.pageSize
+		if (getBlockListRequest.pagination && getBlockListRequest.pagination.page > 0 && getBlockListRequest.pagination.pageSize > 0) {
+			skip = (getBlockListRequest.pagination.page - 1) * getBlockListRequest.pagination.pageSize
+			pageSize = getBlockListRequest.pagination.pageSize
 		}
 
 		const countBlocklistPipeline: PipelineStage[] = [
