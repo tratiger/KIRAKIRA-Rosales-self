@@ -47,7 +47,7 @@ import { approvePendingReviewVideoController, checkVideoExistController, deleteV
 import { createVideoTagController, getVideoTagByTagIdController, searchVideoTagController } from '../controller/VideoTagController.js'
 import { adminGetUserRolesByUidController, adminUpdateUserRoleController, createRbacApiPathController, createRbacRoleController, deleteRbacApiPathController, deleteRbacRoleController, getRbacApiPathController, getRbacRoleController, updateApiPathPermissionsForRoleController } from '../controller/RbacController.js'
 import { getStgEnvBackEndSecretController } from '../controller/ConsoleSecretController.js'
-import { followingUploaderController, unfollowingUploaderController } from '../controller/FeedController.js'
+import { addNewUid2FeedGroupController, administratorApproveFeedGroupInfoChangeController, administratorDeleteFeedGroupController, createFeedGroupController, createOrEditFeedGroupInfoController, deleteFeedGroupController, followingUploaderController, getFeedContentController, getFeedGroupCoverUploadSignedUrlController, getFeedGroupListController, removeUidFromFeedGroupController, unfollowingUploaderController } from '../controller/FeedController.js'
 import { addRegexController, blockKeywordController, blockTagController, blockUserByUidController, getBlockUserListController, muteUserByUidController, removeRegexController, showUserByUidController, unblockKeywordController, unblockTagController, unblockUserByUidController } from '../controller/BlockController.js'
 // import { addRegexController, blockKeywordController, blockTagController, blockUserByUidController, getBlockUserListController, muteUserByUidController, removeRegexController, showUserByUidController, unblockKeywordController, unblockTagController, unblockUserByUidController } from '../controller/BlockController.js'
 
@@ -664,6 +664,78 @@ router.post('/feed/unfollowing', unfollowingUploaderController) // 取消关注�
 // {
 // 	"unfollowingUid": 999
 // }
+
+router.post('/feed/createFeedGroup', createFeedGroupController) // 创建动态分组
+// https://localhost:9999/feed/createFeedGroup
+// cookie: uuid, token
+// {
+// 	"feedGroupName": "test",
+// 	"withUidList": [1, 2],
+// 	"withCustomCoverUrl": "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+// }
+
+router.post('/feed/addNewUid2FeedGroup', addNewUid2FeedGroupController) // 向一个动态分组中添加新的 UID
+// https://localhost:9999/feed/addNewUid2FeedGroup
+// cookie: uuid, token
+// {
+// 	"feedGroupUuid": "xxxxxxxxxxxxxxxxxxxxx",
+// 	"uidList": [1, 2]
+// }
+
+router.post('/feed/removeUidFromFeedGroup', removeUidFromFeedGroupController) // 从一个动态分组中移除 UID
+// https://localhost:9999/feed/removeUidFromFeedGroup
+// cookie: uuid, token
+// {
+// 	"feedGroupUuid": "xxxxxxxxxxxxxxxxxxxxx",
+// 	"uidList": [1, 2]
+// }
+
+router.delete('/feed/deleteFeedGroup', deleteFeedGroupController) // 删除动态分组
+// https://localhost:9999/feed/deleteFeedGroup
+// cookie: uuid, token
+// {
+// 	"feedGroupUuid": "xxxxxxxxxxxxxxxxxxxxx"
+// }
+
+router.get('/feed/getFeedGroupCoverUploadSignedUrl', getFeedGroupCoverUploadSignedUrlController) // 获取用于用户上传头像的预签名 URL, 上传限时 60 秒
+// https://localhost:9999/feed/getFeedGroupCoverUploadSignedUrl
+// cookie: uuid, token
+
+router.post('/feed/createOrEditFeedGroupInfo', createOrEditFeedGroupInfoController) // 创建或更新动态分组信息
+// https://localhost:9999/feed/createOrEditFeedGroupInfo
+// cookie: uuid, token
+// {
+// 	"feedGroupUuid": "xxxxxxxxxxxxxxxxxxxxx",
+// 	"feedGroupName": "xxxxx",
+// 	"feedGroupCustomCoverUrl": "xxxxxxxxxxxxxxxxxxxxxxxxxxx",
+// }
+
+router.post('/feed/administratorApproveFeedGroupInfoChange', administratorApproveFeedGroupInfoChangeController) // 管理员通过动态分组信息更新审核
+// https://localhost:9999/feed/administratorApproveFeedGroupInfoChange
+// cookie: uuid, token
+// {
+// 	"feedGroupUuid": "xxxxxxxxxxxxxxxxxxxxx"
+// }
+
+router.delete('/feed/administratorDeleteFeedGroup', administratorDeleteFeedGroupController) // 管理员删除动态分组
+// https://localhost:9999/feed/administratorDeleteFeedGroup
+// cookie: uuid, token
+// {
+// 	"feedGroupUuid": "xxxxxxxxxxxxxxxxxxxxx"
+// }
+
+router.get('/feed/getFeedGroupList', getFeedGroupListController) // 获取动态分组
+// https://localhost:9999/feed/getFeedGroupList
+// cookie: uuid, token
+
+
+router.get('/feed/getFeedContent', getFeedContentController) // 获取动态分组
+// https://localhost:9999/feed/getFeedContent?page=1&pageSize=30
+// cookie: uuid, token
+// {
+// 	"feedGroupUuid": "xxxxxxxxxxxxxxxxxxxxx"
+// }
+
 
 
 
