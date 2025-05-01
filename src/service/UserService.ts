@@ -2452,7 +2452,7 @@ export const adminGetUserInfoService = async (adminGetUserInfoRequest: AdminGetU
 			console.error('ERROR', '管理员获取用户信息失败，用户校验未通过')
 			return { success: false, message: '管理员获取用户信息失败，用户校验未通过', totalCount: 0 }
 		}
-
+		const { sortBy, sortOrder } = adminGetUserInfoRequest
 		let pageSize = undefined
 		let skip = 0
 		if (adminGetUserInfoRequest.pagination && adminGetUserInfoRequest.pagination.page > 0 && adminGetUserInfoRequest.pagination.pageSize > 0) {
@@ -2493,7 +2493,7 @@ export const adminGetUserInfoService = async (adminGetUserInfoRequest: AdminGetU
 					preserveNullAndEmptyArrays: true, // 保留空数组和null值
 				},
 			},
-			{ $sort: { 'user_info_data.editDateTime': -1 } }, // 按最后编辑时间降序排序
+			{ $sort: { [`user_info_data.${sortBy}`]: sortOrder === 'descend' ? -1 : 1}},
 			{ $skip: skip }, // 跳过指定数量的文档
 			{ $limit: pageSize }, // 限制返回的文档数量
 		]
@@ -2513,7 +2513,8 @@ export const adminGetUserInfoService = async (adminGetUserInfoRequest: AdminGetU
 				uid: 1,
 				UUID: 1,
 				userCreateDateTime: 1, // 用户创建日期
-				role: 1, // 用户的角色
+				roles: 1, // 用户的角色
+				email: 1, // 用户的邮箱
 				username: '$user_info_data.username', // 用户名
 				userNickname: '$user_info_data.userNickname', // 用户昵称
 				avatar: '$user_info_data.avatar', // 用户头像

@@ -701,6 +701,10 @@ export type GetBlockedUserResponseDto = {
 export type AdminGetUserInfoRequestDto = {
 	/** 是否只展示在上一次审核通过后修改了用户信息的用户 */
 	isOnlyShowUserInfoUpdatedAfterReview: boolean;
+	/** 排序字段 */
+	sortBy: string;
+	/** 排序方法 */
+	sortOrder: string;
 	/** 分页查询 */
 	pagination: {
 		/** 当前在第几页 */
