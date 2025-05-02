@@ -725,6 +725,7 @@ export type AdminGetUserInfoResponseDto = {
 	/** 请求响应 */
 	result?: (
 		GetSelfUserInfoResponseDto['result']
+		& { editOperatorUUID: string }
 		& { uid: number }
 		& { UUID: string }
 	)[];

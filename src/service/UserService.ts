@@ -730,6 +730,12 @@ export const updateOrCreateUserInfoService = async (updateOrCreateUserInfoReques
 					}
 				}
 
+				const editOperatorUUID = await getUserUuid(uid)
+				if (!editOperatorUUID) {
+					console.error('ERROR', '更新或创建用户信息失败，UUID 不存在', { updateOrCreateUserInfoRequest, uid })
+					return { success: false, message: '更新或创建用户信息失败，UUID 不存在' }
+				}
+
 				const updateUserInfoWhere: QueryType<UserInfo> = {
 					uid,
 				}
@@ -738,6 +744,7 @@ export const updateOrCreateUserInfoService = async (updateOrCreateUserInfoReques
 					label: updateOrCreateUserInfoRequest.label as UserInfo['label'], // TODO: Mongoose issue: #12420
 					userLinkAccounts: updateOrCreateUserInfoRequest.userLinkAccounts as UserInfo['userLinkAccounts'], // TODO: Mongoose issue: #12420
 					isUpdatedAfterReview: true,
+					editOperatorUUID,
 					editDateTime: new Date().getTime(),
 				}
 				const updateResult = await findOneAndUpdateData4MongoDB(updateUserInfoWhere, updateUserInfoUpdate, schemaInstance, collectionName)
@@ -2521,6 +2528,9 @@ export const adminGetUserInfoService = async (adminGetUserInfoRequest: AdminGetU
 				userBannerImage: '$user_info_data.userBannerImage', // 用户的背景图
 				signature: '$user_info_data.signature', // 用户的个性签名
 				gender: '$user_info_data.gender', // 用户的性别
+				userBirthday: '$user_info_data.userBirthday', // 用户出生日期
+				isUpdatedAfterReview: '$user_info_data.isUpdatedAfterReview', // 是否经过审核
+				editOperatorUUID: '$user_info_data.editOperatorUUID', // 编辑操作员的 UUID
 				totalCount: 1, // 总文档数
 			},
 		}
@@ -2644,6 +2654,7 @@ export const adminClearUserInfoService = async (adminClearUserInfoRequest: Admin
 			userLinkAccounts: [] as UserInfo['userLinkAccounts'], // TODO: Mongoose issue: #12420
 			userWebsite: { websiteName: '', websiteUrl: '' },
 			isUpdatedAfterReview: false, // 清除信息的直接设为 false
+			editOperatorUUID: adminUUID,
 			editDateTime: new Date().getTime(),
 		}
 		try {
