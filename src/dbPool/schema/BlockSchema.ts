@@ -9,8 +9,6 @@ class BlockListSchemaFactory {
 		type: { type: String, required: true },
 		/** 黑名单内容 - 非空 */
 		value: { type: String, required: true },
-		/** 被屏蔽用户 UID（如有） */
-		Uid: { type: Number },
 		/** 创建者 UID - 非空 */
 		operatorUid: { type: Number, required: true },
 		/** 创建者 UUID - 非空 */

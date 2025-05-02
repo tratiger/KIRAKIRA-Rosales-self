@@ -6,6 +6,7 @@ import { QueryType, SelectType } from '../dbPool/DbClusterPoolTypes.js'
 import { RemovedVideoCommentSchema, VideoCommentDownvoteSchema, VideoCommentSchema, VideoCommentUpvoteSchema } from '../dbPool/schema/VideoCommentSchema.js'
 import { getNextSequenceValueService } from './SequenceValueService.js'
 import { checkUserTokenByUuidService, checkUserTokenService, getUserInfoByUidService, getUserUuid } from './UserService.js'
+import { buildBlockListMongooseFilter } from './BlockService.js'
 
 /**
  * 用户发送视频评论
@@ -154,6 +155,29 @@ export const getVideoCommentListByKvidService = async (getVideoCommentByKvidRequ
 			pageSize = getVideoCommentByKvidRequest.pagination.pageSize
 		}
 
+		const blockListFilter = await buildBlockListMongooseFilter(
+			[
+				{
+					attr: 'UUID',
+					category: 'block-uuid',
+				},
+				{
+					attr: 'UUID',
+					category: 'hide-uuid',
+				},
+				{
+					attr: 'text',
+					category: 'keyword',
+				},
+				{
+					attr: 'text',
+					category: 'regex',
+				},
+			],
+			uuid,
+			token
+		)
+
 		// 获取视频的评论总数的 pipeline
 		const countVideoCommentPipeline: PipelineStage[] = [
 			// 1. 查询评论信息
@@ -162,6 +186,7 @@ export const getVideoCommentListByKvidService = async (getVideoCommentByKvidRequ
 					videoId // 通过 videoId 筛选评论
 				},
 			},
+			...blockListFilter.filter,
 			// 2. 统计总数量
 			{
 				$count: 'totalCount', // 统计总文档数
@@ -176,6 +201,7 @@ export const getVideoCommentListByKvidService = async (getVideoCommentByKvidRequ
 					videoId // 通过 videoId 筛选评论
 				},
 			},
+			...blockListFilter.filter,
 			// 2. 关联用户表获取评论发送者信息
 			{
 				$lookup: {
