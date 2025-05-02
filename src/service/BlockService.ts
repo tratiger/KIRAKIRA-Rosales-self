@@ -1,5 +1,5 @@
 import { InferSchemaType, PipelineStage } from "mongoose";
-import { AddRegexRequestDto, AddRegexResponseDto, BlockKeywordRequestDto, BlockKeywordResponseDto, BlockTagRequestDto, BlockTagResponseDto, BlockUserByUidRequestDto, BlockUserByUidResponseDto, CheckContentIsBlockedRequestDto, CheckIsBlockedByOtherUserRequestDto, CheckIsBlockedByOtherUserResponseDto, CheckIsBlockedResponseDto, CheckTagIsBlockedRequestDto, CheckUserIsBlockedRequestDto, CheckUserIsBlockedResponseDto, GetBlockListRequestDto, GetBlockListResponseDto, MuteUserByUidRequestDto, MuteUserByUidResponseDto, RemoveRegexRequestDto, RemoveRegexResponseDto, ShowUserByUidRequestDto, ShowUserByUidResponseDto, UnblockKeywordRequestDto, UnblockKeywordResponseDto, UnblockTagRequestDto, UnblockTagResponseDto, UnblockUserByUidRequestDto, UnblockUserByUidResponseDto } from "../controller/BlockControllerDto.js";
+import { AddRegexRequestDto, AddRegexResponseDto, BlockKeywordRequestDto, BlockKeywordResponseDto, BlockTagRequestDto, BlockTagResponseDto, BlockUserByUidRequestDto, BlockUserByUidResponseDto, CheckContentIsBlockedRequestDto, CheckIsBlockedByOtherUserRequestDto, CheckIsBlockedByOtherUserResponseDto, CheckIsBlockedResponseDto, CheckTagIsBlockedRequestDto, CheckUserIsBlockedRequestDto, CheckUserIsBlockedResponseDto, GetBlockListRequestDto, GetBlockListResponseDto, HideUserByUidRequestDto, HideUserByUidResponseDto, RemoveRegexRequestDto, RemoveRegexResponseDto, ShowUserByUidRequestDto, ShowUserByUidResponseDto, UnblockKeywordRequestDto, UnblockKeywordResponseDto, UnblockTagRequestDto, UnblockTagResponseDto, UnblockUserByUidRequestDto, UnblockUserByUidResponseDto } from "../controller/BlockControllerDto.js";
 import { checkUserExistsByUIDService, checkUserTokenByUuidService, getUserUid, getUserUuid } from "./UserService.js";
 import { QueryType, SelectType } from "../dbPool/DbClusterPoolTypes.js";
 import { abortAndEndSession, commitAndEndSession, createAndStartSession } from "../common/MongoDBSessionTool.js";
@@ -93,19 +93,19 @@ export const blockUserByUidService = async (blockUserByUidRequest: BlockUserByUi
  * @param token 用户 Token
  * @returns 屏蔽关键词的请求响应
  */
-export const muteUserByUidService = async (muteUserByUidRequest: MuteUserByUidRequestDto, uuid: string, token: string): Promise<MuteUserByUidResponseDto> => {
+export const hideUserByUidService = async (hideUserByUidRequest: HideUserByUidRequestDto, uuid: string, token: string): Promise<HideUserByUidResponseDto> => {
 	try {
-		if (!checkMuteUserByUidRequest(muteUserByUidRequest)) {
+		if (!checkHideUserByUidRequest(hideUserByUidRequest)) {
 			return { success: false, message: '隐藏用户失败，隐藏用户请求载荷不合法' }
 		}
 
-		const { muteUid } = muteUserByUidRequest
-		if (!checkUserExistsByUIDService({ uid: muteUid })) {
+		const { hideUid } = hideUserByUidRequest
+		if (!checkUserExistsByUIDService({ uid: hideUid })) {
 			console.error('ERROR', '隐藏用户失败，用户不存在')
 			return { success: false, message: '隐藏用户失败，用户不存在' }
 		}
 
-		const userUuid = await getUserUuid(muteUid)
+		const userUuid = await getUserUuid(hideUid)
 		const operatorUid = await getUserUid(uuid)
 
 		if (!userUuid || !operatorUid) {
@@ -121,7 +121,7 @@ export const muteUserByUidService = async (muteUserByUidRequest: MuteUserByUidRe
 			return { success: false, message: '隐藏用户失败，用户 Token 不合法' }
 		}
 
-		if (await getBlocklistCount('mute', uuid) > 500) {
+		if (await getBlocklistCount('hide', uuid) > 500) {
 			return { success: false, message: '隐藏用户失败，隐藏列表已达上限' } // TODO: 增加粉丝数判断
 		}
 
@@ -129,7 +129,7 @@ export const muteUserByUidService = async (muteUserByUidRequest: MuteUserByUidRe
 		const { collectionName: blockUserCollectionName, schemaInstance: blockUserSchemaInstance } = BlockListSchema
 		type BlockListSchemaType = InferSchemaType<typeof blockUserSchemaInstance>
 		const blockListWhere: QueryType<BlockListSchemaType> = {
-			type: 'mute',
+			type: 'hide',
 			value: userUuid,
 			operatorUUID: uuid,
 		}
@@ -142,9 +142,9 @@ export const muteUserByUidService = async (muteUserByUidRequest: MuteUserByUidRe
 		}
 
 		const blockListData: BlockListSchemaType = {
-			type: 'mute',
+			type: 'hide',
 			value: userUuid,
-			Uid: muteUid,
+			Uid: hideUid,
 			operatorUid: operatorUid,
 			operatorUUID: uuid,
 			createDateTime: now,
@@ -472,16 +472,16 @@ export const unBlockUserService = async (unblockUserByUidRequest: UnblockUserByU
  */
 export const showUserService = async (showUserByUidRequest: ShowUserByUidRequestDto, uuid: string, token: string): Promise<ShowUserByUidResponseDto> => {
 	try {
-		if (!checkMuteUserByUidRequest(showUserByUidRequest)) {
+		if (!checkHideUserByUidRequest(showUserByUidRequest)) {
 			return { success: false, message: '显示用户失败，显示用户请求载荷不合法' }
 		}
 
-		const { muteUid } = showUserByUidRequest
-		if (!checkUserExistsByUIDService({ uid: muteUid })) {
+		const { hideUid } = showUserByUidRequest
+		if (!checkUserExistsByUIDService({ uid: hideUid })) {
 			console.error('ERROR', '显示用户失败，用户不存在')
 			return { success: false, message: '显示用户失败，用户不存在' }
 		}
-		const userUuid = await getUserUuid(muteUid)
+		const userUuid = await getUserUuid(hideUid)
 		const operatorUid = await getUserUid(uuid)
 
 		if (!userUuid || !operatorUid) {
@@ -501,7 +501,7 @@ export const showUserService = async (showUserByUidRequest: ShowUserByUidRequest
 		const { collectionName: blockUserCollectionName, schemaInstance: blockUserSchemaInstance } = BlockListSchema
 		type BlockListSchemaType = InferSchemaType<typeof blockUserSchemaInstance>
 		const blockListWhere: QueryType<BlockListSchemaType> = {
-			type: 'mute',
+			type: 'hide',
 			value: userUuid,
 			operatorUUID: uuid,
 		}
@@ -837,7 +837,7 @@ export const getBlockListService = async (getBlockListRequest: GetBlockListReque
 		}
 
 		const { type } = getBlockListRequest
-		if (!['mute', 'block', 'keyword', 'tag', 'regex'].includes(type)) {
+		if (!['hide', 'block', 'keyword', 'tag', 'regex'].includes(type)) {
 			console.error('ERROR', '获取黑名单失败，黑名单类型不合法')
 			return { success: false, message: '获取黑名单失败，黑名单类型不合法' }
 		}
@@ -861,7 +861,7 @@ export const getBlockListService = async (getBlockListRequest: GetBlockListReque
 		]
 
 		// 判断是否需要关联用户信息
-		const shouldJoinUserInfo = ['mute', 'block'].includes(type)
+		const shouldJoinUserInfo = ['hide', 'block'].includes(type)
 
 		const getBlocklistPipeline: PipelineStage[] = [
 			{
@@ -1056,21 +1056,21 @@ export const checkBlockTagsService = async (CheckIsBlockedRequest: CheckTagIsBlo
 export const checkBlockUserService = async (CheckIsBlockedRequest: CheckUserIsBlockedRequestDto, uuid: string, token: string): Promise<CheckUserIsBlockedResponseDto> => {
 	try {
 		const isBlocked = false
-		const isMuted = false
+		const isHided = false
 
 		if (!checkCheckUserIsBlockedRequest(CheckIsBlockedRequest)) {
 			console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，请求载荷不合法')
-			return { success: true, message: '检查用户是否被屏蔽或隐藏失败，请求载荷不合法', isBlocked, isMuted }
+			return { success: true, message: '检查用户是否被屏蔽或隐藏失败，请求载荷不合法', isBlocked, isHided }
 		}
 		const { uid } = CheckIsBlockedRequest
 
 		if (!checkUserExistsByUIDService({ uid })) {
 			console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，用户不存在')
-			return { success: false, message: '检查用户是否被屏蔽或隐藏失败，用户不存在', isBlocked, isMuted }
+			return { success: false, message: '检查用户是否被屏蔽或隐藏失败，用户不存在', isBlocked, isHided }
 		}
 		if (!checkUserTokenByUuidService(uuid, token)) {
 			console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，用户 Token 不合法')
-			return { success: false, message: '检查用户是否被屏蔽或隐藏失败，用户 Token 不合法', isBlocked, isMuted }
+			return { success: false, message: '检查用户是否被屏蔽或隐藏失败，用户 Token 不合法', isBlocked, isHided }
 		}
 
 		const { collectionName: blockUserCollectionName, schemaInstance: blockUserSchemaInstance } = BlockListSchema
@@ -1079,8 +1079,8 @@ export const checkBlockUserService = async (CheckIsBlockedRequest: CheckUserIsBl
 			type: 'block',
 			operatorUUID: uuid,
 		}
-		const muteWhere: QueryType<BlockListSchemaType> = {
-			type: 'mute',
+		const hideWhere: QueryType<BlockListSchemaType> = {
+			type: 'hide',
 			operatorUUID: uuid,
 		}
 
@@ -1091,32 +1091,32 @@ export const checkBlockUserService = async (CheckIsBlockedRequest: CheckUserIsBl
 		const blockResult = await selectDataFromMongoDB(blockWhere, userSelect, blockUserSchemaInstance, blockUserCollectionName)
 		if (!blockResult.success) {
 			console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，查询数据失败')
-			return { success: false, message: '检查用户是否被屏蔽或隐藏失败，查询数据失败', isBlocked, isMuted }
+			return { success: false, message: '检查用户是否被屏蔽或隐藏失败，查询数据失败', isBlocked, isHided }
 		}
 
-		const muteResult = await selectDataFromMongoDB(muteWhere, userSelect, blockUserSchemaInstance, blockUserCollectionName)
-		if (!muteResult.success) {
+		const hideResult = await selectDataFromMongoDB(hideWhere, userSelect, blockUserSchemaInstance, blockUserCollectionName)
+		if (!hideResult.success) {
 			console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，查询数据失败')
-			return { success: false, message: '检查用户是否被屏蔽或隐藏失败，查询数据失败', isBlocked, isMuted }
+			return { success: false, message: '检查用户是否被屏蔽或隐藏失败，查询数据失败', isBlocked, isHided }
 		}
 
 		const blockData = blockResult.result.map((item) => item.Uid)
-		const muteData = muteResult.result.map((item) => item.Uid)
+		const hideData = hideResult.result.map((item) => item.Uid)
 
 		if (blockData.includes(uid)) {
 			const isBlocked = true
-			return { success: true, message: '检查用户是否被屏蔽或隐藏成功，未被屏蔽或隐藏', isBlocked, isMuted }
+			return { success: true, message: '检查用户是否被屏蔽或隐藏成功，未被屏蔽或隐藏', isBlocked, isHided }
 		}
-		if (muteData.includes(uid)) {
-			const isMuted = true
-			return { success: true, message: '检查用户是否被屏蔽或隐藏成功，未被屏蔽或隐藏', isBlocked, isMuted }
+		if (hideData.includes(uid)) {
+			const isHided = true
+			return { success: true, message: '检查用户是否被屏蔽或隐藏成功，未被屏蔽或隐藏', isBlocked, isHided }
 		}
 
-		return { success: true, message: '检查用户是否被屏蔽或隐藏成功，未被屏蔽或隐藏', isBlocked, isMuted }
+		return { success: true, message: '检查用户是否被屏蔽或隐藏成功，未被屏蔽或隐藏', isBlocked, isHided }
 
 	} catch (error) {
 		console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，未知错误', error)
-		return { success: false, message: '检查用户是否被屏蔽或隐藏失败，未知错误', isBlocked: false, isMuted: false }
+		return { success: false, message: '检查用户是否被屏蔽或隐藏失败，未知错误', isBlocked: false, isHided: false }
 	}
 }
 
@@ -1220,11 +1220,11 @@ const checkBlockUserByUidRequest = (blockUserByUidRequest: BlockUserByUidRequest
 
 /**
  * 检测隐藏用户的请求载荷
- * @param MuteUserByUidRequest 隐藏用户的请求载荷
+ * @param HideUserByUidRequest 隐藏用户的请求载荷
  * @returns 合法返回 true, 不合法返回 false
  */
-const checkMuteUserByUidRequest = (muteUserByUidRequest: MuteUserByUidRequestDto): boolean => {
-	if (!muteUserByUidRequest.muteUid) {
+const checkHideUserByUidRequest = (hideUserByUidRequest: HideUserByUidRequestDto): boolean => {
+	if (!hideUserByUidRequest.hideUid) {
 		console.error('ERROR', '隐藏用户请求载荷不合法')
 		return false
 	}

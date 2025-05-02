@@ -9,15 +9,15 @@ export type BlockUserByUidRequestDto = {
 /**
  * 隐藏用户的请求载荷
  */
-export type MuteUserByUidRequestDto = {
+export type HideUserByUidRequestDto = {
 	/** 被隐藏的用户的 UID - 非空 */
-	muteUid: number;
+	hideUid: number;
 }
 
 /**
  * 隐藏用户的请求响应
  */
-export type MuteUserByUidResponseDto = {
+export type HideUserByUidResponseDto = {
 	/** 是否请求成功 */
 	success: boolean;
 	/** 附加的文本消息 */
@@ -123,7 +123,7 @@ export type UnblockUserByUidRequestDto = {
  */
 export type ShowUserByUidRequestDto = {
 	/** 被显示的用户的 UID - 非空 */
-	muteUid: number;
+	hideUid: number;
 }
 
 /**
@@ -292,5 +292,5 @@ export type CheckUserIsBlockedResponseDto = {
 	/** 是否被屏蔽 */
 	isBlocked: boolean;
 	/** 是否被隐藏 */
-	isMuted: boolean;
+	isHided: boolean;
 }

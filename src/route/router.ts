@@ -48,8 +48,8 @@ import { createVideoTagController, getVideoTagByTagIdController, searchVideoTagC
 import { adminGetUserRolesByUidController, adminUpdateUserRoleController, createRbacApiPathController, createRbacRoleController, deleteRbacApiPathController, deleteRbacRoleController, getRbacApiPathController, getRbacRoleController, updateApiPathPermissionsForRoleController } from '../controller/RbacController.js'
 import { getStgEnvBackEndSecretController } from '../controller/ConsoleSecretController.js'
 import { addNewUid2FeedGroupController, administratorApproveFeedGroupInfoChangeController, administratorDeleteFeedGroupController, createFeedGroupController, createOrEditFeedGroupInfoController, deleteFeedGroupController, followingUploaderController, getFeedContentController, getFeedGroupCoverUploadSignedUrlController, getFeedGroupListController, removeUidFromFeedGroupController, unfollowingUploaderController } from '../controller/FeedController.js'
-import { addRegexController, blockKeywordController, blockTagController, blockUserByUidController, getBlockUserListController, muteUserByUidController, removeRegexController, showUserByUidController, unblockKeywordController, unblockTagController, unblockUserByUidController } from '../controller/BlockController.js'
-// import { addRegexController, blockKeywordController, blockTagController, blockUserByUidController, getBlockUserListController, muteUserByUidController, removeRegexController, showUserByUidController, unblockKeywordController, unblockTagController, unblockUserByUidController } from '../controller/BlockController.js'
+import { addRegexController, blockKeywordController, blockTagController, blockUserByUidController, getBlockUserListController, hideUserByUidController, removeRegexController, showUserByUidController, unblockKeywordController, unblockTagController, unblockUserByUidController } from '../controller/BlockController.js'
+// import { addRegexController, blockKeywordController, blockTagController, blockUserByUidController, getBlockUserListController, hideUserByUidController, removeRegexController, showUserByUidController, unblockKeywordController, unblockTagController, unblockUserByUidController } from '../controller/BlockController.js'
 
 const router = new Router()
 
@@ -324,11 +324,11 @@ router.post('/block/user', blockUserByUidController) // 用户屏蔽用户
 // 	"blockUid": XXXX
 // }
 
-router.post('/block/muteuser', muteUserByUidController) // 用户隐藏用户
-// https://localhost:9999/block/muteuser
+router.post('/block/hideuser', hideUserByUidController) // 用户隐藏用户
+// https://localhost:9999/block/hideuser
 // cookie: UUID, token
 // {
-//	"muteUid": XXXX
+//	"hideUid": XXXX
 // }
 
 router.post('/block/keyword', blockKeywordController) // 用户屏蔽关键词
@@ -359,10 +359,10 @@ router.delete('/block/delete/user', unblockUserByUidController) // 用户解封�
 //	"blockUid": XXXX
 // }
 
-router.delete('/block/delete/muteuser', showUserByUidController) // 用户取消隐藏用户
-// https://localhost:9999/block/delete/muteuser
+router.delete('/block/delete/hideuser', showUserByUidController) // 用户取消隐藏用户
+// https://localhost:9999/block/delete/hideuser
 // {
-//	"muteUid": XXXX
+//	"hideUid": XXXX
 // }
 
 router.delete('/block/delete/keyword', unblockKeywordController) // 用户解封关键词

@@ -1,6 +1,6 @@
-import { addRegexService, blockKeywordService, blockTagService, blockUserByUidService, getBlockListService, muteUserByUidService, removeRegexService, showUserService, unBlockKeywordService, unBlockTagService, unBlockUserService } from '../service/BlockService.js'
+import { addRegexService, blockKeywordService, blockTagService, blockUserByUidService, getBlockListService, hideUserByUidService, removeRegexService, showUserService, unBlockKeywordService, unBlockTagService, unBlockUserService } from '../service/BlockService.js'
 import { koaCtx, koaNext } from '../type/koaTypes.js'
-import { AddRegexRequestDto, BlockKeywordRequestDto, BlockTagRequestDto, BlockUserByUidRequestDto, GetBlockListRequestDto, MuteUserByUidRequestDto, RemoveRegexRequestDto, ShowUserByUidRequestDto, UnblockKeywordRequestDto, UnblockTagRequestDto, UnblockUserByUidRequestDto } from './BlockControllerDto.js'
+import { AddRegexRequestDto, BlockKeywordRequestDto, BlockTagRequestDto, BlockUserByUidRequestDto, GetBlockListRequestDto, HideUserByUidRequestDto, RemoveRegexRequestDto, ShowUserByUidRequestDto, UnblockKeywordRequestDto, UnblockTagRequestDto, UnblockUserByUidRequestDto } from './BlockControllerDto.js'
 
 /**
  * 屏蔽用户
@@ -24,15 +24,15 @@ export const blockUserByUidController = async (ctx: koaCtx, next: koaNext) => {
  * @param ctx context
  * @param next context
  */
-export const muteUserByUidController = async (ctx: koaCtx, next: koaNext) => {
-	const data = ctx.request.body as Partial<MuteUserByUidRequestDto>
+export const hideUserByUidController = async (ctx: koaCtx, next: koaNext) => {
+	const data = ctx.request.body as Partial<HideUserByUidRequestDto>
 	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
-	const muteUserByUidRequest: MuteUserByUidRequestDto = {
-		muteUid: data.muteUid ?? -1,
+	const hideUserByUidRequest: HideUserByUidRequestDto = {
+		hideUid: data.hideUid ?? -1,
 	}
 
-	ctx.body = await muteUserByUidService(muteUserByUidRequest, uuid, token)
+	ctx.body = await hideUserByUidService(hideUserByUidRequest, uuid, token)
 	await next()
 }
 
@@ -114,7 +114,7 @@ export const showUserByUidController = async (ctx: koaCtx, next: koaNext) => {
 	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
 	const showUserByUidRequest: ShowUserByUidRequestDto = {
-		muteUid: data.muteUid ?? -1,
+		hideUid: data.hideUid ?? -1,
 	}
 
 	ctx.body = await showUserService(showUserByUidRequest, uuid, token)
