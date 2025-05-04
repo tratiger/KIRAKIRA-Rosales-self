@@ -726,6 +726,7 @@ export type AdminGetUserInfoResponseDto = {
 	result?: (
 		GetSelfUserInfoResponseDto['result']
 		& { editOperatorUUID: string }
+		& { isUpdatedAfterReview: boolean }
 		& { uid: number }
 		& { UUID: string }
 	)[];
@@ -763,6 +764,45 @@ export type AdminClearUserInfoRequestDto = {
  * 管理员清空某个用户的信息的请求响应
  */
 export type AdminClearUserInfoResponseDto = {
+	/** 执行结果 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+}
+
+/**
+ * 管理员编辑用户信息的请求载荷
+ */
+export type AdminEditUserInfoRequestDto = {
+	/** 用户的 UID */
+	uid: number;
+	/** 编辑用户的信息 */
+	userInfo?: {
+		/** 用户名 */
+		username?: string;
+		/** 用户昵称 */
+		userNickname?: string;
+		/** 用户头像的链接 */
+		avatar?: string;
+		/** 用户背景图片的链接 */
+		userBannerImage?: string;
+		/** 用户的个性签名 */
+		signature?: string;
+		/** 用户的性别，男、女和自定义（字符串） */
+		gender?: string;
+		/** 用户生日 */
+		userBirthday?: number;
+		/** 用户主页 Markdown */
+		userProfileMarkdown?: string;
+		/** 审核状态 */
+		isUpdatedAfterReview?: boolean;
+	}
+}
+
+/**
+ * 管理员编辑用户信息的请求响应
+ */
+export type AdminEditUserInfoResponseDto = {
 	/** 执行结果 */
 	success: boolean;
 	/** 附加的文本消息 */

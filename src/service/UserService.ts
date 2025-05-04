@@ -1,4 +1,4 @@
-import mongoose, { InferSchemaType, PipelineStage, ClientSession } from 'mongoose'
+import mongoose, { InferSchemaType, PipelineStage, ClientSession, startSession } from 'mongoose'
 import { createCloudflareImageUploadSignedUrl } from '../cloudflare/index.js'
 import { isInvalidEmail, sendMail } from '../common/EmailTool.js'
 import { comparePasswordSync, hashPasswordSync } from '../common/HashTool.js'
@@ -72,6 +72,8 @@ import {
 	UserExistsCheckByUIDResponseDto,
 	UserEmailExistsCheckRequestDto,
 	UserEmailExistsCheckResponseDto,
+	AdminEditUserInfoRequestDto,
+	AdminEditUserInfoResponseDto,
 } from '../controller/UserControllerDto.js'
 import { findOneAndUpdateData4MongoDB, insertData2MongoDB, selectDataFromMongoDB, updateData4MongoDB, selectDataByAggregateFromMongoDB, deleteDataFromMongoDB } from '../dbPool/DbClusterPool.js'
 import { DbPoolResultsType, QueryType, SelectType, UpdateType } from '../dbPool/DbClusterPoolTypes.js'
@@ -710,15 +712,15 @@ export const updateOrCreateUserInfoService = async (updateOrCreateUserInfoReques
 						uid: 1,
 						username: 1,
 					}
-					const verificationCodeResult = await selectDataFromMongoDB<UserInfo>(getUserInfoWhere, getUserInfoSelect, schemaInstance, collectionName)
+					const checkUsernameResult = await selectDataFromMongoDB<UserInfo>(getUserInfoWhere, getUserInfoSelect, schemaInstance, collectionName)
 
 					let isSafeUsername = false
-					if (verificationCodeResult.success) {
-						if (verificationCodeResult.result.length === 0) {
+					if (checkUsernameResult.success) {
+						if (checkUsernameResult.result.length === 0) {
 							isSafeUsername = true
 						}
-						if (verificationCodeResult.result.length === 1) {
-							if (verificationCodeResult.result[0].uid === uid) {
+						if (checkUsernameResult.result.length === 1) {
+							if (checkUsernameResult.result[0].uid === uid) {
 								isSafeUsername = true
 							}
 						}
@@ -2676,6 +2678,87 @@ export const adminClearUserInfoService = async (adminClearUserInfoRequest: Admin
 }
 
 /**
+ * 管理员编辑用户信息
+ * @param AdminEditUserInfoRequestDto 管理员编辑用户信息的请求载荷
+ * @param adminUUID 管理员的 UUID
+ * @param adminToken 管理员的 Token
+ * @return 管理员编辑用户信息的请求响应
+ */
+export const adminEditUserInfoService = async (adminEditUserInfoRequest: AdminEditUserInfoRequestDto, adminUUID: string, adminToken: string): Promise<AdminEditUserInfoResponseDto> => {
+	try {
+		if (!checkAdminEditUserInfoRequest(adminEditUserInfoRequest)) {
+			console.error('ERROR', '管理员编辑用户信息失败，参数不合法')
+			return { success: false, message: '管理员编辑用户信息失败，参数不合法' }
+		}
+
+		const { uid } = adminEditUserInfoRequest
+
+		const { username } = adminEditUserInfoRequest.userInfo
+		const { collectionName: userInfoCollectionName, schemaInstance: userInfoSchemaInstance } = UserInfoSchema
+
+		if (username) {
+			const getUserInfoWhere: QueryType<UserInfo> = {
+				username: { $regex: new RegExp(`\\b${username}\\b`, 'iu') },
+			}
+			const getUserInfoSelect: SelectType<UserInfo> = {
+				uid: 1,
+				username: 1,
+			}
+			const checkUsernameResult = await selectDataFromMongoDB<UserInfo>(getUserInfoWhere, getUserInfoSelect, userInfoSchemaInstance, userInfoCollectionName)
+
+			let isSafeUsername = false
+			if (checkUsernameResult.success) {
+				if (checkUsernameResult.result.length === 0) {
+					isSafeUsername = true
+				}
+				if (checkUsernameResult.result.length === 1) {
+					if (checkUsernameResult.result[0].uid === uid) {
+						isSafeUsername = true
+					}
+				}
+			}
+
+			if (!isSafeUsername) {
+				console.error('ERROR', '更新用户信息失败，用户重名', { adminEditUserInfoRequest, uid })
+				return { success: false, message: '更新用户信息失败，用户重名' }
+			}
+		}
+
+		const UUID = await getUserUuid(uid)
+		if (!UUID) {
+			console.error('ERROR', '管理员编辑用户信息失败，UUID 不存在', { uid })
+			return { success: false, message: '管理员编辑用户信息失败，UUID 不存在' }
+		}
+
+		if (!await checkUserTokenByUUID(adminUUID, adminToken)) {
+			console.error('ERROR', '管理员编辑用户信息失败，用户校验未通过')
+			return { success: false, message: '管理员编辑用户信息失败，用户校验未通过' }
+		}
+
+		type UserInfo = InferSchemaType<typeof userInfoSchemaInstance>
+		const adminEditUserInfoWhere: QueryType<UserInfo> = {
+			UUID,
+		}
+		const adminEditUserInfoUpdate: UpdateType<UserInfo> = {
+			...adminEditUserInfoRequest.userInfo,
+			editOperatorUUID: adminUUID,
+			editDateTime: new Date().getTime(),
+		}
+
+		const updateUserInfoResult = await findOneAndUpdateData4MongoDB(adminEditUserInfoWhere, adminEditUserInfoUpdate, userInfoSchemaInstance, userInfoCollectionName)
+		if (!updateUserInfoResult.success) {
+			console.error('ERROR', '管理员编辑用户信息失败，向数据库更新数据失败')
+			return { success: false, message: '管理员编辑用户信息失败，向数据库更新数据失败' }
+		}
+		return { success: true, message: '管理员编辑用户信息成功' }
+
+	} catch (error) {
+		console.error('ERROR', '管理员编辑用户信息时出错，未知错误：', error)
+		return { success: false, message: '管理员编辑用户信息时出错，未知错误' }
+	}
+}
+
+/**
  * 根据 UID 获取 UUID
  * // DELETE ME 这是一个临时的解决方案，以后 Cookie 中直接存储 UUID
  * @param uid 用户 UID
@@ -4255,5 +4338,17 @@ const checkDeleteUserEmailAuthenticatorRequest = (deleteUserEmailAuthenticatorRe
 	return (
 		!!deleteUserEmailAuthenticatorRequest.passwordHash
 		&& !!deleteUserEmailAuthenticatorRequest.verificationCode
+	)
+}
+
+/**
+ * 检查管理员编辑用户信息的请求载荷
+ * @param adminEditUserInfoRequest 管理员编辑用户信息的请求载荷
+ * @returns 检查结果，合法返回 true，不合法返回 false
+ */
+const checkAdminEditUserInfoRequest = (adminEditUserInfoRequest: AdminEditUserInfoRequestDto): boolean => {
+	return (
+		adminEditUserInfoRequest.uid !== null && adminEditUserInfoRequest.uid !== undefined
+		&& !!adminEditUserInfoRequest.userInfo
 	)
 }

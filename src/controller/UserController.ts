@@ -38,10 +38,12 @@ import {
 	sendDeleteUserEmailAuthenticatorService,
 	checkUserExistsByUIDService,
 	userEmailExistsCheckService,
+	adminEditUserInfoService,
 } from '../service/UserService.js'
 import { koaCtx, koaNext } from '../type/koaTypes.js'
 import {
 	AdminClearUserInfoRequestDto,
+	AdminEditUserInfoRequestDto,
 	AdminGetUserInfoRequestDto,
 	ApproveUserInfoRequestDto,
 	BlockUserByUIDRequestDto,
@@ -832,5 +834,36 @@ export const adminClearUserInfoController = async (ctx: koaCtx, next: koaNext) =
 	await next()
 }
 
+/**
+ * 管理员修改用户信息
+ * @param ctx context
+ * @param next context
+ * @return 管理员修改用户信息的请求响应
+ */
+export const adminEditUserInfoController = async (ctx: koaCtx, next: koaNext) => {
+	const adminUUID = ctx.cookies.get('uuid')
+	const adminToken = ctx.cookies.get('token')
 
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid: adminUUID, apiPath: ctx.path }, ctx)) {
+		return
+	}
 
+	const data = ctx.request.body as Partial<AdminEditUserInfoRequestDto>
+
+	const editUserInfoRequest: AdminEditUserInfoRequestDto = {
+		uid: data?.uid,
+		userInfo: {
+			username: data?.userInfo.username,
+			userNickname: data?.userInfo.userNickname,
+			avatar: data?.userInfo.avatar,
+			userBannerImage: data?.userInfo.userBannerImage,
+			signature: data?.userInfo.signature,
+			userBirthday: data?.userInfo.userBirthday,
+			gender: data?.userInfo.gender,
+			isUpdatedAfterReview: data?.userInfo.isUpdatedAfterReview,
+		}
+	}
+	ctx.body = await adminEditUserInfoService(editUserInfoRequest, adminUUID, adminToken)
+	await next()
+}
