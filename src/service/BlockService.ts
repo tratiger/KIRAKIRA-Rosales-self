@@ -59,7 +59,7 @@ export const blockUserByUidService = async (blockUserByUidRequest: BlockUserByUi
 		}
 		const blockListResult = await selectDataFromMongoDB<BlockListSchemaType>(blockListWhere, blockListSelect, blockListSchemaInstance, blockListCollectionName)
 		if (blockListResult.success && blockListResult.result && blockListResult.result.length > 0) {
-			return { success: false, message: '屏蔽用户失败，用户已被屏蔽' }
+			return { success: false, message: '屏蔽用户失败，该用户已经被你屏蔽' }
 		}
 
 		const blockListData: BlockListSchemaType = {
@@ -203,8 +203,8 @@ export const blockKeywordService = async (blockKeywordRequest: BlockKeywordReque
 
 		const blockListResult = await selectDataFromMongoDB<BlockListSchemaType>(blockListWhere, blockListSelect, blockListSchemaInstance, blockListCollectionName)
 		if (blockListResult.success && blockListResult.result && blockListResult.result.length > 0) {
-			console.error('ERROR', '屏蔽关键词失败，关键词已被屏蔽')
-			return { success: false, message: '屏蔽关键词失败，关键词已被屏蔽' }
+			console.error('ERROR', '屏蔽关键词失败，该关键词已经被你屏蔽')
+			return { success: false, message: '屏蔽关键词失败，该关键词已经被你屏蔽' }
 		}
 
 		const blockListData: BlockListSchemaType = {
@@ -273,8 +273,8 @@ export const blockTagService = async (blockTagRequest: BlockTagRequestDto, uuid:
 
 		const blockListResult = await selectDataFromMongoDB<BlockListSchemaType>(blockListWhere, blockListSelect, blockListSchemaInstance, blockListCollectionName)
 		if (blockListResult.success && blockListResult.result && blockListResult.result.length > 0) {
-			console.error('ERROR', '屏蔽标签失败，标签已被屏蔽')
-			return { success: false, message: '屏蔽标签失败，标签已被屏蔽' }
+			console.error('ERROR', '屏蔽标签失败，该标签已经被你屏蔽')
+			return { success: false, message: '屏蔽标签失败，该标签已经被你屏蔽' }
 		}
 
 		const blockListData: BlockListSchemaType = {
@@ -931,6 +931,10 @@ export const getBlockListService = async (getBlockListRequest: GetBlockListReque
 	}
 }
 
+// type BlockListFilterCategory = 'block-uuid' | 'block-uid' | 'hide-uuid' | 'hide-uid' | 'keyword' | 'tag-id' | 'regex'
+type BlockListFilterCategory = 'block-uuid' | 'hide-uuid' | 'keyword' | 'tag-id' | 'regex' // 黑名单的类型
+type BlockListAttrs = { attr: string, category: BlockListFilterCategory }[] // 设置哪些属性需要使用哪种类型的黑名单过滤
+type BlockListFilterResult = { success: boolean, filter: PipelineStage.Match[] } // 返回值
 /**
  * 构建 Mongoose Pipeline 黑名单过滤器
  * @param attrs 哪些属性需要过滤，以及使用的过滤方式
@@ -938,12 +942,12 @@ export const getBlockListService = async (getBlockListRequest: GetBlockListReque
  * @param token 用户 Token
  * @returns Mongoose Pipeline 黑名单过滤器
  */
-// type BlockListFilterCategory = 'block-uuid' | 'block-uid' | 'hide-uuid' | 'hide-uid' | 'keyword' | 'tag-id' | 'regex'
-type BlockListFilterCategory = 'block-uuid' | 'hide-uuid' | 'keyword' | 'tag-id' | 'regex' // 黑名单的类型
-type BlockListAttrs = { attr: string, category: BlockListFilterCategory }[] // 设置哪些属性需要使用哪种类型的黑名单过滤
-type BlockListFilterResult = { success: boolean, filter: PipelineStage.Match[] } // 返回值
-export const buildBlockListMongooseFilter = async (attrs: BlockListAttrs, uuid: string, token: string): Promise<BlockListFilterResult> => {
+export const buildBlockListMongooseFilter = async (attrs: BlockListAttrs, uuid?: string, token?: string): Promise<BlockListFilterResult> => {
 	try {
+		if (!uuid || !token) {
+			return { success: false, filter: [] }
+		}
+
 		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
 			console.error('ERROR', '构建黑名单过滤器失败，用户 Token 不合法')
 			return { success: false, filter: [] }
@@ -990,7 +994,7 @@ export const buildBlockListMongooseFilter = async (attrs: BlockListAttrs, uuid: 
 					keywordList.push(block.value)
 					break
 				case 'tag':
-					tagIdList.push(block.value)
+					tagIdList.push(parseInt(block.value ?? '-1', 10))
 					break
 				case 'regex':
 					regexList.push(block.value)

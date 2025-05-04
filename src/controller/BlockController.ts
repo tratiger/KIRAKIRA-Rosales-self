@@ -63,7 +63,7 @@ export const blockTagController = async (ctx: koaCtx, next: koaNext) => {
 	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
 	const blockTagRequest: BlockTagRequestDto = {
-		tagId: data.tagId ?? -1,
+		tagId: data.tagId,
 	}
 
 	ctx.body = await blockTagService(blockTagRequest, uuid, token)

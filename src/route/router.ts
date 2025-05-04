@@ -342,7 +342,7 @@ router.post('/block/tag', blockTagController) // 用户屏蔽标签
 // https://localhost:9999/block/tag
 // cookie: UUID, token
 // {
-//	"blockTag": XXXX
+//	"tagId": XXXX
 // }
 
 router.post('/block/regex', addRegexController) // 用户添加正则表达式

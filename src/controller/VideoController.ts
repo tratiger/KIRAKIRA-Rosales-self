@@ -48,7 +48,9 @@ export const updateVideoController = async (ctx: koaCtx, next: koaNext) => {
  * @returns 获取首页要显示的视频
  */
 export const getThumbVideoController = async (ctx: koaCtx, next: koaNext) => {
-	const getThumbVideoResponse = await getThumbVideoService()
+	const uuid = ctx.cookies.get('uuid')
+	const token = ctx.cookies.get('token')
+	const getThumbVideoResponse = await getThumbVideoService(uuid, token)
 	ctx.body = getThumbVideoResponse
 	await next()
 }

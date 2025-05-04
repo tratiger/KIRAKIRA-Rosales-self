@@ -17,6 +17,7 @@ import { createOrUpdateBrowsingHistoryService } from './BrowsingHistoryService.j
 import { getNextSequenceValueEjectService } from './SequenceValueService.js'
 import { checkUserTokenByUuidService, checkUserTokenService, getUserUuid } from './UserService.js'
 import { FollowingSchema } from '../dbPool/schema/FeedSchema.js'
+import { buildBlockListMongooseFilter } from './BlockService.js'
 
 /**
  * 上传视频
@@ -143,10 +144,35 @@ export const updateVideoService = async (uploadVideoRequest: UploadVideoRequestD
  * 获取主页视频 // TODO 应该使用推荐算法，而不是获取最后上传的 100 个视频
  * @returns 获取主页视频的请求响应
  */
-export const getThumbVideoService = async (): Promise<ThumbVideoResponseDto> => {
+export const getThumbVideoService = async (uuid?: string, token?: string): Promise<ThumbVideoResponseDto> => {
 	try {
-		const { collectionName: videoCollectionName, schemaInstance: videoSchemaInstance } = VideoSchema
-		type ThumbVideo = InferSchemaType<typeof videoSchemaInstance>
+		const blockListFilter = await buildBlockListMongooseFilter(
+			[
+				{
+					attr: 'uploaderUUID',
+					category: 'block-uuid',
+				},
+				{
+					attr: 'uploaderUUID',
+					category: 'hide-uuid',
+				},
+				{
+					attr: 'videoTagList.tagId',
+					category: 'tag-id',
+				},
+				{
+					attr: 'title',
+					category: 'keyword',
+				},
+				{
+					attr: 'title',
+					category: 'regex',
+				},
+			],
+			uuid,
+			token
+		)
+
 		const getThumbVideoPipeline: PipelineStage[] = [
 			{
 				$lookup: {
@@ -156,6 +182,7 @@ export const getThumbVideoService = async (): Promise<ThumbVideoResponseDto> => 
 					as: 'uploader_info',
 				},
 			},
+			...blockListFilter.filter,
 			{ $skip: 0 }, // 跳过指定数量的文档 // TODO: 目前的值是占位符
 			{ $limit: 100 }, // 限制返回的文档数量 // TODO: 目前的值是占位符
 			{
@@ -184,6 +211,9 @@ export const getThumbVideoService = async (): Promise<ThumbVideoResponseDto> => 
 		]
 
 		try {
+			const { collectionName: videoCollectionName, schemaInstance: videoSchemaInstance } = VideoSchema
+			type ThumbVideo = InferSchemaType<typeof videoSchemaInstance>
+
 			const result = await selectDataByAggregateFromMongoDB<ThumbVideo>(videoSchemaInstance, videoCollectionName, getThumbVideoPipeline)
 			const videoResult = result.result
 
