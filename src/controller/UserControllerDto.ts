@@ -705,6 +705,8 @@ export type AdminGetUserInfoRequestDto = {
 	sortBy: string;
 	/** 排序方法 */
 	sortOrder: string;
+	/** 查询 UID */
+	uid?: number;
 	/** 分页查询 */
 	pagination: {
 		/** 当前在第几页 */

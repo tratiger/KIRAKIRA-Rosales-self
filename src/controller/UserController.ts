@@ -764,6 +764,7 @@ export const adminGetUserInfoController = async (ctx: koaCtx, next: koaNext) => 
 	const isOnlyShowUserInfoUpdatedAfterReviewString = ctx.query.isOnlyShowUserInfoUpdatedAfterReview as string
 	const sortBy = ctx.query.sortBy as string
 	const sortOrder = ctx.query.sortOrder as string
+	const uid = parseInt(ctx.query.uid as string, 10)
 	const page = ctx.query.page as string
 	const pageSize = ctx.query.pageSize as string
 
@@ -771,6 +772,7 @@ export const adminGetUserInfoController = async (ctx: koaCtx, next: koaNext) => 
 		isOnlyShowUserInfoUpdatedAfterReview: typeof isOnlyShowUserInfoUpdatedAfterReviewString === 'string' && isOnlyShowUserInfoUpdatedAfterReviewString === 'true',
 		sortBy: sortBy ?? 'uid',
 		sortOrder: sortOrder ?? 'ascend',
+		uid: uid ?? -1,
 		pagination: {
 			page: parseInt(page, 10) ?? 0,
 			pageSize: parseInt(pageSize, 10) ?? Infinity,

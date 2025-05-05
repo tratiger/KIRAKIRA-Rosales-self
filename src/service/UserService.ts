@@ -2517,6 +2517,16 @@ export const adminGetUserInfoService = async (adminGetUserInfoRequest: AdminGetU
 			adminGetUserInfoPipeline.push(userInfoFilter)
 		}
 
+		if (adminGetUserInfoRequest.uid !== undefined && adminGetUserInfoRequest.uid !== null && adminGetUserInfoRequest.uid !== -1) {
+			const userInfoFilter = {
+				$match: {
+					uid: adminGetUserInfoRequest.uid,
+				},
+			}
+			adminGetUserInfoCountPipeline.push(userInfoFilter)
+			adminGetUserInfoPipeline.push(userInfoFilter)
+		}
+
 		const projectStep = {
 			$project: {
 				uid: 1,
