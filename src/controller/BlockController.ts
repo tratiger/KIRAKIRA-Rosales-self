@@ -172,18 +172,18 @@ export const removeRegexController = async (ctx: koaCtx, next: koaNext) => {
 }
 
 /**
- * 获取屏蔽用户列表
+ * 获取用户的黑名单列表
  * @param ctx context
  * @param next context
  */
-export const getBlockUserListController = async (ctx: koaCtx, next: koaNext) => {
-	const data = ctx.request.body as Partial<GetBlockListRequestDto>
+export const getBlockListController = async (ctx: koaCtx, next: koaNext) => {
 	const page = ctx.query.page as string
 	const pageSize = ctx.query.pageSize as string
+	const type = ctx.query.type as string
 	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
 	const getBlockListRequest: GetBlockListRequestDto = {
-		type: data.type as string ?? '',
+		type: type ?? '',
 		pagination: {
 			page: parseInt(page, 10) ?? 0,
 			pageSize: parseInt(pageSize, 10) ?? Infinity,

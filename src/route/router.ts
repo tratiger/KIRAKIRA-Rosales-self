@@ -48,8 +48,7 @@ import { createVideoTagController, getVideoTagByTagIdController, searchVideoTagC
 import { adminGetUserRolesByUidController, adminUpdateUserRoleController, createRbacApiPathController, createRbacRoleController, deleteRbacApiPathController, deleteRbacRoleController, getRbacApiPathController, getRbacRoleController, updateApiPathPermissionsForRoleController } from '../controller/RbacController.js'
 import { getStgEnvBackEndSecretController } from '../controller/ConsoleSecretController.js'
 import { addNewUid2FeedGroupController, administratorApproveFeedGroupInfoChangeController, administratorDeleteFeedGroupController, createFeedGroupController, createOrEditFeedGroupInfoController, deleteFeedGroupController, followingUploaderController, getFeedContentController, getFeedGroupCoverUploadSignedUrlController, getFeedGroupListController, removeUidFromFeedGroupController, unfollowingUploaderController } from '../controller/FeedController.js'
-import { addRegexController, blockKeywordController, blockTagController, blockUserByUidController, getBlockUserListController, hideUserByUidController, removeRegexController, showUserByUidController, unblockKeywordController, unblockTagController, unblockUserByUidController } from '../controller/BlockController.js'
-// import { addRegexController, blockKeywordController, blockTagController, blockUserByUidController, getBlockUserListController, hideUserByUidController, removeRegexController, showUserByUidController, unblockKeywordController, unblockTagController, unblockUserByUidController } from '../controller/BlockController.js'
+import { addRegexController, blockKeywordController, blockTagController, blockUserByUidController, getBlockListController, hideUserByUidController, removeRegexController, showUserByUidController, unblockKeywordController, unblockTagController, unblockUserByUidController } from '../controller/BlockController.js'
 
 const router = new Router()
 
@@ -386,12 +385,9 @@ router.delete('/block/delete/regex', removeRegexController) // 用户解封正�
 //	"blockRegex": "XXXXXX"
 // }
 
-router.get('/block/list', getBlockUserListController) // 获取黑名单列表
-// https://localhost:9999/block/list?page=0&pageSize=10
+router.get('/block/list', getBlockListController) // 获取用户的黑名单列表
+// https://localhost:9999/block/list?type=block&page=0&pageSize=10
 // cookie: UUID, token
-// {
-// 	"type": "XXXXXX"
-// }
 
 
 
