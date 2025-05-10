@@ -29,7 +29,7 @@ export type CreateVideoTagRequestDto = {
 }
 
 /**
- * 视频 TAG 类型
+ * 视频 TAG 的类型
  */
 export type VideoTag = {
 	/** TAG ID */

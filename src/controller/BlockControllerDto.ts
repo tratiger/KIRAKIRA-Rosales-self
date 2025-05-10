@@ -1,3 +1,5 @@
+import { type VideoTag } from "./VideoTagControllerDto.js";
+
 /**
  * 屏蔽用户的请求载荷
  */
@@ -198,20 +200,22 @@ export type GetBlockListRequestDto = {
 }
 
 export type GetBlocklistResult = {
-	/** 被屏蔽用户 UID */
-	uid?: number;
 	/** 屏蔽类型 */
 	type: string;
 	/** 屏蔽值 */
 	value: string;
 	/** 屏蔽时间 */
 	createDateTime: number;
+	/** 被屏蔽用户 UID */
+	uid?: number;
 	/** 被屏蔽用户名 */
 	username?: string;
 	/** 被屏蔽用户昵称 */
 	userNickname?: string;
 	/** 被屏蔽用户头像 */
 	avatar?: string;
+	/** 被屏蔽的 TAG */
+	tag?: VideoTag;
 }
 
 /**

@@ -849,31 +849,21 @@ export const getBlockListService = async (getBlockListRequest: GetBlockListReque
 			pageSize = getBlockListRequest.pagination.pageSize
 		}
 
-		const countBlocklistPipeline: PipelineStage[] = [
+		let getBlocklistPipelineProject: PipelineStage[] = [
 			{
-				$match: {
-					type,
-				},
-			},
-			{
-				$count: 'totalCount',
-			},
+				$project: {
+					type: 1,
+					value: 1,
+					createDateTime: 1,
+				}
+			}
 		]
 
-		// 判断是否需要关联用户信息
-		const shouldJoinUserInfo = ['hide', 'block'].includes(type)
-
-		const getBlocklistPipeline: PipelineStage[] = [
-			{
-				$match: {
-					operatorUUID: uuid,
-					type,
-				},
-			},
-			{ $sort: { 'createDateTime': -1 } },
-			{ $skip: skip },
-			...(pageSize ? [{ $limit: pageSize }] : []),
-			...(shouldJoinUserInfo ? [
+		const shouldJoinUserInfo = ['hide', 'block'].includes(type) // 判断是否需要关联用户信息
+		const shouldJoinTagInfo = type === 'tag' // 判断是否需要关联 TAG 信息
+		
+		if (shouldJoinUserInfo) {
+			getBlocklistPipelineProject = [
 				{
 					$lookup: {
 						from: 'user-infos',
@@ -899,19 +889,68 @@ export const getBlockListService = async (getBlockListRequest: GetBlockListReque
 						avatar: '$user_info_data.avatar',
 					}
 				}
-			] : [
+			]
+		}
+
+		if (shouldJoinTagInfo) {
+			getBlocklistPipelineProject = [
+				{
+					$addFields: {
+						tagIdInt: { $toInt: "$value" } // 将字符串字段转换为整数
+					}
+				},
+				{
+					$lookup: {
+						from: 'video-tags',
+						localField: 'tagIdInt',
+						foreignField: 'tagId',
+						as: 'tag_data',
+					}
+				},
+				{
+					$unwind: {
+						path: '$tag_data',
+						preserveNullAndEmptyArrays: true,
+					}
+				},
 				{
 					$project: {
 						type: 1,
 						value: 1,
 						createDateTime: 1,
+						tag: '$tag_data',
 					}
 				}
-			])
+			]
+		}
+
+		const countBlocklistPipeline: PipelineStage[] = [
+			{
+				$match: {
+					operatorUUID: uuid,
+					type,
+				},
+			},
+			{
+				$count: 'totalCount',
+			},
+		]
+
+		const getBlocklistPipelineMix: PipelineStage[] = [
+			{
+				$match: {
+					operatorUUID: uuid,
+					type,
+				},
+			},
+			{ $sort: { 'createDateTime': -1 } },
+			{ $skip: skip },
+			...(pageSize ? [{ $limit: pageSize }] : []),
+			...getBlocklistPipelineProject
 		]
 		const { collectionName: blockListCollectionName, schemaInstance: blockListSchemaInstance } = BlockListSchema
 		const blocklistCountResult = await selectDataByAggregateFromMongoDB(blockListSchemaInstance, blockListCollectionName, countBlocklistPipeline)
-		const blocklistResult = await selectDataByAggregateFromMongoDB(blockListSchemaInstance, blockListCollectionName, getBlocklistPipeline)
+		const blocklistResult = await selectDataByAggregateFromMongoDB(blockListSchemaInstance, blockListCollectionName, getBlocklistPipelineMix)
 
 		if (!blocklistResult.success || !blocklistCountResult.success) {
 			console.error('ERROR', '获取黑名单失败，查询数据失败')
