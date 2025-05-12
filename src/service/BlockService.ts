@@ -1,4 +1,5 @@
 import { InferSchemaType, PipelineStage } from "mongoose";
+import safeRegex from 'safe-regex';
 import { AddRegexRequestDto, AddRegexResponseDto, BlockKeywordRequestDto, BlockKeywordResponseDto, BlockTagRequestDto, BlockTagResponseDto, BlockUserByUidRequestDto, BlockUserByUidResponseDto, CheckContentIsBlockedRequestDto, CheckIsBlockedByOtherUserRequestDto, CheckIsBlockedByOtherUserResponseDto, CheckIsBlockedResponseDto, CheckTagIsBlockedRequestDto, CheckUserIsBlockedRequestDto, CheckUserIsBlockedResponseDto, GetBlockListRequestDto, GetBlockListResponseDto, HideUserByUidRequestDto, HideUserByUidResponseDto, RemoveRegexRequestDto, RemoveRegexResponseDto, ShowUserByUidRequestDto, ShowUserByUidResponseDto, UnblockKeywordRequestDto, UnblockKeywordResponseDto, UnblockTagRequestDto, UnblockTagResponseDto, UnblockUserByUidRequestDto, UnblockUserByUidResponseDto } from "../controller/BlockControllerDto.js";
 import { checkUserExistsByUIDService, checkUserTokenByUuidService, getUserUid, getUserUuid } from "./UserService.js";
 import { QueryType, SelectType } from "../dbPool/DbClusterPoolTypes.js";
@@ -308,24 +309,30 @@ export const blockTagService = async (blockTagRequest: BlockTagRequestDto, uuid:
 export const addRegexService = async (addRegexRequest: AddRegexRequestDto, uuid: string, token: string): Promise<AddRegexResponseDto> => {
 	try {
 		if (!checkAddRegexRequest(addRegexRequest)) {
-			return { success: false, message: '添加正则表达式请求载荷不合法' }
+			return { success: false, message: '添加正则表达式请求载荷不合法', unsafeRegex: false }
 		}
 
 		const { blockRegex } = addRegexRequest
+
+		if (!safeRegex(blockRegex)) {
+			console.error('ERROR', '添加正则表达式失败，用户输入了一个不安全的正则表达式')
+			return { success: false, message: '添加正则表达式失败，用户输入了一个不安全的正则表达式', unsafeRegex: true }
+		}
+
 		const operatorUid = await getUserUid(uuid)
 
 		if (!operatorUid) {
 			console.error('ERROR', '添加正则表达式失败，用户不存在')
-			return { success: false, message: '添加正则表达式失败，用户不存在' }
+			return { success: false, message: '添加正则表达式失败，用户不存在', unsafeRegex: false }
 		}
 
 		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
 			console.error('ERROR', '添加正则表达式失败，用户 Token 不合法')
-			return { success: false, message: '添加正则表达式失败，用户 Token 不合法' }
+			return { success: false, message: '添加正则表达式失败，用户 Token 不合法', unsafeRegex: false }
 		}
 
 		if (await getBlocklistCount('regex', uuid) > 3) {
-			return { success: false, message: '添加正则表达式失败，屏蔽列表已达上限' }
+			return { success: false, message: '添加正则表达式失败，屏蔽列表已达上限', unsafeRegex: false }
 		}
 
 		const now = new Date().getTime()
@@ -342,7 +349,7 @@ export const addRegexService = async (addRegexRequest: AddRegexRequestDto, uuid:
 
 		const blockListResult = await selectDataFromMongoDB<BlockListSchemaType>(blockListWhere, blockListSelect, blockListSchemaInstance, blockListCollectionName)
 		if (blockListResult.success && blockListResult.result && blockListResult.result.length > 0) {
-			return { success: false, message: '添加正则表达式失败，正则表达式已存在' }
+			return { success: false, message: '添加正则表达式失败，正则表达式已存在', unsafeRegex: false }
 		}
 
 		const blockListData: BlockListSchemaType = {
@@ -355,13 +362,14 @@ export const addRegexService = async (addRegexRequest: AddRegexRequestDto, uuid:
 
 		const insertResult = await insertData2MongoDB<BlockListSchemaType>(blockListData, blockListSchemaInstance, blockListCollectionName)
 		if (!insertResult.success) {
-			return { success: false, message: '添加正则表达式失败' }
+			return { success: false, message: '添加正则表达式失败', unsafeRegex: false }
 		}
-		return { success: true, message: '添加正则表达式成功' }
+
+		return { success: true, message: '添加正则表达式成功', unsafeRegex: false }
 	}
 	catch (error) {
 		console.error('ERROR', '添加正则表达式失败', error)
-		return { success: false, message: '添加正则表达式失败' }
+		return { success: false, message: '添加正则表达式失败', unsafeRegex: false }
 	}
 }
 

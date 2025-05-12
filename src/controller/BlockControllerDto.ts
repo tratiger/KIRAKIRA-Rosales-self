@@ -88,6 +88,8 @@ export type AddRegexRequestDto = {
 export type AddRegexResponseDto = {
 	/** 是否请求成功 */
 	success: boolean;
+	/** 用户是否输入了一个不安全的正则表达式 */
+	unsafeRegex: boolean;
 	/** 附加的文本消息 */
 	message?: string;
 }
