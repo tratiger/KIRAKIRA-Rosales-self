@@ -978,10 +978,14 @@ export const getBlockListService = async (getBlockListRequest: GetBlockListReque
 	}
 }
 
+// /** 黑名单的类型 */
 // type BlockListFilterCategory = 'block-uuid' | 'block-uid' | 'hide-uuid' | 'hide-uid' | 'keyword' | 'tag-id' | 'regex'
-type BlockListFilterCategory = 'block-uuid' | 'hide-uuid' | 'keyword' | 'tag-id' | 'regex' // 黑名单的类型
-type BlockListAttrs = { attr: string, category: BlockListFilterCategory }[] // 设置哪些属性需要使用哪种类型的黑名单过滤
-type BlockListFilterResult = { success: boolean, filter: PipelineStage.Match[] } // 返回值
+/** 黑名单的类型 */
+type BlockListFilterCategory = 'block-uuid' | 'hide-uuid' | 'keyword' | 'tag-id' | 'regex'
+/** 设置哪些属性需要使用哪种类型的黑名单过滤，其中 attr 参数**必须**为开发者硬编码的安全字段，**禁止**由用户传入 */
+type BlockListAttrs = { attr: string, category: BlockListFilterCategory }[]
+/** 返回值，一个构建好的 Monogoose Pipeline 查询 */
+type BlockListFilterResult = { success: boolean, filter: PipelineStage.Match[] } 
 /**
  * 构建 Mongoose Pipeline 黑名单过滤器
  * @param attrs 哪些属性需要过滤，以及使用的过滤方式
