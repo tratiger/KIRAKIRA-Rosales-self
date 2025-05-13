@@ -174,6 +174,12 @@ export const blockKeywordService = async (blockKeywordRequest: BlockKeywordReque
 		}
 
 		const { blockKeyword } = blockKeywordRequest
+
+		if (!safeRegex(blockKeyword)) {
+			console.error('ERROR', '屏蔽关键词失败，用户输入了一个不安全的关键词，该关键词是一个不安全的正则表达式')
+			return { success: false, message: '屏蔽关键词失败，用户输入了一个不安全的关键词' }
+		}
+
 		const operatorUid = await getUserUid(uuid)
 
 		if (!operatorUid) {
