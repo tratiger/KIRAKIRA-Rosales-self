@@ -2543,6 +2543,7 @@ export const adminGetUserInfoService = async (adminGetUserInfoRequest: AdminGetU
 				userBirthday: '$user_info_data.userBirthday', // 用户出生日期
 				isUpdatedAfterReview: '$user_info_data.isUpdatedAfterReview', // 是否经过审核
 				editOperatorUUID: '$user_info_data.editOperatorUUID', // 编辑操作员的 UUID
+				editDateTime: '$user_info_data.editDateTime', // 编辑时间
 				totalCount: 1, // 总文档数
 			},
 		}

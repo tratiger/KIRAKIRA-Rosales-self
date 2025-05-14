@@ -727,6 +727,7 @@ export type AdminGetUserInfoResponseDto = {
 	/** 请求响应 */
 	result?: (
 		GetSelfUserInfoResponseDto['result']
+		& { editDateTime: number }
 		& { editOperatorUUID: string }
 		& { isUpdatedAfterReview: boolean }
 		& { uid: number }
