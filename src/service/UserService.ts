@@ -74,6 +74,7 @@ import {
 	UserEmailExistsCheckResponseDto,
 	AdminEditUserInfoRequestDto,
 	AdminEditUserInfoResponseDto,
+	GetBlockedUserRequestDto,
 } from '../controller/UserControllerDto.js'
 import { findOneAndUpdateData4MongoDB, insertData2MongoDB, selectDataFromMongoDB, updateData4MongoDB, selectDataByAggregateFromMongoDB, deleteDataFromMongoDB } from '../dbPool/DbClusterPool.js'
 import { DbPoolResultsType, QueryType, SelectType, UpdateType } from '../dbPool/DbClusterPoolTypes.js'
@@ -2370,25 +2371,33 @@ export const checkUsernameService = async (checkUsernameRequest: CheckUsernameRe
  * 获取所有被封禁用户的信息
  * @param adminUid 管理员的 UID
  * @param adminToken 管理员的 Token
+ * @param GetBlockedUserRequest 获取被封禁用户的请求载荷
  * @returns 获取所有被封禁用户的信息的请求响应
  */
-export const getBlockedUserService = async (adminUid: number, adminToken: string): Promise<GetBlockedUserResponseDto> => {
+export const getBlockedUserService = async (adminUUid: string, adminToken: string, GetBlockedUserRequest: GetBlockedUserRequestDto): Promise<GetBlockedUserResponseDto> => {
 	try {
-		if (await checkUserToken(adminUid, adminToken)) {
+		if (await checkUserTokenByUUID(adminUUid, adminToken)) {
+			const { sortBy, sortOrder } = GetBlockedUserRequest
+			let pageSize = undefined
+			let skip = 0
+			if (GetBlockedUserRequest.pagination && GetBlockedUserRequest.pagination.page > 0 && GetBlockedUserRequest.pagination.pageSize > 0) {
+				skip = (GetBlockedUserRequest.pagination.page - 1) * GetBlockedUserRequest.pagination.pageSize
+				pageSize = GetBlockedUserRequest.pagination.pageSize
+			}
+
 			const { collectionName: userAuthCollectionName, schemaInstance: userAuthSchemaInstance } = UserAuthSchema
 
-			// TODO: 下方这个 Aggregate 只适用于被封禁用户的搜索
-			const blockedUserAggregateProps: PipelineStage[] = [
+			const blockedUserCountPipeline: PipelineStage[] = [
 				{
 					$match: {
-						role: 'blocked',
+						roles: 'blocked',
 					},
 				},
 				{
 					$lookup: {
 						from: 'user-infos', // WARN: 别忘了加复数
-						localField: 'uid',
-						foreignField: 'uid',
+						localField: 'UUID',
+						foreignField: 'UUID',
 						as: 'user_info_data',
 					},
 				},
@@ -2398,48 +2407,72 @@ export const getBlockedUserService = async (adminUid: number, adminToken: string
 						preserveNullAndEmptyArrays: true, // 保留空数组和null值
 					},
 				},
-				{
-					$project: {
-						uid: 1,
-						UUID: 1,
-						userCreateDateTime: 1, // 用户创建日期
-						role: 1, // 用户的角色
-						username: '$user_info_data.username', // 用户名
-						userNickname: '$user_info_data.userNickname', // 用户昵称
-						avatar: '$user_info_data.avatar', // 用户头像
-						userBannerImage: '$user_info_data.userBannerImage', // 用户的背景图
-						signature: '$user_info_data.signature', // 用户的个性签名
-						gender: '$user_info_data.gender', // 用户的性别
-					},
-				},
 			]
 
+			const blockedUserPipeline: PipelineStage[] = [
+				{
+					$match: {
+						roles: 'blocked',
+					},
+				},
+				{
+					$lookup: {
+						from: 'user-infos', // WARN: 别忘了加复数
+						localField: 'UUID',
+						foreignField: 'UUID',
+						as: 'user_info_data',
+					},
+				},
+				{
+					$unwind: {
+						path: '$user_info_data',
+						preserveNullAndEmptyArrays: true, // 保留空数组和null值
+					},
+				},
+				{ $sort: { [`user_info_data.${sortBy}`]: sortOrder === 'descend' ? -1 : 1 } },
+				{ $skip: skip }, // 跳过指定数量的文档
+				{ $limit: pageSize }, // 限制返回的文档数量
+			]
+
+			const projectStep = {
+				$project: {
+					uid: 1,
+					UUID: 1,
+					userCreateDateTime: 1, // 用户创建日期
+					role: 1, // 用户的角色
+					username: '$user_info_data.username', // 用户名
+					userNickname: '$user_info_data.userNickname', // 用户昵称
+					email: 1, // 用户邮箱
+					totalCount: 1, // 总文档数
+				},
+			}
+			blockedUserPipeline.push(projectStep)
+
+			const countStep = {
+				$count: 'totalCount', // 统计总文档数
+			}
+			blockedUserCountPipeline.push(countStep)
+
 			try {
-				const userResult = await selectDataByAggregateFromMongoDB(userAuthSchemaInstance, userAuthCollectionName, blockedUserAggregateProps)
-				if (userResult && userResult.success) {
-					const userInfo = userResult?.result
-					if (userInfo?.length > 0) {
-						return { success: true, message: '获取封禁用户信息成功',
-							result: userInfo,
-						}
-					} else {
-						return { success: true, message: '没有被封禁用户', result: [] }
-					}
-				} else {
-					console.error('ERROR', '获取所有被封禁用户的信息失败，获取到的结果为空')
-					return { success: false, message: '获取所有被封禁用户的信息失败，结果为空' }
+				const userCountResult = await selectDataByAggregateFromMongoDB(userAuthSchemaInstance, userAuthCollectionName, blockedUserCountPipeline)
+				const userResult = await selectDataByAggregateFromMongoDB(userAuthSchemaInstance, userAuthCollectionName, blockedUserPipeline)
+				if (!userResult.success) {
+					console.error('ERROR', '获取所有被封禁用户的信息失败，查询数据失败')
+					return { success: false, message: '获取所有被封禁用户的信息失败，查询数据失败', totalCount: 0 }
 				}
+
+				return { success: true, message: '获取所有被封禁用户的信息成功', result: userResult.result, totalCount: userCountResult.result?.[0]?.totalCount ?? 0 }
 			} catch (error) {
-				console.error('ERROR', '获取所有被封禁用户的信息失败，查询数据时出错：0', error)
-				return { success: false, message: '获取所有被封禁用户的信息失败，查询数据时出错' }
+				console.error('ERROR', '获取所有被封禁用户的信息失败，查询数据时出错：', error)
+				return { success: false, message: '获取所有被封禁用户的信息失败，查询数据时出错', totalCount: 0 }
 			}
 		} else {
 			console.error('ERROR', '获取所有被封禁用户的信息失败，用户校验失败')
-			return { success: false, message: '获取所有被封禁用户的信息失败，用户校验失败' }
+			return { success: false, message: '获取所有被封禁用户的信息失败，用户校验失败', totalCount: 0 }
 		}
 	} catch (error) {
 		console.error('ERROR', '获取所有被封禁用户的信息时出错，未知错误：', error)
-		return { success: false, message: '获取所有被封禁用户的信息时出错，未知错误' }
+		return { success: false, message: '获取所有被封禁用户的信息时出错，未知错误', totalCount: 0 }
 	}
 }
 

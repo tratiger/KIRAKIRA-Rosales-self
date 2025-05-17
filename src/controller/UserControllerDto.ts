@@ -681,6 +681,25 @@ export type ReactivateUserByUIDResponseDto = {
 }
 
 /**
+ * 管理员获取用户信息的请求载荷
+ */
+export type GetBlockedUserRequestDto = {
+	/** 排序字段 */
+	sortBy: string;
+	/** 排序方法 */
+	sortOrder: string;
+	/** 查询 UID */
+	uid?: number;
+	/** 分页查询 */
+	pagination: {
+		/** 当前在第几页 */
+		page: number;
+		/** 一页显示多少条 */
+		pageSize: number;
+	};
+};
+
+/**
  * 获取所有被封禁用户的信息的请求响应
  */
 export type GetBlockedUserResponseDto = {
@@ -692,7 +711,10 @@ export type GetBlockedUserResponseDto = {
 	result?: (
 		GetUserInfoByUidResponseDto['result']
 		& { uid: number }
+		& { UUID: string }
 	)[];
+	/** 数据总长度 */
+	totalCount: number;
 }
 
 /**
@@ -727,6 +749,8 @@ export type AdminGetUserInfoResponseDto = {
 	/** 请求响应 */
 	result?: (
 		GetSelfUserInfoResponseDto['result']
+		& { avatar: string }
+		& { userBannerImage: string }
 		& { editDateTime: number }
 		& { editOperatorUUID: string }
 		& { isUpdatedAfterReview: boolean }

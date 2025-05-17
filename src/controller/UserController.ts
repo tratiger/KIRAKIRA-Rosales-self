@@ -53,6 +53,7 @@ import {
 	ConfirmUserTotpAuthenticatorRequestDto,
 	DeleteTotpAuthenticatorByTotpVerificationCodeRequestDto,
 	DeleteUserEmailAuthenticatorRequestDto,
+	GetBlockedUserRequestDto,
 	GetSelfUserInfoRequestDto,
 	GetUserInfoByUidRequestDto,
 	GetUserSettingsRequestDto,
@@ -733,15 +734,31 @@ export const checkUsernameController = async (ctx: koaCtx, next: koaNext) => {
  * @return 获取所有被封禁用户的信息的请求响应
  */
 export const getBlockedUserController = async (ctx: koaCtx, next: koaNext) => {
-	const uid = parseInt(ctx.cookies.get('uid'), 10)
-	const token = ctx.cookies.get('token')
+	const adminUUID = ctx.cookies.get('uuid')
+	const adminToken = ctx.cookies.get('token')
 
 	// RBAC 权限验证
-	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
+	if (!await isPassRbacCheck({ uuid: adminUUID, apiPath: ctx.path }, ctx)) {
 		return
 	}
 
-	const reactivateUserByUIDResponse = await getBlockedUserService(uid, token)
+	const sortBy = ctx.query.sortBy as string
+	const sortOrder = ctx.query.sortOrder as string
+	const uid = parseInt(ctx.query.uid as string, 10)
+	const page = ctx.query.page as string
+	const pageSize = ctx.query.pageSize as string
+
+	const GetBlockedUserRequest: GetBlockedUserRequestDto = {
+		sortBy: sortBy ?? 'uid',
+		sortOrder: sortOrder ?? 'ascend',
+		uid: uid ?? -1,
+		pagination: {
+			page: parseInt(page, 10) ?? 0,
+			pageSize: parseInt(pageSize, 10) ?? Infinity,
+		},
+	}
+
+	const reactivateUserByUIDResponse = await getBlockedUserService(adminUUID, adminToken, GetBlockedUserRequest)
 	ctx.body = reactivateUserByUIDResponse
 	await next()
 }
