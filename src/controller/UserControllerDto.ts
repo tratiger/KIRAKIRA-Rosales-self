@@ -709,9 +709,10 @@ export type GetBlockedUserResponseDto = {
 	message?: string;
 	/** 请求响应，被封禁的用户 */
 	result?: (
-		GetUserInfoByUidResponseDto['result']
-		& { uid: number }
-		& { UUID: string }
+		GetUserInfoByUidResponseDto["result"] & {
+			uid: number;
+			UUID: string;
+		}
 	)[];
 	/** 数据总长度 */
 	totalCount: number;
@@ -748,14 +749,15 @@ export type AdminGetUserInfoResponseDto = {
 	message?: string;
 	/** 请求响应 */
 	result?: (
-		GetSelfUserInfoResponseDto['result']
-		& { avatar: string }
-		& { userBannerImage: string }
-		& { editDateTime: number }
-		& { editOperatorUUID: string }
-		& { isUpdatedAfterReview: boolean }
-		& { uid: number }
-		& { UUID: string }
+		GetSelfUserInfoResponseDto["result"] & {
+			avatar: string;
+			userBannerImage: string;
+			editDateTime: number;
+			editOperatorUUID: string;
+			isUpdatedAfterReview: boolean;
+			uid: number;
+			UUID: string;
+		}
 	)[];
 	/** 数据总长度 */
 	totalCount: number;
