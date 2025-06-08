@@ -330,18 +330,18 @@ router.post('/block/hideuser', hideUserByUidController) // 用户隐藏用户
 //	"hideUid": XXXX
 // }
 
-router.post('/block/keyword', blockKeywordController) // 用户屏蔽关键词
-// https://localhost:9999/block/keyword
-// cookie: UUID, token
-// {
-// 	"blockKeyword": "XXXXXX"
-// }
-
 router.post('/block/tag', blockTagController) // 用户屏蔽标签
 // https://localhost:9999/block/tag
 // cookie: UUID, token
 // {
 //	"tagId": XXXX
+// }
+
+router.post('/block/keyword', blockKeywordController) // 用户屏蔽关键词
+// https://localhost:9999/block/keyword
+// cookie: UUID, token
+// {
+// 	"blockKeyword": "XXXXXX"
 // }
 
 router.post('/block/regex', addRegexController) // 用户添加正则表达式
@@ -364,18 +364,18 @@ router.delete('/block/delete/hideuser', showUserByUidController) // 用户取消
 //	"hideUid": XXXX
 // }
 
-router.delete('/block/delete/keyword', unblockKeywordController) // 用户解封关键词
-// https://localhost:9999/block/delete/keyword
-// cookie: UUID, token
-// {
-//	"blockKeyword": "XXXXXX"
-// }
-
 router.delete('/block/delete/tag', unblockTagController) // 用户解封标签
 // https://localhost:9999/block/delete/tag
 // cookie: UUID, token
 // {
 //	"blockTag": XXXX
+// }
+
+router.delete('/block/delete/keyword', unblockKeywordController) // 用户解封关键词
+// https://localhost:9999/block/delete/keyword
+// cookie: UUID, token
+// {
+//	"blockKeyword": "XXXXXX"
 // }
 
 router.delete('/block/delete/regex', removeRegexController) // 用户解封正则表达式

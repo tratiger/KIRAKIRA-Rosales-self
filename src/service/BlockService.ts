@@ -7,6 +7,9 @@ import { abortAndEndSession, commitAndEndSession, createAndStartSession } from "
 import { selectDataFromMongoDB, insertData2MongoDB, deleteDataFromMongoDB, selectDataByAggregateFromMongoDB } from "../dbPool/DbClusterPool.js";
 import { BlockListSchema, UnblockListSchema } from "../dbPool/schema/BlockSchema.js";
 
+const MAX_KEYWORD_LENGTH = 30; // 关键词长度限制
+const MAX_REGEX_LENGTH = 30; // 正则表达式长度限制
+
 /**
  * 屏蔽用户
  * @param blockUserByUidRequest 屏蔽用户的请求载荷
@@ -1090,7 +1093,7 @@ export const buildBlockListMongooseFilter = async (attrs: BlockListAttrs, uuid?:
 				}
 				case 'regex': {
 					if (regexList.length > 0)
-						blockListMongooseFilter.push({ $match: { $nor: regexList.map(rx => ({ [attr]: { $regex: rx } })) } })
+						blockListMongooseFilter.push({ $match: { $nor: regexList.map(rx => ({ [attr]: { $regex: rx, $options: 'i' } })) } })
 					break;
 				}
 			} 
@@ -1418,7 +1421,7 @@ const checkBlockKeywordRequest = (blockKeywordRequest: BlockKeywordRequestDto): 
 	const validKeywordRegex = /^[a-zA-Z0-9\u4e00-\u9fa5\s.,!?@#$%&*()_+-=[\]{}|;:'"`~<>]+$/
 	if (
 			keyword.trim().length === 0 || // 空字符串或纯空格
-			keyword.length > 100 || // 长度超限
+			keyword.length > MAX_KEYWORD_LENGTH || // 长度超限
 			!validKeywordRegex.test(keyword) // 包含非法字符
 	) {
 			console.error('ERROR', '屏蔽关键词请求载荷不合法')
@@ -1454,7 +1457,7 @@ const checkAddRegexRequest = (addRegexRequest: AddRegexRequestDto): boolean => {
 	const regex = addRegexRequest.blockRegex
 	if (
 			regex.trim().length === 0 || // 空字符串或纯空格
-			regex.length > 500 // 长度超限
+			regex.length > MAX_REGEX_LENGTH // 长度超限
 	) {
 			return false
 	}

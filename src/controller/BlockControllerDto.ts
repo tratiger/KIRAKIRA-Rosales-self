@@ -95,26 +95,6 @@ export type AddRegexResponseDto = {
 }
 
 /**
- * 删除正则表达式的请求载荷
- */
-export type RemoveRegexRequestDto = {
-	/** 正则表达式 - 非空 */
-	blockRegex: string;
-	/** 正则表达式的标志 - 非空 */
-	// flag: string;
-}
-
-/**
- * 删除正则表达式的请求响应
- */
-export type RemoveRegexResponseDto = {
-	/** 是否请求成功 */
-	success: boolean;
-	/** 附加的文本消息 */
-	message?: string;
-}
-
-/**
  * 取消屏蔽用户的请求载荷
  */
 export type UnblockUserByUidRequestDto = {
@@ -174,6 +154,26 @@ export type UnblockTagResponseDto = {
 export type UnblockKeywordRequestDto = {
 	/** 屏蔽的关键词 - 非空 */
 	blockKeyword: string;
+}
+
+/**
+ * 删除正则表达式的请求载荷
+ */
+export type RemoveRegexRequestDto = {
+	/** 正则表达式 - 非空 */
+	blockRegex: string;
+	/** 正则表达式的标志 - 非空 */
+	// flag: string;
+}
+
+/**
+ * 删除正则表达式的请求响应
+ */
+export type RemoveRegexResponseDto = {
+	/** 是否请求成功 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
 }
 
 /**
