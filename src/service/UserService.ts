@@ -3,6 +3,7 @@ import { createCloudflareImageUploadSignedUrl } from '../cloudflare/index.js'
 import { isInvalidEmail, sendMail } from '../common/EmailTool.js'
 import { comparePasswordSync, hashPasswordSync } from '../common/HashTool.js'
 import { isEmptyObject } from '../common/ObjectTool.js'
+import { validateNameField } from '../common/ValidTool.js'
 import { generateRandomString, generateSecureRandomString, generateSecureVerificationNumberCode, generateSecureVerificationStringCode } from '../common/RandomTool.js'
 import {
 	AdminClearUserInfoRequestDto,
@@ -710,6 +711,11 @@ export const updateOrCreateUserInfoService = async (updateOrCreateUserInfoReques
 				const username = updateOrCreateUserInfoRequest.username
 
 				if (username) {
+					if (!validateNameField(username) || !validateNameField(updateOrCreateUserInfoRequest.userNickname)) {
+						console.error('ERROR', '更新用户信息失败，用户名或昵称不合法，用户 UID:', uid)
+						return { success: false, message: '更新用户信息失败，用户名或昵称不合法' }
+					}
+
 					const getUserInfoWhere: QueryType<UserInfo> = {
 						username: { $regex: new RegExp(`\\b${updateOrCreateUserInfoRequest.username}\\b`, 'iu') },
 					}
