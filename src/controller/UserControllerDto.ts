@@ -309,7 +309,7 @@ export type GetUserInfoByUidResponseDto = {
 		roles?: string[];
 		/** 是否正在关注该用户 */
 		isFollowing: boolean;
-		/** 
+		/**
 		 * 查询的用户是否是自己。
 		 * 如果该字段的值为 true，则通常意味着发生了错误的请求，因为有专用的接口用于查询用户自己的信息。
 		 */
@@ -411,16 +411,16 @@ export type BasicUserSettingsDto = {
 	devMode?: boolean;
 	/** 实验性：启用动态背景 - 布尔 */
 	showCssDoodle?: boolean;
-	/** 实验性：启用直角模式 - 布尔 */
-	sharpAppearanceMode?: boolean;
-	/** 实验性：启用扁平模式 - 布尔 */
-	flatAppearanceMode?: boolean;
 	/** 用户关联网站的隐私设置 - 允许的值有：{public: 公开, following: 仅关注, private: 隐藏} */
 	userWebsitePrivacySetting?: 'public' | 'following' | 'private';
 	/** 用户隐私数据可见性设置 */
 	userPrivaryVisibilitiesSetting?: UserPrivaryVisibilitiesSettingDto[];
 	/** 用户关联账户的隐私设置 */
 	userLinkedAccountsVisibilitiesSetting?: UserLinkedAccountsVisibilitiesSettingDto[];
+	// /** 实验性：启用直角模式 - 布尔 */
+	// sharpAppearanceMode?: boolean;
+	// /** 实验性：启用扁平模式 - 布尔 */
+	// flatAppearanceMode?: boolean;
 }
 
 /**
