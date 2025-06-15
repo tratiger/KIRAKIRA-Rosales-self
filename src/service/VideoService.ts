@@ -17,7 +17,7 @@ import { createOrUpdateBrowsingHistoryService } from './BrowsingHistoryService.j
 import { getNextSequenceValueEjectService } from './SequenceValueService.js'
 import { checkUserTokenByUuidService, checkUserTokenService, getUserUuid } from './UserService.js'
 import { FollowingSchema } from '../dbPool/schema/FeedSchema.js'
-import { buildBlockListMongooseFilter } from './BlockService.js'
+import { buildBlockListMongooseFilter, checkBlockUserService, checkIsBlockedByOtherUserService } from './BlockService.js'
 
 /**
  * 上传视频
@@ -284,15 +284,17 @@ export const checkVideoExistByKvidService = async (checkVideoExistRequestDto: Ch
  * @param uploadVideoRequest 根据 kvid 获取视频的请求携带的请求载荷
  * @returns 视频数据
  */
-export const getVideoByKvidService = async (getVideoByKvidRequest: GetVideoByKvidRequestDto, uuid?: string, token?: string): Promise<GetVideoByKvidResponseDto> => {
+export const getVideoByKvidService = async (getVideoByKvidRequest: GetVideoByKvidRequestDto, selectorUuid?: string, selectorToken?: string): Promise<GetVideoByKvidResponseDto> => {
 	try {
 		const { videoId } = getVideoByKvidRequest
 		const { collectionName: videoCollectionName, schemaInstance: videoSchemaInstance } = VideoSchema
 
+		let isHidden = false
+
 		// 判断请求参数是否合法
 		if (!checkGetVideoByKvidRequest(getVideoByKvidRequest)) {
 			console.error('ERROR', '视频页 - KVID 为空')
-			return { success: false, message: '视频页 - 必要的请求参数为空' }
+			return { success: false, message: '视频页 - 必要的请求参数为空', isBlocked: false, isBlockedByOther: false, isHidden }
 		}
 
 		// 构建视频查询 Pipeline
@@ -352,26 +354,49 @@ export const getVideoByKvidService = async (getVideoByKvidRequest: GetVideoByKvi
 			const video = result.result?.[0] as GetVideoByKvidResponseDto['video']
 			if (!result.success || !video) {
 				console.error('ERROR', '视频页 - 获取到的视频结果或视频数组为空')
-				return { success: false, message: '视频页 - 未获取到视频' }
+				return { success: false, message: '视频页 - 未获取到视频', isBlocked: false, isBlockedByOther: false, isHidden }
 			}
 
 			video.uploaderInfo.isFollowing = false // 默认没有关注上传者
 			video.uploaderInfo.isSelf = false // 默认上传者不是自己
 
-			if ((await checkUserTokenByUuidService(uuid, token)).success) { // 如果用户已登录
-				// 1. 存储浏览历史记录
+			if ((await checkUserTokenByUuidService(selectorUuid, selectorToken)).success) { // 如果用户已登录
+				const checkBlockUserResult = await checkBlockUserService({ uid: video.uploaderInfo.uid }, selectorUuid, selectorToken)
+				const checkIsBlockedByOtherUserResult = await checkIsBlockedByOtherUserService({ targetUid: video.uploaderInfo.uid }, selectorUuid, selectorToken)
+
+				// 1. 检查上传者是否已经被当前用户隐藏
+				if (checkBlockUserResult.isHidden) {
+					isHidden = true
+				}
+
+				// 2. 检查当前用户是否与上传者双向屏蔽
+				if (checkBlockUserResult.isBlocked && checkIsBlockedByOtherUserResult.isBlocked) {
+					return { success: true, message: '视频页 - 未获取到视频，你与该用户已双向屏蔽', isBlockedByOther: true, isBlocked: true, isHidden }
+				}
+
+				// 3. 检查上传者是否已经被当前用户屏蔽
+				if (checkBlockUserResult.isBlocked) {
+					return { success: true, message: '视频页 - 未获取到视频，你已屏蔽该用户', isBlockedByOther: false, isBlocked: true, isHidden }
+				}
+
+				// 4. 检查当前用户是否已经被上传者屏蔽
+				if (checkIsBlockedByOtherUserResult.isBlocked) {
+					return { success: true, message: '视频页 - 未获取到视频，你已被该用户屏蔽', isBlockedByOther: true, isBlocked: false, isHidden }
+				}
+
+				// 5. 存储浏览历史记录
 				const createOrUpdateBrowsingHistoryRequest: CreateOrUpdateBrowsingHistoryRequestDto = {
-					uuid,
+					uuid: selectorUuid,
 					category: 'video',
 					id: String(video.videoId),
 				}
-				await createOrUpdateBrowsingHistoryService(createOrUpdateBrowsingHistoryRequest, uuid, token)
+				await createOrUpdateBrowsingHistoryService(createOrUpdateBrowsingHistoryRequest, selectorUuid, selectorToken)
 
-				// 2. 查询上传者是否被当前登录用户关注
+				// 6. 查询上传者是否被当前登录用户关注
 				const { collectionName: followingSchemaCollectionName, schemaInstance: followingSchemaInstance } = FollowingSchema
 				type Following = InferSchemaType<typeof followingSchemaInstance>
 				const followingWhere: QueryType<Following> = {
-					followerUuid: uuid,
+					followerUuid: selectorUuid,
 					followingUuid: video.uploaderUUID,
 				}
 				const followingSelect: SelectType<Following> = {
@@ -385,8 +410,8 @@ export const getVideoByKvidService = async (getVideoByKvidRequest: GetVideoByKvi
 					video.uploaderInfo.isFollowing = true
 				}
 
-				// 3. 如果上传者 uuid 和当前登录用户 uuid 相同，则是自己查看自己的视频
-				if (video.uploaderUUID === uuid) {
+				// 7. 如果上传者 uuid 和当前登录用户 uuid 相同，则是自己查看自己的视频
+				if (video.uploaderUUID === selectorUuid) {
 					video.uploaderInfo.isSelf = true
 				}
 			}
@@ -395,14 +420,17 @@ export const getVideoByKvidService = async (getVideoByKvidRequest: GetVideoByKvi
 				success: true,
 				message: '视频页 - 获取视频成功',
 				video,
+				isBlocked: false,
+				isBlockedByOther: false,
+				isHidden,
 			}
 		} catch (error) {
 			console.error('ERROR', '视频页 - 视频查询失败：', error)
-			return { success: false, message: '视频页 - 视频查询失败' }
+			return { success: false, message: '视频页 - 视频查询失败', isBlocked: false, isBlockedByOther: false, isHidden }
 		}
 	} catch (error) {
 		console.error('ERROR', '获取视频失败：', error)
-		return { success: false, message: '获取视频失败：' }
+		return { success: false, message: '获取视频失败：', isBlocked: false, isBlockedByOther: false, isHidden: false }
 	}
 }
 
@@ -411,52 +439,82 @@ export const getVideoByKvidService = async (getVideoByKvidRequest: GetVideoByKvi
  * @param getVideoByUidRequest 根据 UID 获取该用户上传的视频的请求 UID
  * @returns 请求到的视频信息
  */
-export const getVideoByUidRequestService = async (getVideoByUidRequest: GetVideoByUidRequestDto): Promise<GetVideoByUidResponseDto> => {
+export const getVideoByUidRequestService = async (getVideoByUidRequest: GetVideoByUidRequestDto, selectorUuid?: string, selectorToken?: string): Promise<GetVideoByUidResponseDto> => {
 	try {
-		if (checkGetVideoByUidRequest(getVideoByUidRequest)) {
-			const { collectionName, schemaInstance } = VideoSchema
-			type Video = InferSchemaType<typeof schemaInstance>
-			const where: QueryType<Video> = {
-				uploaderId: getVideoByUidRequest.uid,
-			}
-			const select: SelectType<Video> = {
-				videoId: 1,
-				videoPart: 1,
-				title: 1,
-				image: 1,
-				uploadDate: 1,
-				watchedCount: 1,
-				uploaderId: 1,
-				duration: 1,
-				description: 1,
-				editDateTime: 1,
+		let isHidden = false
+
+		if (!checkGetVideoByUidRequest(getVideoByUidRequest)) {
+			console.error('ERROR', '根据 UID 获取视频失败，请求的 UID 为空：')
+			return { success: false, message: '根据 UID 获取视频失败，请求的 UID 为空', videosCount: 0, videos: [], isBlockedByOther: false, isBlocked: false, isHidden }
+		}
+
+		const { uid } = getVideoByUidRequest
+
+		if (selectorUuid && selectorToken && (await checkUserTokenByUuidService(selectorUuid, selectorToken)).success) {
+			const checkBlockUserResult = await checkBlockUserService({ uid }, selectorUuid, selectorToken)
+			const checkIsBlockedByOtherUserResult = await checkIsBlockedByOtherUserService({ targetUid: uid }, selectorUuid, selectorToken)
+
+			// 1. 检查上传者是否已经被当前用户隐藏
+			if (checkBlockUserResult.isHidden) {
+				isHidden = true
 			}
 
-			try {
-				const result = await selectDataFromMongoDB<Video>(where, select, schemaInstance, collectionName)
-				const videoResult = result.result
-				if (result.success && videoResult) {
-					const videoResultLength = videoResult?.length
-					if (videoResultLength > 0) {
-						return { success: true, message: '根据 UID 获取视频成功', videosCount: videoResultLength, videos: videoResult }
-					} else {
-						return { success: false, message: '该用户似乎未上传过视频', videosCount: 0, videos: [] }
-					}
-				} else {
-					console.error('ERROR', '根据 UID 获取视频失败，获取的结果失败或为空')
-					return { success: false, message: '根据 UID 获取视频失败，获取的结果失败或为空', videosCount: 0, videos: [] }
-				}
-			} catch (error) {
-				console.error('ERROR', '根据 UID 获取视频失败，检索视频出错：', error)
-				return { success: false, message: '根据 UID 获取视频失败，检索视频出错', videosCount: 0, videos: [] }
+			// 2. 检查当前用户是否与上传者双向屏蔽
+			if (checkBlockUserResult.isBlocked && checkIsBlockedByOtherUserResult.isBlocked) {
+				return { success: true, message: '根据 UID 获取视频失败，你与该用户已双向屏蔽', videosCount: 0, videos: [], isBlockedByOther: true, isBlocked: true, isHidden }
 			}
-		} else {
-			console.error('ERROR', '根据 UID 获取视频失败，请求的 UID 为空：')
-			return { success: false, message: '根据 UID 获取视频失败，请求的 UID 为空', videosCount: 0, videos: [] }
+
+			// 3. 检查上传者是否已经被当前用户屏蔽
+			if (checkBlockUserResult.isBlocked) {
+				return { success: true, message: '根据 UID 获取视频失败，你已屏蔽该用户', videosCount: 0, videos: [], isBlockedByOther: false, isBlocked: true, isHidden }
+			}
+
+			// 4. 检查当前用户是否已经被上传者屏蔽
+			if (checkIsBlockedByOtherUserResult.isBlocked) {
+				return { success: true, message: '根据 UID 获取视频失败，你已被该用户屏蔽', videosCount: 0, videos: [], isBlockedByOther: true, isBlocked: false, isHidden }
+			}
+		}
+
+		const { collectionName, schemaInstance } = VideoSchema
+		type Video = InferSchemaType<typeof schemaInstance>
+		const where: QueryType<Video> = {
+			uploaderId: uid,
+		}
+		const select: SelectType<Video> = {
+			videoId: 1,
+			videoPart: 1,
+			title: 1,
+			image: 1,
+			uploadDate: 1,
+			watchedCount: 1,
+			uploaderId: 1,
+			duration: 1,
+			description: 1,
+			editDateTime: 1,
+		}
+
+		try {
+			const result = await selectDataFromMongoDB<Video>(where, select, schemaInstance, collectionName)
+			const videoResult = result.result
+			if (!result.success || !videoResult) {
+				console.error('ERROR', '根据 UID 获取视频失败，获取的结果失败或为空')
+				return { success: false, message: '根据 UID 获取视频失败，获取的结果失败或为空', videosCount: 0, videos: [], isBlockedByOther: false, isBlocked: false, isHidden }
+			}
+
+			const videoResultLength = videoResult?.length
+
+			if (videoResultLength <= 0) {
+				return { success: true, message: '该用户似乎未上传过视频', videosCount: 0, videos: [], isBlockedByOther: false, isBlocked: false, isHidden }
+			}
+
+			return { success: true, message: '根据 UID 获取视频成功', videosCount: videoResultLength, videos: videoResult, isBlockedByOther: false, isBlocked: false, isHidden }
+		} catch (error) {
+			console.error('ERROR', '根据 UID 获取视频失败，检索视频出错：', error)
+			return { success: false, message: '根据 UID 获取视频失败，检索视频出错', videosCount: 0, videos: [], isBlockedByOther: false, isBlocked: false, isHidden }
 		}
 	} catch (error) {
 		console.error('ERROR', '根据 UID 获取视频失败，未知原因：', error)
-		return { success: false, message: '根据 UID 获取视频失败，未知原因', videosCount: 0, videos: [] }
+		return { success: false, message: '根据 UID 获取视频失败，未知原因', videosCount: 0, videos: [], isBlockedByOther: false, isBlocked: false, isHidden: false }
 	}
 }
 

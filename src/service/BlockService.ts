@@ -1074,6 +1074,40 @@ export const buildBlockListMongooseFilter = async (attrs: BlockListAttrs, uuid?:
 				case 'block-uuid': {
 					if (blockUuidList.length > 0)
 						blockListMongooseFilter.push({ $match: { [attr]: { $nin: blockUuidList } } })
+					blockListMongooseFilter.push(
+						// 1. 关联 BlockList 集合，获取上传者屏蔽的用户列表（仅 type = 'user'）
+						{
+							$lookup: {
+								from: 'blocklists',
+								let: { uuid: `$${attr}` },
+								pipeline: [
+									{
+										$match: {
+											$expr: { 
+												$and: [
+													{ $eq: ['$operatorUUID', '$$uuid'] },
+													{ $eq: ['$type', 'block'] },
+												],
+											},
+										},
+									},
+									{
+										$project: {
+											_id: 0,
+											blockedUserUUID: '$value', // value 字段存储被屏蔽的用户 UUID
+										},
+									},
+								],
+								as: 'block_by_others_data',
+							},
+						},
+						// 2. 过滤：排除上传者屏蔽了当前用户的视频
+						{
+							$match: {
+								'block_by_others_data.blockedUserUUID': { $ne: uuid },
+							},
+						},
+					)
 					break;
 				}
 				case 'hide-uuid': {
@@ -1221,131 +1255,135 @@ export const buildBlockListMongooseFilter = async (attrs: BlockListAttrs, uuid?:
 // 	}
 // }
 
-// /**
-//  * 检查用户是否被屏蔽或隐藏
-//  * @param UUID 用户 uuid
-//  * @param token 用户 Token
-//  * @param targetUid 目标用户 UID
-//  * @returns 用户是否被屏蔽或隐藏的请求响应
-//  */
-// export const checkBlockUserService = async (CheckIsBlockedRequest: CheckUserIsBlockedRequestDto, uuid: string, token: string): Promise<CheckUserIsBlockedResponseDto> => {
-// 	try {
-// 		const isBlocked = false
-// 		const isHided = false
+/**
+ * 检查用户是否被屏蔽或隐藏
+ * @param UUID 用户 uuid
+ * @param token 用户 Token
+ * @param targetUid 目标用户 UID
+ * @returns 用户是否被屏蔽或隐藏的请求响应
+ */
+export const checkBlockUserService = async (checkIsBlockedRequest: CheckUserIsBlockedRequestDto, uuid: string, token: string): Promise<CheckUserIsBlockedResponseDto> => {
+	try {
+		let isBlocked = false
+		let isHidden = false
 
-// 		if (!checkCheckUserIsBlockedRequest(CheckIsBlockedRequest)) {
-// 			console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，请求载荷不合法')
-// 			return { success: true, message: '检查用户是否被屏蔽或隐藏失败，请求载荷不合法', isBlocked, isHided }
-// 		}
-// 		const { uid } = CheckIsBlockedRequest
+		if (!checkCheckUserIsBlockedRequest(checkIsBlockedRequest)) {
+			console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，请求载荷不合法')
+			return { success: false, message: '检查用户是否被屏蔽或隐藏失败，请求载荷不合法', isBlocked, isHidden }
+		}
 
-// 		if (!checkUserExistsByUIDService({ uid })) {
-// 			console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，用户不存在')
-// 			return { success: false, message: '检查用户是否被屏蔽或隐藏失败，用户不存在', isBlocked, isHided }
-// 		}
-// 		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
-// 			console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，用户 Token 不合法')
-// 			return { success: false, message: '检查用户是否被屏蔽或隐藏失败，用户 Token 不合法', isBlocked, isHided }
-// 		}
+		const { uid } = checkIsBlockedRequest
 
-// 		const { collectionName: blockListCollectionName, schemaInstance: blockListSchemaInstance } = BlockListSchema
-// 		type BlockListSchemaType = InferSchemaType<typeof blockListSchemaInstance>
-// 		const blockWhere: QueryType<BlockListSchemaType> = {
-// 			type: 'block',
-// 			operatorUUID: uuid,
-// 		}
-// 		const hideWhere: QueryType<BlockListSchemaType> = {
-// 			type: 'hide',
-// 			operatorUUID: uuid,
-// 		}
+		if (!checkUserExistsByUIDService({ uid })) {
+			console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，用户不存在')
+			return { success: false, message: '检查用户是否被屏蔽或隐藏失败，用户不存在', isBlocked, isHidden }
+		}
 
-// 		const userSelect: SelectType<BlockListSchemaType> = {
-// 			Uid: 1,
-// 		}
+		const targetUuid = await getUserUuid(uid)
+		if (!targetUuid) {
+			console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，用户 UUID 不存在')
+			return { success: false, message: '检查用户是否被屏蔽或隐藏失败，用户 UUID 不存在', isBlocked, isHidden }
+		}
 
-// 		const blockResult = await selectDataFromMongoDB(blockWhere, userSelect, blockListSchemaInstance, blockListCollectionName)
-// 		if (!blockResult.success) {
-// 			console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，查询数据失败')
-// 			return { success: false, message: '检查用户是否被屏蔽或隐藏失败，查询数据失败', isBlocked, isHided }
-// 		}
+		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
+			console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，用户 Token 不合法')
+			return { success: false, message: '检查用户是否被屏蔽或隐藏失败，用户 Token 不合法', isBlocked, isHidden }
+		}
 
-// 		const hideResult = await selectDataFromMongoDB(hideWhere, userSelect, blockListSchemaInstance, blockListCollectionName)
-// 		if (!hideResult.success) {
-// 			console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，查询数据失败')
-// 			return { success: false, message: '检查用户是否被屏蔽或隐藏失败，查询数据失败', isBlocked, isHided }
-// 		}
+		const { collectionName: blockListCollectionName, schemaInstance: blockListSchemaInstance } = BlockListSchema
+		type BlockListSchemaType = InferSchemaType<typeof blockListSchemaInstance>
+		const blockWhere: QueryType<BlockListSchemaType> = {
+			type: 'block',
+			value: targetUuid,
+			operatorUUID: uuid,
+		}
+		const hideWhere: QueryType<BlockListSchemaType> = {
+			type: 'hide',
+			value: targetUuid,
+			operatorUUID: uuid,
+		}
+		const userSelect: SelectType<BlockListSchemaType> = {
+			value: 1,
+		}
 
-// 		const blockData = blockResult.result.map((item) => item.Uid)
-// 		const hideData = hideResult.result.map((item) => item.Uid)
+		const blockResult = await selectDataFromMongoDB<BlockListSchemaType>(blockWhere, userSelect, blockListSchemaInstance, blockListCollectionName)
+		if (!blockResult.success) {
+			console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，查询屏蔽数据失败')
+			return { success: false, message: '检查用户是否被屏蔽或隐藏失败，查询屏蔽数据失败', isBlocked, isHidden }
+		}
 
-// 		if (blockData.includes(uid)) {
-// 			const isBlocked = true
-// 			return { success: true, message: '检查用户是否被屏蔽或隐藏成功，未被屏蔽或隐藏', isBlocked, isHided }
-// 		}
-// 		if (hideData.includes(uid)) {
-// 			const isHided = true
-// 			return { success: true, message: '检查用户是否被屏蔽或隐藏成功，未被屏蔽或隐藏', isBlocked, isHided }
-// 		}
+		const hideResult = await selectDataFromMongoDB<BlockListSchemaType>(hideWhere, userSelect, blockListSchemaInstance, blockListCollectionName)
+		if (!hideResult.success) {
+			console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，查询隐藏数据失败')
+			return { success: false, message: '检查用户是否被屏蔽或隐藏失败，查询隐藏数据失败', isBlocked, isHidden }
+		}
 
-// 		return { success: true, message: '检查用户是否被屏蔽或隐藏成功，未被屏蔽或隐藏', isBlocked, isHided }
+		if (blockResult.result && Array.isArray(blockResult.result) && blockResult.result?.length > 0) {
+			isBlocked = true
+		}
 
-// 	} catch (error) {
-// 		console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，未知错误', error)
-// 		return { success: false, message: '检查用户是否被屏蔽或隐藏失败，未知错误', isBlocked: false, isHided: false }
-// 	}
-// }
+		if (hideResult.result && Array.isArray(hideResult.result) && hideResult.result?.length > 0) {
+			isHidden = true
+		}
 
-// /**
-//  * 检测是否被其他用户屏蔽
-//  * @param UUID 用户 uuid
-//  * @param token 用户 Token
-//  * @param targetUid 目标用户 UID
-//  * @returns 是否被其他用户屏蔽的请求响应
-//  */
-// export const checkIsBlockedByOtherUserService = async (CheckIsBlockedRequest: CheckIsBlockedByOtherUserRequestDto, uuid: string, token: string): Promise<CheckIsBlockedByOtherUserResponseDto> => {
-// 	try {
-// 		if (!checkCheckIsBlockedByOtherUserRequest(CheckIsBlockedRequest)) {
-// 			console.error('ERROR', '检查是否被其他用户屏蔽失败，请求载荷不合法')
-// 			return { success: true, message: '检查是否被其他用户屏蔽失败，请求载荷不合法', isBlocked: false }
-// 		}
-// 		const { targetUid } = CheckIsBlockedRequest
+		return { success: true, message: '检查用户是否被屏蔽或隐藏完成', isBlocked, isHidden }
 
-// 		if (!checkUserExistsByUIDService({uid: targetUid})) {
-// 			return { success: false, message: '检查是否被其他用户屏蔽失败，用户不存在', isBlocked: false }
-// 		}
+	} catch (error) {
+		console.error('ERROR', '检查用户是否被屏蔽或隐藏失败，未知错误', error)
+		return { success: false, message: '检查用户是否被屏蔽或隐藏失败，未知错误', isBlocked: false, isHidden: false }
+	}
+}
 
-// 		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
-// 			console.error('ERROR', '检查是否被其他用户屏蔽失败，用户 Token 不合法')
-// 			return { success: false, message: '检查是否被其他用户屏蔽失败，用户 Token 不合法', isBlocked: false }
-// 		}
-// 		const { collectionName: blockListCollectionName, schemaInstance: blockListSchemaInstance } = BlockListSchema
-// 		type BlockListSchemaType = InferSchemaType<typeof blockListSchemaInstance>
-// 		const blockWhere: QueryType<BlockListSchemaType> = {
-// 			type: 'block',
-// 			operatorUid: targetUid,
-// 		}
-// 		const blockSelect: SelectType<BlockListSchemaType> = {
-// 			Uid: 1,
-// 		}
-// 		const blockResult = await selectDataFromMongoDB(blockWhere, blockSelect, blockListSchemaInstance, blockListCollectionName)
-// 		if (!blockResult.success) {
-// 			console.error('ERROR', '检查是否被其他用户屏蔽失败，查询数据失败')
-// 			return { success: false, message: '检查是否被其他用户屏蔽失败，查询数据失败', isBlocked: false }
-// 		}
+/**
+ * 检测是否被其他用户屏蔽
+ * @param UUID 用户 uuid
+ * @param token 用户 Token
+ * @param targetUid 目标用户 UID
+ * @returns 是否被其他用户屏蔽的请求响应
+ */
+export const checkIsBlockedByOtherUserService = async (checkIsBlockedByOtherRequest: CheckIsBlockedByOtherUserRequestDto, uuid: string, token: string): Promise<CheckIsBlockedByOtherUserResponseDto> => {
+	try {
+		if (!checkCheckIsBlockedByOtherUserRequest(checkIsBlockedByOtherRequest)) {
+			console.error('ERROR', '检查是否被其他用户屏蔽失败，请求载荷不合法')
+			return { success: false, message: '检查是否被其他用户屏蔽失败，请求载荷不合法', isBlocked: false }
+		}
+		const { targetUid } = checkIsBlockedByOtherRequest
 
-// 		const blockData = blockResult.result.map((item) => item.Uid)
+		if (!checkUserExistsByUIDService({uid: targetUid})) {
+			return { success: false, message: '检查是否被其他用户屏蔽失败，用户不存在', isBlocked: false }
+		}
 
-// 		if (blockData.includes(uuid)) {
-// 			return { success: true, message: '检查是否被其他用户屏蔽成功，被其他用户屏蔽', isBlocked: true }
-// 		} else {
-// 			return { success: true, message: '检查是否被其他用户屏蔽成功，未被其他用户屏蔽', isBlocked: false }
-// 		}
+		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
+			console.error('ERROR', '检查是否被其他用户屏蔽失败，用户 Token 不合法')
+			return { success: false, message: '检查是否被其他用户屏蔽失败，用户 Token 不合法', isBlocked: false }
+		}
+		const { collectionName: blockListCollectionName, schemaInstance: blockListSchemaInstance } = BlockListSchema
+		type BlockListSchemaType = InferSchemaType<typeof blockListSchemaInstance>
+		const blockWhere: QueryType<BlockListSchemaType> = {
+			type: 'block',
+			operatorUid: targetUid,
+			value: uuid,
+		}
+		const blockSelect: SelectType<BlockListSchemaType> = {
+			value: 1,
+		}
+		const blockResult = await selectDataFromMongoDB<BlockListSchemaType>(blockWhere, blockSelect, blockListSchemaInstance, blockListCollectionName)
+		if (!blockResult.success) {
+			console.error('ERROR', '检查是否被其他用户屏蔽失败，查询数据失败')
+			return { success: false, message: '检查是否被其他用户屏蔽失败，查询数据失败', isBlocked: false }
+		}
 
-// 	} catch (error) {
-// 		console.error('ERROR', '检查是否被其他用户屏蔽失败，未知错误', error)
-// 		return { success: false, message: '检查是否被其他用户屏蔽失败，未知错误', isBlocked: false }
-// 	}
-// }
+		if (blockResult.result && Array.isArray(blockResult.result) && blockResult.result.length > 0 ) {
+			return { success: true, message: '检查是否被其他用户屏蔽成功，被其他用户屏蔽', isBlocked: true }
+		} else {
+			return { success: true, message: '检查是否被其他用户屏蔽成功，未被其他用户屏蔽', isBlocked: false }
+		}
+
+	} catch (error) {
+		console.error('ERROR', '检查是否被其他用户屏蔽失败，未知错误', error)
+		return { success: false, message: '检查是否被其他用户屏蔽失败，未知错误', isBlocked: false }
+	}
+}
 
 /**
  * 获取对应类型的黑名单数量

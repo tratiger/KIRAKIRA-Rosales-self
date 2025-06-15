@@ -298,5 +298,5 @@ export type CheckUserIsBlockedResponseDto = {
 	/** 是否被屏蔽 */
 	isBlocked: boolean;
 	/** 是否被隐藏 */
-	isHided: boolean;
+	isHidden: boolean;
 }

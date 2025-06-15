@@ -126,6 +126,11 @@ type UploaderInfoDto = {
 }
 
 /**
+ * 用户被屏蔽的状态
+ */
+type BlockState = { isBlockedByOther: boolean, isBlocked: boolean; isHidden: boolean }
+
+/**
  * 视频页面需要的响应
  */
 export type GetVideoByKvidResponseDto = {
@@ -166,7 +171,7 @@ export type GetVideoByKvidResponseDto = {
 		/** 视频 TAG */
 		videoTagList: VideoTag[];
 	};
-}
+} & BlockState
 
 /**
  * 根据视频 ID (KVID) 检查视频是否存在的请求参数
@@ -199,7 +204,7 @@ export type GetVideoByUidRequestDto = {
 /**
  * 从 UID 获取视频的请求的响应结果
  */
-export type GetVideoByUidResponseDto = ThumbVideoResponseDto & {}
+export type GetVideoByUidResponseDto = ThumbVideoResponseDto & BlockState
 
 /**
  * 根据关键字搜索视频的请求参数

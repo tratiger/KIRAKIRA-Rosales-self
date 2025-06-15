@@ -280,6 +280,11 @@ export type GetUserInfoByUidRequestDto = {
 }
 
 /**
+ * 用户被屏蔽的状态
+ */
+type BlockState = { isBlockedByOther: boolean, isBlocked: boolean; isHidden: boolean }
+
+/**
  * 通过 UID 获取用户信息的请求响应
  */
 export type GetUserInfoByUidResponseDto = {
@@ -315,7 +320,7 @@ export type GetUserInfoByUidResponseDto = {
 		 */
 		isSlef: boolean;
 	};
-}
+} & BlockState
 
 /**
  * 通过 UID 和 TOKEN 校验用户的返回结果
@@ -409,8 +414,6 @@ export type BasicUserSettingsDto = {
 	unitSystemType?: string;
 	/** 是否进入了开发者模式 - 布尔 */
 	devMode?: boolean;
-	/** 实验性：启用动态背景 - 布尔 */
-	showCssDoodle?: boolean;
 	/** 用户关联网站的隐私设置 - 允许的值有：{public: 公开, following: 仅关注, private: 隐藏} */
 	userWebsitePrivacySetting?: 'public' | 'following' | 'private';
 	/** 用户隐私数据可见性设置 */

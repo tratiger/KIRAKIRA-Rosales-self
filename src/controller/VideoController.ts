@@ -96,11 +96,13 @@ export const getVideoByKvidController = async (ctx: koaCtx, next: koaNext) => {
  * @returns 获取到的视频信息
  */
 export const getVideoByUidController = async (ctx: koaCtx, next: koaNext) => {
+	const uuid = ctx.cookies.get('uuid')
+	const token = ctx.cookies.get('token')
 	const uid = ctx.query.uid as string
 	const getVideoByUidRequest: GetVideoByUidRequestDto = {
 		uid: uid ? parseInt(uid, 10) : -1, // WARN -1 means you can't find any video
 	}
-	const getVideoByKvidResponse = await getVideoByUidRequestService(getVideoByUidRequest)
+	const getVideoByKvidResponse = await getVideoByUidRequestService(getVideoByUidRequest, uuid, token)
 	ctx.body = getVideoByKvidResponse
 	await next()
 }
