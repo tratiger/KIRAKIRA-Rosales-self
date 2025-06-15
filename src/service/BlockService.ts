@@ -1003,6 +1003,7 @@ type BlockListFilterResult = { success: boolean, filter: PipelineStage.Match[] }
  * @returns Mongoose Pipeline 黑名单过滤器
  */
 export const buildBlockListMongooseFilter = async (attrs: BlockListAttrs, uuid?: string, token?: string): Promise<BlockListFilterResult> => {
+	// MEME: Is that a dog...?
 	try {
 		if (!uuid || !token) {
 			return { success: false, filter: [] }
