@@ -1,9 +1,10 @@
-import { InferSchemaType } from 'mongoose'
+import { InferSchemaType, PipelineStage } from 'mongoose'
 import { EmitDanmakuRequestDto, EmitDanmakuResponseDto, GetDanmakuByKvidDto, GetDanmakuByKvidRequestDto, GetDanmakuByKvidResponseDto } from '../controller/DanmakuControllerDto.js'
-import { insertData2MongoDB, selectDataFromMongoDB } from '../dbPool/DbClusterPool.js'
+import { insertData2MongoDB, selectDataByAggregateFromMongoDB, selectDataFromMongoDB } from '../dbPool/DbClusterPool.js'
 import { QueryType, SelectType } from '../dbPool/DbClusterPoolTypes.js'
 import { DanmakuSchema } from '../dbPool/schema/DanmakuSchema.js'
 import { checkUserTokenService, getUserUuid } from './UserService.js'
+import { buildBlockListMongooseFilter } from './BlockService.js'
 
 /**
  * 用户发送弹幕
@@ -59,51 +60,92 @@ export const emitDanmakuService = async (emitDanmakuRequest: EmitDanmakuRequestD
  * @param getDanmakuByKvidRequest 请求弹幕列表的查询参数
  * @returns 视频的弹幕列表
  */
-export const getDanmakuListByKvidService = async (getDanmakuByKvidRequest: GetDanmakuByKvidRequestDto): Promise<GetDanmakuByKvidResponseDto> => {
+export const getDanmakuListByKvidService = async (getDanmakuByKvidRequest: GetDanmakuByKvidRequestDto, uuid?: string, token?: string): Promise<GetDanmakuByKvidResponseDto> => {
 	try {
-		if (checkGetDanmakuByKvidRequest(getDanmakuByKvidRequest)) {
-			const { collectionName, schemaInstance } = DanmakuSchema
-			type Danmaku = InferSchemaType<typeof schemaInstance>
-			const where: QueryType<Danmaku> = {
-				videoId: getDanmakuByKvidRequest.videoId,
-			}
-
-			const select: SelectType<Danmaku> = {
-				videoId: 1,
-				UUID: 1,
-				uid: 1,
-				time: 1,
-				text: 1,
-				color: 1,
-				fontSize: 1,
-				mode: 1,
-				enableRainbow: 1,
-				editDateTime: 1,
-			}
-
-			try {
-				const result = await selectDataFromMongoDB<Danmaku>(where, select, schemaInstance, collectionName)
-				const danmakuList = result.result?.map(danmaku => {
-					const fontSize = danmaku.fontSize === 'small' || danmaku.fontSize === 'medium' || danmaku.fontSize === 'large' ? danmaku.fontSize : 'medium'
-					return { ...danmaku, uuid: danmaku.UUID, fontSize: fontSize } as GetDanmakuByKvidDto
-				})
-				if (result.success) {
-					if (danmakuList && danmakuList.length > 0) {
-						return { success: true, message: '获取弹幕列表成功', danmaku: danmakuList }
-					} else {
-						return { success: true, message: '弹幕列表为空', danmaku: [] }
-					}
-				} else {
-					console.error('ERROR', '获取弹幕列表失败，查询失败或结果为空：', getDanmakuByKvidRequest)
-					return { success: false, message: '获取弹幕列表失败，查询失败' }
-				}
-			} catch (error) {
-				console.error('ERROR', '获取弹幕列表失败，查询失败：', error, getDanmakuByKvidRequest)
-				return { success: false, message: '获取弹幕列表失败，查询失败' }
-			}
-		} else {
+		if (!checkGetDanmakuByKvidRequest(getDanmakuByKvidRequest)) {
 			console.error('ERROR', '获取弹幕列表失败，数据校验失败', getDanmakuByKvidRequest)
 			return { success: false, message: '获取弹幕列表失败，数据校验失败' }
+		}
+
+		const { videoId } = getDanmakuByKvidRequest
+		const { collectionName, schemaInstance } = DanmakuSchema
+		type Danmaku = InferSchemaType<typeof schemaInstance>
+
+		try {
+			const blockListFilter = await buildBlockListMongooseFilter(
+				[
+					{
+						attr: 'UUID',
+						category: 'block-uuid',
+					},
+					{
+						attr: 'UUID',
+						category: 'hide-uuid',
+					},
+					{
+						attr: 'text',
+						category: 'keyword',
+					},
+					{
+						attr: 'text',
+						category: 'regex',
+					},
+				],
+				uuid,
+				token
+			)
+
+			const getDanmakuPipeline: PipelineStage[] = [
+				{
+					$match: {
+						videoId,
+					}
+				},
+				...blockListFilter.filter,
+				{
+					$unwind: '$uploader_info',
+				},
+				{
+					$sort: {
+						uploadDate: -1, // 按 uploadDate 降序排序
+					},
+				},
+				{
+					$project: {
+						videoId: 1,
+						UUID: 1,
+						uid: 1,
+						time: 1,
+						text: 1,
+						color: 1,
+						fontSize: 1,
+						mode: 1,
+						enableRainbow: 1,
+						editDateTime: 1,
+					}
+				}
+			]
+
+			const danmakuResult = await selectDataByAggregateFromMongoDB<Danmaku>(schemaInstance, collectionName, getDanmakuPipeline)
+			
+			if (!danmakuResult.success) {
+				console.error('ERROR', '获取弹幕列表失败，查询失败或结果为空：', getDanmakuByKvidRequest)
+				return { success: false, message: '获取弹幕列表失败，查询失败' }
+			}
+
+			const danmakuList = danmakuResult.result?.map(danmaku => {
+				const fontSize = ['small', 'medium', 'large'].includes(danmaku.fontSize) ? danmaku.fontSize : 'medium'
+				return { ...danmaku, uuid: danmaku.UUID, fontSize } as GetDanmakuByKvidDto
+			})
+
+			if (danmakuList && danmakuList.length > 0) {
+				return { success: true, message: '获取弹幕列表成功', danmaku: danmakuList }
+			} else {
+				return { success: true, message: '弹幕列表为空', danmaku: [] }
+			}
+		} catch (error) {
+			console.error('ERROR', '获取弹幕列表失败，查询失败：', error, getDanmakuByKvidRequest)
+			return { success: false, message: '获取弹幕列表失败，查询失败' }
 		}
 	} catch (error) {
 		console.error('ERROR', '获取弹幕列表失败，错误信息：', error, getDanmakuByKvidRequest)

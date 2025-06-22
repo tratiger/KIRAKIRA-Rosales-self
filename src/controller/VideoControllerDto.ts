@@ -3,7 +3,7 @@ import { VideoTag } from './VideoTagControllerDto.js'
 /**
  * 单个视频分 P 数据参数
  */
-type VideoPartDto = {
+export type VideoPartDto = {
 	/** 分 P ID */
 	id: number;
 	/** 视频分 P 标题 */
@@ -82,8 +82,10 @@ export type ThumbVideoResponseDto = {
 		uploadDate?: number;
 		/** 视频播放量 */
 		watchedCount?: number;
-		/** 视频作者 ID */
+		/** 视频作者名 */
 		uploader?: string;
+		/** 视频作者昵称 */
+		uploaderNickname?: string;
 		/** 创作者 UID */
 		uploaderId?: number;
 		/** 视频时长，单位 ms */
@@ -108,7 +110,7 @@ type UploaderInfoDto = {
 	/** 用户 ID */
 	uid: number;
 	/** 用户名 */
-	username?: string;
+	username: string;
 	/** 用户昵称 */
 	userNickname?: string;
 	/** 用户头像的链接 */
@@ -117,7 +119,16 @@ type UploaderInfoDto = {
 	userBannerImage?: string;
 	/** 用户的个性签名 */
 	signature?: string;
+	/** 是否正在关注该上传者 */
+	isFollowing: boolean;
+	/** 上传者是否是自己 */
+	isSelf: boolean;
 }
+
+/**
+ * 用户被屏蔽的状态
+ */
+type BlockState = { isBlockedByOther: boolean, isBlocked: boolean; isHidden: boolean }
 
 /**
  * 视频页面需要的响应
@@ -160,7 +171,7 @@ export type GetVideoByKvidResponseDto = {
 		/** 视频 TAG */
 		videoTagList: VideoTag[];
 	};
-}
+} & BlockState
 
 /**
  * 根据视频 ID (KVID) 检查视频是否存在的请求参数
@@ -193,7 +204,7 @@ export type GetVideoByUidRequestDto = {
 /**
  * 从 UID 获取视频的请求的响应结果
  */
-export type GetVideoByUidResponseDto = ThumbVideoResponseDto & {}
+export type GetVideoByUidResponseDto = ThumbVideoResponseDto & BlockState
 
 /**
  * 根据关键字搜索视频的请求参数

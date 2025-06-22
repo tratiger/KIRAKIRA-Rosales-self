@@ -47,6 +47,8 @@ import { approvePendingReviewVideoController, checkVideoExistController, deleteV
 import { createVideoTagController, getVideoTagByTagIdController, searchVideoTagController } from '../controller/VideoTagController.js'
 import { adminGetUserRolesByUidController, adminUpdateUserRoleController, createRbacApiPathController, createRbacRoleController, deleteRbacApiPathController, deleteRbacRoleController, getRbacApiPathController, getRbacRoleController, updateApiPathPermissionsForRoleController } from '../controller/RbacController.js'
 import { getStgEnvBackEndSecretController } from '../controller/ConsoleSecretController.js'
+import { addNewUid2FeedGroupController, administratorApproveFeedGroupInfoChangeController, administratorDeleteFeedGroupController, createFeedGroupController, createOrEditFeedGroupInfoController, deleteFeedGroupController, followingUploaderController, getFeedContentController, getFeedGroupCoverUploadSignedUrlController, getFeedGroupListController, removeUidFromFeedGroupController, unfollowingUploaderController } from '../controller/FeedController.js'
+import { addRegexController, blockKeywordController, blockTagController, blockUserByUidController, getBlockListController, hideUserByUidController, removeRegexController, showUserByUidController, unblockKeywordController, unblockTagController, unblockUserByUidController } from '../controller/BlockController.js'
 
 const router = new Router()
 
@@ -190,6 +192,7 @@ router.post('/user/self', getSelfUserInfoController) // 获取当前登录的用
 
 router.get('/user/info', getUserInfoByUidController) // 根据 uid 获取用户信息
 // https://localhost:9999/user/info?uid=10
+// optional: cookie: uuid, token
 
 router.get('/user/exists', userExistsCheckByUIDController) // 检查用户是否存在
 // https://localhost:9999/user/exists?uid=10
@@ -307,6 +310,87 @@ router.post('/user/adminClearUserInfo', adminClearUserInfoController) // 管理�
 // {
 // 	"uid": XXXX
 // }
+
+
+
+
+
+
+router.post('/block/user', blockUserByUidController) // 用户屏蔽用户
+// https://localhost:9999/block/user
+// cookie: UUID, token
+// {
+// 	"blockUid": XXXX
+// }
+
+router.post('/block/hideuser', hideUserByUidController) // 用户隐藏用户
+// https://localhost:9999/block/hideuser
+// cookie: UUID, token
+// {
+//	"hideUid": XXXX
+// }
+
+router.post('/block/tag', blockTagController) // 用户屏蔽标签
+// https://localhost:9999/block/tag
+// cookie: UUID, token
+// {
+//	"tagId": XXXX
+// }
+
+router.post('/block/keyword', blockKeywordController) // 用户屏蔽关键词
+// https://localhost:9999/block/keyword
+// cookie: UUID, token
+// {
+// 	"blockKeyword": "XXXXXX"
+// }
+
+router.post('/block/regex', addRegexController) // 用户添加正则表达式
+// https://localhost:9999/block/regex
+// cookie: UUID, token
+// {
+//	"blockRegex": "XXXXXX"
+// }
+
+router.delete('/block/delete/user', unblockUserByUidController) // 用户解封用户
+// https://localhost:9999/block/delete/user
+// cookie: UUID, token
+// {
+//	"blockUid": XXXX
+// }
+
+router.delete('/block/delete/hideuser', showUserByUidController) // 用户取消隐藏用户
+// https://localhost:9999/block/delete/hideuser
+// {
+//	"hideUid": XXXX
+// }
+
+router.delete('/block/delete/tag', unblockTagController) // 用户解封标签
+// https://localhost:9999/block/delete/tag
+// cookie: UUID, token
+// {
+//	"blockTag": XXXX
+// }
+
+router.delete('/block/delete/keyword', unblockKeywordController) // 用户解封关键词
+// https://localhost:9999/block/delete/keyword
+// cookie: UUID, token
+// {
+//	"blockKeyword": "XXXXXX"
+// }
+
+router.delete('/block/delete/regex', removeRegexController) // 用户解封正则表达式
+// https://localhost:9999/block/delete/regex
+// cookie: UUID, token
+// {
+//	"blockRegex": "XXXXXX"
+// }
+
+router.get('/block/list', getBlockListController) // 获取用户的黑名单列表
+// https://localhost:9999/block/list?type=block&page=0&pageSize=10
+// cookie: UUID, token
+
+
+
 
 
 
@@ -512,6 +596,11 @@ router.post('/video/tag/get', getVideoTagByTagIdController) // 根据 TAG ID 在
 
 
 
+
+
+
+
+
 router.post('/history/merge', createOrUpdateUserBrowsingHistoryController) // 更新或创建用户浏览历史 // DELETE: 该接口没必要暴露
 // https://localhost:9999/history/merge
 // cookie: uid, token
@@ -528,6 +617,12 @@ router.get('/history/filter', getUserBrowsingHistoryWithFilterController) // 获
 
 
 
+
+
+
+
+
+
 router.post('/favorites/create', createFavoritesController) // 创建收藏夹
 // https://localhost:9999/favorites/create
 // cookie: uid, token
@@ -541,6 +636,103 @@ router.post('/favorites/create', createFavoritesController) // 创建收藏夹
 router.get('/favorites', getFavoritesController) // 获取当前登录用户的收藏夹列表
 // https://localhost:9999/favorites
 // cookie: uid, token
+
+
+
+
+
+
+
+
+
+
+
+router.post('/feed/following', followingUploaderController) // 关注一个用户
+// https://localhost:9999/feed/following
+// cookie: uuid, token
+// {
+// 	"followingUid": 999
+// }
+
+router.post('/feed/unfollowing', unfollowingUploaderController) // 取消关注一个用户
+// https://localhost:9999/feed/unfollowing
+// cookie: uuid, token
+// {
+// 	"unfollowingUid": 999
+// }
+
+router.post('/feed/createFeedGroup', createFeedGroupController) // 创建动态分组
+// https://localhost:9999/feed/createFeedGroup
+// cookie: uuid, token
+// {
+// 	"feedGroupName": "test",
+// 	"withUidList": [1, 2],
+// 	"withCustomCoverUrl": "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+// }
+
+router.post('/feed/addNewUid2FeedGroup', addNewUid2FeedGroupController) // 向一个动态分组中添加新的 UID
+// https://localhost:9999/feed/addNewUid2FeedGroup
+// cookie: uuid, token
+// {
+// 	"feedGroupUuid": "xxxxxxxxxxxxxxxxxxxxx",
+// 	"uidList": [1, 2]
+// }
+
+router.post('/feed/removeUidFromFeedGroup', removeUidFromFeedGroupController) // 从一个动态分组中移除 UID
+// https://localhost:9999/feed/removeUidFromFeedGroup
+// cookie: uuid, token
+// {
+// 	"feedGroupUuid": "xxxxxxxxxxxxxxxxxxxxx",
+// 	"uidList": [1, 2]
+// }
+
+router.delete('/feed/deleteFeedGroup', deleteFeedGroupController) // 删除动态分组
+// https://localhost:9999/feed/deleteFeedGroup
+// cookie: uuid, token
+// {
+// 	"feedGroupUuid": "xxxxxxxxxxxxxxxxxxxxx"
+// }
+
+router.get('/feed/getFeedGroupCoverUploadSignedUrl', getFeedGroupCoverUploadSignedUrlController) // 获取用于用户上传头像的预签名 URL, 上传限时 60 秒
+// https://localhost:9999/feed/getFeedGroupCoverUploadSignedUrl
+// cookie: uuid, token
+
+router.post('/feed/createOrEditFeedGroupInfo', createOrEditFeedGroupInfoController) // 创建或更新动态分组信息
+// https://localhost:9999/feed/createOrEditFeedGroupInfo
+// cookie: uuid, token
+// {
+// 	"feedGroupUuid": "xxxxxxxxxxxxxxxxxxxxx",
+// 	"feedGroupName": "xxxxx",
+// 	"feedGroupCustomCoverUrl": "xxxxxxxxxxxxxxxxxxxxxxxxxxx",
+// }
+
+router.post('/feed/administratorApproveFeedGroupInfoChange', administratorApproveFeedGroupInfoChangeController) // 管理员通过动态分组信息更新审核
+// https://localhost:9999/feed/administratorApproveFeedGroupInfoChange
+// cookie: uuid, token
+// {
+// 	"feedGroupUuid": "xxxxxxxxxxxxxxxxxxxxx"
+// }
+
+router.delete('/feed/administratorDeleteFeedGroup', administratorDeleteFeedGroupController) // 管理员删除动态分组
+// https://localhost:9999/feed/administratorDeleteFeedGroup
+// cookie: uuid, token
+// {
+// 	"feedGroupUuid": "xxxxxxxxxxxxxxxxxxxxx"
+// }
+
+router.get('/feed/getFeedGroupList', getFeedGroupListController) // 获取动态分组
+// https://localhost:9999/feed/getFeedGroupList
+// cookie: uuid, token
+
+
+router.get('/feed/getFeedContent', getFeedContentController) // 获取动态分组
+// https://localhost:9999/feed/getFeedContent?page=1&pageSize=30
+// cookie: uuid, token
+// {
+// 	"feedGroupUuid": "xxxxxxxxxxxxxxxxxxxxx"
+// }
+
+
 
 
 
@@ -666,6 +858,19 @@ router.get('/secret/getStgEnvBackEndSecret', getStgEnvBackEndSecretController) /
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 // router.post('/02/koa/user/settings/userSettings/save', saveUserSettingsByUUID)
 // // http://localhost:9999/02/koa/user/settings/userSettings/save
 // //
@@ -691,14 +896,6 @@ router.get('/secret/getStgEnvBackEndSecret', getStgEnvBackEndSecretController) /
 // router.get('/02/koa/user/settings/userSettings/get', getUserSettingsByUUID)
 // // http://localhost:9999/02/koa/user/settings/userSettings/get?uuid=u00001
 
-
-
-// router.post('/02/koa/user/register', userRegistrationController)
-// // http://localhost:9999/02/koa/user/register
-// // {
-// // 	"userName": "u00001",
-// // 	"passwordHash": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-// // }
 
 
 
