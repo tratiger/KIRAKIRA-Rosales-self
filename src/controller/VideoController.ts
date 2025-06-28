@@ -48,7 +48,9 @@ export const updateVideoController = async (ctx: koaCtx, next: koaNext) => {
  * @returns 获取首页要显示的视频
  */
 export const getThumbVideoController = async (ctx: koaCtx, next: koaNext) => {
-	const getThumbVideoResponse = await getThumbVideoService()
+	const uuid = ctx.cookies.get('uuid')
+	const token = ctx.cookies.get('token')
+	const getThumbVideoResponse = await getThumbVideoService(uuid, token)
 	ctx.body = getThumbVideoResponse
 	await next()
 }
@@ -76,13 +78,13 @@ export const checkVideoExistController = async (ctx: koaCtx, next: koaNext) => {
  * @returns 获取视频信息
  */
 export const getVideoByKvidController = async (ctx: koaCtx, next: koaNext) => {
-	const uid = parseInt(ctx.cookies.get('uid'), 10)
+	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
 	const videoId = ctx.query.videoId as string
 	const uploadVideoRequest: GetVideoByKvidRequestDto = {
 		videoId: videoId ? parseInt(videoId, 10) : -1, // WARN -1 means you can't find any video
 	}
-	const getVideoByKvidResponse = await getVideoByKvidService(uploadVideoRequest, uid, token)
+	const getVideoByKvidResponse = await getVideoByKvidService(uploadVideoRequest, uuid, token)
 	ctx.body = getVideoByKvidResponse
 	await next()
 }
@@ -94,11 +96,13 @@ export const getVideoByKvidController = async (ctx: koaCtx, next: koaNext) => {
  * @returns 获取到的视频信息
  */
 export const getVideoByUidController = async (ctx: koaCtx, next: koaNext) => {
+	const uuid = ctx.cookies.get('uuid')
+	const token = ctx.cookies.get('token')
 	const uid = ctx.query.uid as string
 	const getVideoByUidRequest: GetVideoByUidRequestDto = {
 		uid: uid ? parseInt(uid, 10) : -1, // WARN -1 means you can't find any video
 	}
-	const getVideoByKvidResponse = await getVideoByUidRequestService(getVideoByUidRequest)
+	const getVideoByKvidResponse = await getVideoByUidRequestService(getVideoByUidRequest, uuid, token)
 	ctx.body = getVideoByKvidResponse
 	await next()
 }

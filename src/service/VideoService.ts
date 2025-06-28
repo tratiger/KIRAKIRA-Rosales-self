@@ -1,12 +1,12 @@
 import { Client } from '@elastic/elasticsearch'
 import axios from 'axios'
-import mongoose, { InferSchemaType } from 'mongoose'
+import mongoose, { InferSchemaType, PipelineStage } from 'mongoose'
 import { createCloudflareImageUploadSignedUrl } from '../cloudflare/index.js'
 import { isEmptyObject } from '../common/ObjectTool.js'
 import { generateSecureRandomString } from '../common/RandomTool.js'
 import { CreateOrUpdateBrowsingHistoryRequestDto } from '../controller/BrowsingHistoryControllerDto.js'
 import { ApprovePendingReviewVideoRequestDto, ApprovePendingReviewVideoResponseDto, CheckVideoExistRequestDto, CheckVideoExistResponseDto, DeleteVideoRequestDto, DeleteVideoResponseDto, GetVideoByKvidRequestDto, GetVideoByKvidResponseDto, GetVideoByUidRequestDto, GetVideoByUidResponseDto, GetVideoCoverUploadSignedUrlResponseDto, GetVideoFileTusEndpointRequestDto, PendingReviewVideoResponseDto, SearchVideoByKeywordRequestDto, SearchVideoByKeywordResponseDto, SearchVideoByVideoTagIdRequestDto, SearchVideoByVideoTagIdResponseDto, ThumbVideoResponseDto, UploadVideoRequestDto, UploadVideoResponseDto, VideoPartDto } from '../controller/VideoControllerDto.js'
-import { DbPoolOptions, deleteDataFromMongoDB, findOneAndUpdateData4MongoDB, insertData2MongoDB, selectDataFromMongoDB } from '../dbPool/DbClusterPool.js'
+import { DbPoolOptions, deleteDataFromMongoDB, findOneAndUpdateData4MongoDB, insertData2MongoDB, selectDataByAggregateFromMongoDB, selectDataFromMongoDB } from '../dbPool/DbClusterPool.js'
 import { OrderByType, QueryType, SelectType, UpdateType } from '../dbPool/DbClusterPoolTypes.js'
 import { UserInfoSchema } from '../dbPool/schema/UserSchema.js'
 import { RemovedVideoSchema, VideoSchema } from '../dbPool/schema/VideoSchema.js'
@@ -15,7 +15,9 @@ import { EsSchema2TsType } from '../elasticsearchPool/ElasticsearchClusterPoolTy
 import { VideoDocument } from '../elasticsearchPool/template/VideoDocument.js'
 import { createOrUpdateBrowsingHistoryService } from './BrowsingHistoryService.js'
 import { getNextSequenceValueEjectService } from './SequenceValueService.js'
-import { checkUserTokenService, getUserUuid } from './UserService.js'
+import { checkUserTokenByUuidService, checkUserTokenService, getUserUuid } from './UserService.js'
+import { FollowingSchema } from '../dbPool/schema/FeedSchema.js'
+import { buildBlockListMongooseFilter, checkBlockUserService, checkIsBlockedByOtherUserService } from './BlockService.js'
 
 /**
  * 上传视频
@@ -139,72 +141,89 @@ export const updateVideoService = async (uploadVideoRequest: UploadVideoRequestD
 }
 
 /**
- * 获取主页视频 // TODO 应该使用推荐算法，而不是获取全部视频
+ * 获取主页视频 // TODO 应该使用推荐算法，而不是获取最后上传的 100 个视频
  * @returns 获取主页视频的请求响应
  */
-export const getThumbVideoService = async (): Promise<ThumbVideoResponseDto> => {
+export const getThumbVideoService = async (uuid?: string, token?: string): Promise<ThumbVideoResponseDto> => {
 	try {
-		const { collectionName: videoCollectionName, schemaInstance: videoSchemaInstance } = VideoSchema
-		const { collectionName: userInfoCollectionName, schemaInstance: userInfoSchemaInstance } = UserInfoSchema
-		type Video = InferSchemaType<typeof videoSchemaInstance>
-		type UserInfo = InferSchemaType<typeof userInfoSchemaInstance>
-		const where: QueryType<Video> = {}
-		const select: SelectType<Video> = {
-			videoId: 1,
-			title: 1,
-			image: 1,
-			uploadDate: 1,
-			watchedCount: 1,
-			uploaderId: 1,
-			duration: 1,
-			description: 1,
-			editDateTime: 1,
-		}
-		const orderBy: OrderByType<Video> = {
-			editDateTime: -1,
-		}
-		const uploaderInfoKey = 'uploaderInfo'
-		const option: DbPoolOptions<Video, UserInfo> = {
-			virtual: {
-				name: uploaderInfoKey, // 虚拟属性名
-				options: {
-					ref: userInfoCollectionName, // 关联的子模型
-					localField: 'uploaderId', // 父模型中用于关联的字段
-					foreignField: 'uid', // 子模型中用于关联的字段
-					justOne: true, // 如果为 true 则只一条数据关联一个文档（即使有很多符合条件的）
+		const blockListFilter = await buildBlockListMongooseFilter(
+			[
+				{
+					attr: 'uploaderUUID',
+					category: 'block-uuid',
+				},
+				{
+					attr: 'uploaderUUID',
+					category: 'hide-uuid',
+				},
+				{
+					attr: 'videoTagList.tagId',
+					category: 'tag-id',
+				},
+				{
+					attr: 'title',
+					category: 'keyword',
+				},
+				{
+					attr: 'title',
+					category: 'regex',
+				},
+			],
+			uuid,
+			token
+		)
+
+		const getThumbVideoPipeline: PipelineStage[] = [
+			{
+				$lookup: {
+					from: 'user-infos',
+					localField: 'uploaderUUID',
+					foreignField: 'UUID',
+					as: 'uploader_info',
 				},
 			},
-			populate: uploaderInfoKey,
-		}
-		try {
-			const result = await selectDataFromMongoDB<Video, UserInfo>(where, select, videoSchemaInstance, videoCollectionName, option, orderBy)
-			const videoResult = result.result
-			if (result.success && videoResult) {
-				const videosCount = videoResult?.length
-				if (videosCount && videosCount > 0) {
-					return {
-						success: true,
-						message: '获取首页视频成功',
-						videosCount,
-						videos: videoResult.map(video => {
-							if (video) {
-								const uploaderInfo = uploaderInfoKey in video && video?.[uploaderInfoKey] as UserInfo
-								if (uploaderInfo) {
-									const uploader = uploaderInfo.userNickname ?? uploaderInfo.username
-									return { ...video, uploader }
-								}
-							}
-							return { ...video, uploader: undefined }
-						}),
-					}
-				} else {
-					console.error('ERROR', '获取到的视频数组长度小于等于 0')
-					return { success: false, message: '获取首页视频时出现异常，视频数量为 0', videosCount: 0, videos: [] }
+			...blockListFilter.filter,
+			{ $skip: 0 }, // 跳过指定数量的文档 // TODO: 目前的值是占位符
+			{ $limit: 100 }, // 限制返回的文档数量 // TODO: 目前的值是占位符
+			{
+				$unwind: '$uploader_info',
+			},
+			{
+				$sort: {
+					uploadDate: -1, // 按 uploadDate 降序排序
+				},
+			},
+			{
+				$project: {
+					videoId: 1,
+					title: 1,
+					image: 1,
+					uploadDate: 1,
+					watchedCount: 1,
+					uploaderId: 1, // 上传者 UID
+					duration: 1,
+					description: 1,
+					editDateTime: 1,
+					uploader: '$uploader_info.username', // 上传者的名字
+					uploaderNickname: '$uploader_info.userNickname', // 上传者的昵称
 				}
-			} else {
-				console.error('ERROR', '获取到的视频结果或视频数组为空')
-				return { success: false, message: '获取首页视频时出现异常，未获取到视频', videosCount: 0, videos: [] }
 			}
+		]
+
+		try {
+			const { collectionName: videoCollectionName, schemaInstance: videoSchemaInstance } = VideoSchema
+			type ThumbVideo = InferSchemaType<typeof videoSchemaInstance>
+
+			const result = await selectDataByAggregateFromMongoDB<ThumbVideo>(videoSchemaInstance, videoCollectionName, getThumbVideoPipeline)
+			const videoResult = result.result
+
+			if (!result.success || !videoResult) {
+				console.error('ERROR', '获取到的视频数组长度小于等于 0')
+				return { success: false, message: '获取首页视频时出现异常，视频数量为 0', videosCount: 0, videos: [] }
+			}
+
+			const videosCount = videoResult.length
+			return { success: true, message: '获取首页视频成功', videosCount, videos: videoResult }
 		} catch (error) {
 			console.error('ERROR', '获取首页视频时出现异常，查询失败：', error)
 			return { success: false, message: '获取首页视频时出现异常', videosCount: 0, videos: [] }
@@ -265,101 +284,153 @@ export const checkVideoExistByKvidService = async (checkVideoExistRequestDto: Ch
  * @param uploadVideoRequest 根据 kvid 获取视频的请求携带的请求载荷
  * @returns 视频数据
  */
-export const getVideoByKvidService = async (getVideoByKvidRequest: GetVideoByKvidRequestDto, uid?: number, token?: string): Promise<GetVideoByKvidResponseDto> => {
+export const getVideoByKvidService = async (getVideoByKvidRequest: GetVideoByKvidRequestDto, selectorUuid?: string, selectorToken?: string): Promise<GetVideoByKvidResponseDto> => {
 	try {
-		if (checkGetVideoByKvidRequest(getVideoByKvidRequest)) {
-			const { collectionName: videoCollectionName, schemaInstance: videoSchemaInstance } = VideoSchema
-			const { collectionName: userInfoCollectionName, schemaInstance: userInfoSchemaInstance } = UserInfoSchema
-			type Video = InferSchemaType<typeof videoSchemaInstance>
-			type UserInfo = InferSchemaType<typeof userInfoSchemaInstance>
-			const where: QueryType<Video> = {
-				videoId: getVideoByKvidRequest.videoId,
-			}
-			const select: SelectType<Video> = {
-				videoId: 1,
-				videoPart: 1,
-				title: 1,
-				image: 1,
-				uploadDate: 1,
-				watchedCount: 1,
-				uploaderUUID: 1,
-				uploaderId: 1,
-				duration: 1,
-				description: 1,
-				editDateTime: 1,
-				videoCategory: 1,
-				copyright: 1,
-				videoTagList: 1,
-				ensureOriginal: 1,
-				pushToFeed: 1,
-			}
-			const uploaderInfoKey = 'uploaderInfo'
-			const option: DbPoolOptions<Video, UserInfo> = {
-				virtual: {
-					name: uploaderInfoKey, // 虚拟属性名
-					options: {
-						ref: userInfoCollectionName, // 关联的子模型，注意结尾要加s
-						localField: 'uploaderId', // 父模型中用于关联的字段
-						foreignField: 'uid', // 子模型中用于关联的字段
-						justOne: true, // 如果为 true 则只一条数据关联一个文档（即使有很多符合条件的）
-					},
-				},
-				populate: uploaderInfoKey,
-			}
-			try {
-				const result = await selectDataFromMongoDB<Video, UserInfo>(where, select, videoSchemaInstance, videoCollectionName, option)
-				const videoResult = result.result
-				if (result.success && videoResult) {
-					const videosCount = result.result?.length
-					if (videosCount === 1) {
-						const video = videoResult?.[0] as GetVideoByKvidResponseDto['video']
-						if (video && video.uploaderId) {
-							if (uid !== null && uid !== undefined && token) { // if have uid and token, record the browsing history.
-								const createOrUpdateBrowsingHistoryRequest: CreateOrUpdateBrowsingHistoryRequestDto = {
-									uid,
-									category: 'video',
-									id: `${video.videoId}`,
-								}
-								await createOrUpdateBrowsingHistoryService(createOrUpdateBrowsingHistoryRequest, uid, token)
-							}
-							const uploaderInfo = uploaderInfoKey in video && video?.[uploaderInfoKey] as UserInfo
-							if (uploaderInfo) { // 如果获取到的话，就将视频上传者信息附加到请求响应中
-								const uid = uploaderInfo.uid
-								const username = uploaderInfo.username
-								const userNickname = uploaderInfo.userNickname
-								const avatar = uploaderInfo.avatar
-								const userBannerImage = uploaderInfo.userBannerImage
-								const signature = uploaderInfo.signature
-								video.uploaderInfo = { uid, username, userNickname, avatar, userBannerImage, signature }
-							}
-							return {
-								success: true,
-								message: '视频页 - 获取视频成功',
-								video,
-							}
-						} else {
-							console.error('ERROR', '视频页 - 获取到的视频为空', { result, getVideoByKvidRequest, where, select })
-							return { success: false, message: '视频页 - 获取到的视频数据为空' }
-						}
-					} else {
-						console.error('ERROR', '视频页 - 获取到的视频数组长度不等于 1')
-						return { success: false, message: '视频页 - 获取到的视频数量不为 1' }
-					}
-				} else {
-					console.error('ERROR', '视频页 - 获取到的视频结果或视频数组为空')
-					return { success: false, message: '视频页 - 未获取到视频' }
-				}
-			} catch (error) {
-				console.error('ERROR', '视频页 - 视频查询失败：', error)
-				return { success: false, message: '视频页 - 视频查询失败' }
-			}
-		} else {
+		const { videoId } = getVideoByKvidRequest
+		const { collectionName: videoCollectionName, schemaInstance: videoSchemaInstance } = VideoSchema
+
+		let isHidden = false
+
+		// 判断请求参数是否合法
+		if (!checkGetVideoByKvidRequest(getVideoByKvidRequest)) {
 			console.error('ERROR', '视频页 - KVID 为空')
-			return { success: false, message: '视频页 - 必要的请求参数为空' }
+			return { success: false, message: '视频页 - 必要的请求参数为空', isBlocked: false, isBlockedByOther: false, isHidden }
+		}
+
+		// 构建视频查询 Pipeline
+		const getThumbVideoPipeline: PipelineStage[] = [
+			{
+				$match: {
+					videoId, // 通过 videoId 过滤视频
+				},
+			},
+			{
+				$limit: 1, // 如果意外获取多条视频，只获取第一条
+			},
+			{
+				$lookup: { // 关联用户信息表，获取上传者信息
+					from: 'user-infos',
+					localField: 'uploaderUUID',
+					foreignField: 'UUID',
+					as: 'uploader_info',
+				},
+			},
+			{
+				$unwind: '$uploader_info', // 平铺上传者信息
+			},
+			{
+				$project: {
+					videoId: 1,
+					videoPart: 1,
+					title: 1,
+					image: 1,
+					uploadDate: 1,
+					watchedCount: 1,
+					uploaderUUID: 1,
+					uploaderId: 1,
+					duration: 1,
+					description: 1,
+					editDateTime: 1,
+					videoCategory: 1,
+					copyright: 1,
+					videoTagList: 1,
+					ensureOriginal: 1,
+					pushToFeed: 1,
+					uploaderInfo: {
+						uid: '$uploader_info.uid',
+						username: '$uploader_info.username',
+						userNickname: '$uploader_info.userNickname',
+						avatar: '$uploader_info.avatar',
+						userBannerImage: '$uploader_info.userBannerImage',
+						signature: '$uploader_info.signature',
+					}
+				}
+			}
+		]
+
+		try {
+			// 使用 Pipeline 查询视频及上传者数据
+			const result = await selectDataByAggregateFromMongoDB(videoSchemaInstance, videoCollectionName, getThumbVideoPipeline)
+			const video = result.result?.[0] as GetVideoByKvidResponseDto['video']
+			if (!result.success || !video) {
+				console.error('ERROR', '视频页 - 获取到的视频结果或视频数组为空')
+				return { success: false, message: '视频页 - 未获取到视频', isBlocked: false, isBlockedByOther: false, isHidden }
+			}
+
+			video.uploaderInfo.isFollowing = false // 默认没有关注上传者
+			video.uploaderInfo.isSelf = false // 默认上传者不是自己
+
+			if ((await checkUserTokenByUuidService(selectorUuid, selectorToken)).success) { // 如果用户已登录
+				const checkBlockUserResult = await checkBlockUserService({ uid: video.uploaderInfo.uid }, selectorUuid, selectorToken)
+				const checkIsBlockedByOtherUserResult = await checkIsBlockedByOtherUserService({ targetUid: video.uploaderInfo.uid }, selectorUuid, selectorToken)
+
+				// 1. 检查上传者是否已经被当前用户隐藏
+				if (checkBlockUserResult.isHidden) {
+					isHidden = true
+				}
+
+				// 2. 检查当前用户是否与上传者双向屏蔽
+				if (checkBlockUserResult.isBlocked && checkIsBlockedByOtherUserResult.isBlocked) {
+					return { success: true, message: '视频页 - 未获取到视频，你与该用户已双向屏蔽', isBlockedByOther: true, isBlocked: true, isHidden }
+				}
+
+				// 3. 检查上传者是否已经被当前用户屏蔽
+				if (checkBlockUserResult.isBlocked) {
+					return { success: true, message: '视频页 - 未获取到视频，你已屏蔽该用户', isBlockedByOther: false, isBlocked: true, isHidden }
+				}
+
+				// 4. 检查当前用户是否已经被上传者屏蔽
+				if (checkIsBlockedByOtherUserResult.isBlocked) {
+					return { success: true, message: '视频页 - 未获取到视频，你已被该用户屏蔽', isBlockedByOther: true, isBlocked: false, isHidden }
+				}
+
+				// 5. 存储浏览历史记录
+				const createOrUpdateBrowsingHistoryRequest: CreateOrUpdateBrowsingHistoryRequestDto = {
+					uuid: selectorUuid,
+					category: 'video',
+					id: String(video.videoId),
+				}
+				await createOrUpdateBrowsingHistoryService(createOrUpdateBrowsingHistoryRequest, selectorUuid, selectorToken)
+
+				// 6. 查询上传者是否被当前登录用户关注
+				const { collectionName: followingSchemaCollectionName, schemaInstance: followingSchemaInstance } = FollowingSchema
+				type Following = InferSchemaType<typeof followingSchemaInstance>
+				const followingWhere: QueryType<Following> = {
+					followerUuid: selectorUuid,
+					followingUuid: video.uploaderUUID,
+				}
+				const followingSelect: SelectType<Following> = {
+					followerUuid: 1,
+					followingUuid: 1,
+					followingType: 1,
+				}
+				const selectFollowingDataResult = await selectDataFromMongoDB<Following>(followingWhere, followingSelect, followingSchemaInstance, followingSchemaCollectionName)
+				const followingResult = selectFollowingDataResult?.result
+				if (selectFollowingDataResult.success && followingResult.length === 1) { // 如果能查询到结果，则代表正在关注
+					video.uploaderInfo.isFollowing = true
+				}
+
+				// 7. 如果上传者 uuid 和当前登录用户 uuid 相同，则是自己查看自己的视频
+				if (video.uploaderUUID === selectorUuid) {
+					video.uploaderInfo.isSelf = true
+				}
+			}
+
+			return {
+				success: true,
+				message: '视频页 - 获取视频成功',
+				video,
+				isBlocked: false,
+				isBlockedByOther: false,
+				isHidden,
+			}
+		} catch (error) {
+			console.error('ERROR', '视频页 - 视频查询失败：', error)
+			return { success: false, message: '视频页 - 视频查询失败', isBlocked: false, isBlockedByOther: false, isHidden }
 		}
 	} catch (error) {
 		console.error('ERROR', '获取视频失败：', error)
-		return { success: false, message: '获取视频失败：' }
+		return { success: false, message: '获取视频失败：', isBlocked: false, isBlockedByOther: false, isHidden: false }
 	}
 }
 
@@ -368,52 +439,82 @@ export const getVideoByKvidService = async (getVideoByKvidRequest: GetVideoByKvi
  * @param getVideoByUidRequest 根据 UID 获取该用户上传的视频的请求 UID
  * @returns 请求到的视频信息
  */
-export const getVideoByUidRequestService = async (getVideoByUidRequest: GetVideoByUidRequestDto): Promise<GetVideoByUidResponseDto> => {
+export const getVideoByUidRequestService = async (getVideoByUidRequest: GetVideoByUidRequestDto, selectorUuid?: string, selectorToken?: string): Promise<GetVideoByUidResponseDto> => {
 	try {
-		if (checkGetVideoByUidRequest(getVideoByUidRequest)) {
-			const { collectionName, schemaInstance } = VideoSchema
-			type Video = InferSchemaType<typeof schemaInstance>
-			const where: QueryType<Video> = {
-				uploaderId: getVideoByUidRequest.uid,
-			}
-			const select: SelectType<Video> = {
-				videoId: 1,
-				videoPart: 1,
-				title: 1,
-				image: 1,
-				uploadDate: 1,
-				watchedCount: 1,
-				uploaderId: 1,
-				duration: 1,
-				description: 1,
-				editDateTime: 1,
+		let isHidden = false
+
+		if (!checkGetVideoByUidRequest(getVideoByUidRequest)) {
+			console.error('ERROR', '根据 UID 获取视频失败，请求的 UID 为空：')
+			return { success: false, message: '根据 UID 获取视频失败，请求的 UID 为空', videosCount: 0, videos: [], isBlockedByOther: false, isBlocked: false, isHidden }
+		}
+
+		const { uid } = getVideoByUidRequest
+
+		if (selectorUuid && selectorToken && (await checkUserTokenByUuidService(selectorUuid, selectorToken)).success) {
+			const checkBlockUserResult = await checkBlockUserService({ uid }, selectorUuid, selectorToken)
+			const checkIsBlockedByOtherUserResult = await checkIsBlockedByOtherUserService({ targetUid: uid }, selectorUuid, selectorToken)
+
+			// 1. 检查上传者是否已经被当前用户隐藏
+			if (checkBlockUserResult.isHidden) {
+				isHidden = true
 			}
 
-			try {
-				const result = await selectDataFromMongoDB<Video>(where, select, schemaInstance, collectionName)
-				const videoResult = result.result
-				if (result.success && videoResult) {
-					const videoResultLength = videoResult?.length
-					if (videoResultLength > 0) {
-						return { success: true, message: '根据 UID 获取视频成功', videosCount: videoResultLength, videos: videoResult }
-					} else {
-						return { success: false, message: '该用户似乎未上传过视频', videosCount: 0, videos: [] }
-					}
-				} else {
-					console.error('ERROR', '根据 UID 获取视频失败，获取的结果失败或为空')
-					return { success: false, message: '根据 UID 获取视频失败，获取的结果失败或为空', videosCount: 0, videos: [] }
-				}
-			} catch (error) {
-				console.error('ERROR', '根据 UID 获取视频失败，检索视频出错：', error)
-				return { success: false, message: '根据 UID 获取视频失败，检索视频出错', videosCount: 0, videos: [] }
+			// 2. 检查当前用户是否与上传者双向屏蔽
+			if (checkBlockUserResult.isBlocked && checkIsBlockedByOtherUserResult.isBlocked) {
+				return { success: true, message: '根据 UID 获取视频失败，你与该用户已双向屏蔽', videosCount: 0, videos: [], isBlockedByOther: true, isBlocked: true, isHidden }
 			}
-		} else {
-			console.error('ERROR', '根据 UID 获取视频失败，请求的 UID 为空：')
-			return { success: false, message: '根据 UID 获取视频失败，请求的 UID 为空', videosCount: 0, videos: [] }
+
+			// 3. 检查上传者是否已经被当前用户屏蔽
+			if (checkBlockUserResult.isBlocked) {
+				return { success: true, message: '根据 UID 获取视频失败，你已屏蔽该用户', videosCount: 0, videos: [], isBlockedByOther: false, isBlocked: true, isHidden }
+			}
+
+			// 4. 检查当前用户是否已经被上传者屏蔽
+			if (checkIsBlockedByOtherUserResult.isBlocked) {
+				return { success: true, message: '根据 UID 获取视频失败，你已被该用户屏蔽', videosCount: 0, videos: [], isBlockedByOther: true, isBlocked: false, isHidden }
+			}
+		}
+
+		const { collectionName, schemaInstance } = VideoSchema
+		type Video = InferSchemaType<typeof schemaInstance>
+		const where: QueryType<Video> = {
+			uploaderId: uid,
+		}
+		const select: SelectType<Video> = {
+			videoId: 1,
+			videoPart: 1,
+			title: 1,
+			image: 1,
+			uploadDate: 1,
+			watchedCount: 1,
+			uploaderId: 1,
+			duration: 1,
+			description: 1,
+			editDateTime: 1,
+		}
+
+		try {
+			const result = await selectDataFromMongoDB<Video>(where, select, schemaInstance, collectionName)
+			const videoResult = result.result
+			if (!result.success || !videoResult) {
+				console.error('ERROR', '根据 UID 获取视频失败，获取的结果失败或为空')
+				return { success: false, message: '根据 UID 获取视频失败，获取的结果失败或为空', videosCount: 0, videos: [], isBlockedByOther: false, isBlocked: false, isHidden }
+			}
+
+			const videoResultLength = videoResult?.length
+
+			if (videoResultLength <= 0) {
+				return { success: true, message: '该用户似乎未上传过视频', videosCount: 0, videos: [], isBlockedByOther: false, isBlocked: false, isHidden }
+			}
+
+			return { success: true, message: '根据 UID 获取视频成功', videosCount: videoResultLength, videos: videoResult, isBlockedByOther: false, isBlocked: false, isHidden }
+		} catch (error) {
+			console.error('ERROR', '根据 UID 获取视频失败，检索视频出错：', error)
+			return { success: false, message: '根据 UID 获取视频失败，检索视频出错', videosCount: 0, videos: [], isBlockedByOther: false, isBlocked: false, isHidden }
 		}
 	} catch (error) {
 		console.error('ERROR', '根据 UID 获取视频失败，未知原因：', error)
-		return { success: false, message: '根据 UID 获取视频失败，未知原因', videosCount: 0, videos: [] }
+		return { success: false, message: '根据 UID 获取视频失败，未知原因', videosCount: 0, videos: [], isBlockedByOther: false, isBlocked: false, isHidden: false }
 	}
 }
 
@@ -896,7 +997,7 @@ export const approvePendingReviewVideoService = async (approvePendingReviewVideo
 			const updatePendingReviewVideoData: UpdateType<Video> = {
 				pendingReview: false,
 			}
-			const updatePendingReviewVideoResult = await findOneAndUpdateData4MongoDB(updatePendingReviewVideoWhere, updatePendingReviewVideoData, videoSchemaInstance, videoCollectionName)
+			const updatePendingReviewVideoResult = await findOneAndUpdateData4MongoDB<Video>(updatePendingReviewVideoWhere, updatePendingReviewVideoData, videoSchemaInstance, videoCollectionName)
 
 			if (!updatePendingReviewVideoResult.success) {
 				console.error('ERROR', '通过一个待审核视频失败，更新失败')

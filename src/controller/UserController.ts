@@ -362,7 +362,7 @@ export const updateOrCreateUserInfoController = async (ctx: koaCtx, next: koaNex
 		label: data?.label,
 		userBirthday: data?.userBirthday,
 		userProfileMarkdown: data?.userProfileMarkdown,
-		userLinkAccounts: data?.userLinkAccounts,
+		userLinkedAccounts: data?.userLinkedAccounts,
 		userWebsite: data?.userWebsite,
 	}
 	ctx.body = await updateOrCreateUserInfoService(updateOrCreateUserInfoRequest, uid, token)
@@ -407,6 +407,8 @@ export const getSelfUserInfoController = async (ctx: koaCtx, next: koaNext) => {
 
 /**
  * 获取用户信息
+ * 该接口还接受可选的 Cookie 中的 uuid 和 token 数据，一旦传递则可以在请求响应中获取发起请求者是否关注该用户。
+ *
  * @param ctx context
  * @param next context
  * @return GetUserInfoByUidResponseDto 通过 uid 获取到的用户信息，如果获取成功则 success: true，不成功则 success: false
@@ -416,7 +418,10 @@ export const getUserInfoByUidController = async (ctx: koaCtx, next: koaNext) => 
 	const getUserInfoByUidRequest: GetUserInfoByUidRequestDto = {
 		uid: uid ? parseInt(uid, 10) : -1, // WARN -1 代表这个 UID 是永远无法查找到结果
 	}
-	ctx.body = await getUserInfoByUidService(getUserInfoByUidRequest)
+	const uuid = ctx.cookies.get('uuid')
+	const token = ctx.cookies.get('token')
+	const result = await getUserInfoByUidService(getUserInfoByUidRequest, uuid, token)
+	ctx.body = result
 	await next()
 }
 

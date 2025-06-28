@@ -6,7 +6,7 @@ import { UserAuthSchema, UserInfoSchema } from "../dbPool/schema/UserSchema.js";
 import { RbacApiSchema, RbacRoleSchema } from "../dbPool/schema/RbacSchema.js";
 import { v4 as uuidV4 } from 'uuid'
 import { QueryType, SelectType, UpdateType } from "../dbPool/DbClusterPoolTypes.js";
-import { abortAndEndSession, commitSession, createAndStartSession } from "../common/MongoDBSessionTool.js";
+import { abortAndEndSession, commitAndEndSession, createAndStartSession } from "../common/MongoDBSessionTool.js";
 import { koaCtx } from "../type/koaTypes.js";
 import { clearUndefinedItemInObject, isEmptyObject } from "../common/ObjectTool.js";
 
@@ -225,7 +225,7 @@ export const deleteRbacApiPathService = async (deleteRbacApiPathRequest: DeleteR
 			return { success: false, isAssigned: false, message: '删除 RBAC API 路径失败，数据删除失败' }
 		}
 
-		await commitSession(session)
+		await commitAndEndSession(session)
 		return { success: true, isAssigned: false, message: '删除 RBAC API 路径成功' }
 	} catch (error) {
 		console.error('ERROR', '创建 RBAC API 路径时出错，未知错误：', error)
@@ -760,9 +760,6 @@ export const adminGetUserRolesByUidService = async (adminGetUserRolesByUidReques
 			roles: RbacRole[];
 		}>(userAuthSchemaInstance, userAuthCollectionName, adminGetUserRolesPipeline)
 		const adminGerUserRolesData = adminGerUserRolesResult.result?.[0]
-
-		console.log('uuuuuu', uid)
-		console.log('rrrrrrrr', adminGerUserRolesResult.result)
 
 		if (!adminGerUserRolesResult.success || !adminGerUserRolesData) {
 			console.error('ERROR', '通过 UID 获取一个用户的角色失败，查询数据失败')
