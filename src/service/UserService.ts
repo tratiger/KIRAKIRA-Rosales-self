@@ -1,4 +1,4 @@
-import mongoose, { InferSchemaType, PipelineStage, ClientSession } from 'mongoose'
+import mongoose, { InferSchemaType, PipelineStage, ClientSession, startSession } from 'mongoose'
 import { createCloudflareImageUploadSignedUrl } from '../cloudflare/index.js'
 import { isInvalidEmail, sendMail } from '../common/EmailTool.js'
 import { comparePasswordSync, hashPasswordSync } from '../common/HashTool.js'
@@ -75,6 +75,9 @@ import {
 	UserEmailExistsCheckResponseDto,
 	CheckUserExistsByUuidRequestDto,
 	CheckUserExistsByUuidResponseDto,
+	AdminEditUserInfoRequestDto,
+	AdminEditUserInfoResponseDto,
+	GetBlockedUserRequestDto
 } from '../controller/UserControllerDto.js'
 import { findOneAndUpdateData4MongoDB, insertData2MongoDB, selectDataFromMongoDB, updateData4MongoDB, selectDataByAggregateFromMongoDB, deleteDataFromMongoDB } from '../dbPool/DbClusterPool.js'
 import { DbPoolResultsType, QueryType, SelectType, UpdateType } from '../dbPool/DbClusterPoolTypes.js'
@@ -724,15 +727,15 @@ export const updateOrCreateUserInfoService = async (updateOrCreateUserInfoReques
 						uid: 1,
 						username: 1,
 					}
-					const verificationCodeResult = await selectDataFromMongoDB<UserInfo>(getUserInfoWhere, getUserInfoSelect, schemaInstance, collectionName)
+					const checkUsernameResult = await selectDataFromMongoDB<UserInfo>(getUserInfoWhere, getUserInfoSelect, schemaInstance, collectionName)
 
 					let isSafeUsername = false
-					if (verificationCodeResult.success) {
-						if (verificationCodeResult.result.length === 0) {
+					if (checkUsernameResult.success) {
+						if (checkUsernameResult.result.length === 0) {
 							isSafeUsername = true
 						}
-						if (verificationCodeResult.result.length === 1) {
-							if (verificationCodeResult.result[0].uid === uid) {
+						if (checkUsernameResult.result.length === 1) {
+							if (checkUsernameResult.result[0].uid === uid) {
 								isSafeUsername = true
 							}
 						}
@@ -744,6 +747,12 @@ export const updateOrCreateUserInfoService = async (updateOrCreateUserInfoReques
 					}
 				}
 
+				const editOperatorUUID = await getUserUuid(uid)
+				if (!editOperatorUUID) {
+					console.error('ERROR', '更新或创建用户信息失败，UUID 不存在', { updateOrCreateUserInfoRequest, uid })
+					return { success: false, message: '更新或创建用户信息失败，UUID 不存在' }
+				}
+
 				const updateUserInfoWhere: QueryType<UserInfo> = {
 					uid,
 				}
@@ -752,6 +761,7 @@ export const updateOrCreateUserInfoService = async (updateOrCreateUserInfoReques
 					label: updateOrCreateUserInfoRequest.label as UserInfo['label'], // TODO: Mongoose issue: #12420
 					userLinkedAccounts: updateOrCreateUserInfoRequest.userLinkedAccounts as UserInfo['userLinkedAccounts'], // TODO: Mongoose issue: #12420
 					isUpdatedAfterReview: true,
+					editOperatorUUID,
 					editDateTime: new Date().getTime(),
 				}
 				const updateResult = await findOneAndUpdateData4MongoDB(updateUserInfoWhere, updateUserInfoUpdate, schemaInstance, collectionName)
@@ -2489,15 +2499,23 @@ export const checkUserExistsByUuidService = async (checkUserExistsByUuidRequest:
  * 获取所有被封禁用户的信息
  * @param adminUid 管理员的 UID
  * @param adminToken 管理员的 Token
+ * @param GetBlockedUserRequest 获取被封禁用户的请求载荷
  * @returns 获取所有被封禁用户的信息的请求响应
  */
-export const getBlockedUserService = async (adminUid: number, adminToken: string): Promise<GetBlockedUserResponseDto> => {
+export const getBlockedUserService = async (adminUUid: string, adminToken: string, GetBlockedUserRequest: GetBlockedUserRequestDto): Promise<GetBlockedUserResponseDto> => {
 	try {
-		if (await checkUserToken(adminUid, adminToken)) {
+		if (await checkUserTokenByUUID(adminUUid, adminToken)) {
+			const { sortBy, sortOrder } = GetBlockedUserRequest
+			let pageSize = undefined
+			let skip = 0
+			if (GetBlockedUserRequest.pagination && GetBlockedUserRequest.pagination.page > 0 && GetBlockedUserRequest.pagination.pageSize > 0) {
+				skip = (GetBlockedUserRequest.pagination.page - 1) * GetBlockedUserRequest.pagination.pageSize
+				pageSize = GetBlockedUserRequest.pagination.pageSize
+			}
+
 			const { collectionName: userAuthCollectionName, schemaInstance: userAuthSchemaInstance } = UserAuthSchema
 
-			// TODO: 下方这个 Aggregate 只适用于被封禁用户的搜索
-			const blockedUserAggregateProps: PipelineStage[] = [
+			const blockedUserCountPipeline: PipelineStage[] = [
 				{
 					$match: {
 						roles: 'blocked',
@@ -2506,8 +2524,8 @@ export const getBlockedUserService = async (adminUid: number, adminToken: string
 				{
 					$lookup: {
 						from: 'user-infos', // WARN: 别忘了加复数
-						localField: 'uid',
-						foreignField: 'uid',
+						localField: 'UUID',
+						foreignField: 'UUID',
 						as: 'user_info_data',
 					},
 				},
@@ -2517,48 +2535,72 @@ export const getBlockedUserService = async (adminUid: number, adminToken: string
 						preserveNullAndEmptyArrays: true, // 保留空数组和null值
 					},
 				},
-				{
-					$project: {
-						uid: 1,
-						UUID: 1,
-						userCreateDateTime: 1, // 用户创建日期
-						roles: 1, // 用户的角色
-						username: '$user_info_data.username', // 用户名
-						userNickname: '$user_info_data.userNickname', // 用户昵称
-						avatar: '$user_info_data.avatar', // 用户头像
-						userBannerImage: '$user_info_data.userBannerImage', // 用户的背景图
-						signature: '$user_info_data.signature', // 用户的个性签名
-						gender: '$user_info_data.gender', // 用户的性别
-					},
-				},
 			]
 
+			const blockedUserPipeline: PipelineStage[] = [
+				{
+					$match: {
+						roles: 'blocked',
+					},
+				},
+				{
+					$lookup: {
+						from: 'user-infos', // WARN: 别忘了加复数
+						localField: 'UUID',
+						foreignField: 'UUID',
+						as: 'user_info_data',
+					},
+				},
+				{
+					$unwind: {
+						path: '$user_info_data',
+						preserveNullAndEmptyArrays: true, // 保留空数组和null值
+					},
+				},
+				{ $sort: { [`user_info_data.${sortBy}`]: sortOrder === 'descend' ? -1 : 1 } },
+				{ $skip: skip }, // 跳过指定数量的文档
+				{ $limit: pageSize }, // 限制返回的文档数量
+			]
+
+			const projectStep = {
+				$project: {
+					uid: 1,
+					UUID: 1,
+					userCreateDateTime: 1, // 用户创建日期
+					roles: 1, // 用户的角色
+					username: '$user_info_data.username', // 用户名
+					userNickname: '$user_info_data.userNickname', // 用户昵称
+					email: 1, // 用户邮箱
+					totalCount: 1, // 总文档数
+				},
+			}
+			blockedUserPipeline.push(projectStep)
+
+			const countStep = {
+				$count: 'totalCount', // 统计总文档数
+			}
+			blockedUserCountPipeline.push(countStep)
+
 			try {
-				const userResult = await selectDataByAggregateFromMongoDB(userAuthSchemaInstance, userAuthCollectionName, blockedUserAggregateProps)
-				if (userResult && userResult.success) {
-					const userInfo = userResult?.result
-					if (userInfo?.length > 0) {
-						return { success: true, message: '获取封禁用户信息成功',
-							result: userInfo,
-						}
-					} else {
-						return { success: true, message: '没有被封禁用户', result: [] }
-					}
-				} else {
-					console.error('ERROR', '获取所有被封禁用户的信息失败，获取到的结果为空')
-					return { success: false, message: '获取所有被封禁用户的信息失败，结果为空' }
+				const userCountResult = await selectDataByAggregateFromMongoDB(userAuthSchemaInstance, userAuthCollectionName, blockedUserCountPipeline)
+				const userResult = await selectDataByAggregateFromMongoDB(userAuthSchemaInstance, userAuthCollectionName, blockedUserPipeline)
+				if (!userResult.success) {
+					console.error('ERROR', '获取所有被封禁用户的信息失败，查询数据失败')
+					return { success: false, message: '获取所有被封禁用户的信息失败，查询数据失败', totalCount: 0 }
 				}
+
+				return { success: true, message: '获取所有被封禁用户的信息成功', result: userResult.result, totalCount: userCountResult.result?.[0]?.totalCount ?? 0 }
 			} catch (error) {
-				console.error('ERROR', '获取所有被封禁用户的信息失败，查询数据时出错：0', error)
-				return { success: false, message: '获取所有被封禁用户的信息失败，查询数据时出错' }
+				console.error('ERROR', '获取所有被封禁用户的信息失败，查询数据时出错：', error)
+				return { success: false, message: '获取所有被封禁用户的信息失败，查询数据时出错', totalCount: 0 }
 			}
 		} else {
 			console.error('ERROR', '获取所有被封禁用户的信息失败，用户校验失败')
-			return { success: false, message: '获取所有被封禁用户的信息失败，用户校验失败' }
+			return { success: false, message: '获取所有被封禁用户的信息失败，用户校验失败', totalCount: 0 }
 		}
 	} catch (error) {
 		console.error('ERROR', '获取所有被封禁用户的信息时出错，未知错误：', error)
-		return { success: false, message: '获取所有被封禁用户的信息时出错，未知错误' }
+		return { success: false, message: '获取所有被封禁用户的信息时出错，未知错误', totalCount: 0 }
 	}
 }
 
@@ -2580,7 +2622,7 @@ export const adminGetUserInfoService = async (adminGetUserInfoRequest: AdminGetU
 			console.error('ERROR', '管理员获取用户信息失败，用户校验未通过')
 			return { success: false, message: '管理员获取用户信息失败，用户校验未通过', totalCount: 0 }
 		}
-
+		const { sortBy, sortOrder } = adminGetUserInfoRequest
 		let pageSize = undefined
 		let skip = 0
 		if (adminGetUserInfoRequest.pagination && adminGetUserInfoRequest.pagination.page > 0 && adminGetUserInfoRequest.pagination.pageSize > 0) {
@@ -2621,7 +2663,7 @@ export const adminGetUserInfoService = async (adminGetUserInfoRequest: AdminGetU
 					preserveNullAndEmptyArrays: true, // 保留空数组和null值
 				},
 			},
-			{ $sort: { 'user_info_data.editDateTime': -1 } }, // 按最后编辑时间降序排序
+			{ $sort: { [`user_info_data.${sortBy}`]: sortOrder === 'descend' ? -1 : 1}},
 			{ $skip: skip }, // 跳过指定数量的文档
 			{ $limit: pageSize }, // 限制返回的文档数量
 		]
@@ -2636,18 +2678,33 @@ export const adminGetUserInfoService = async (adminGetUserInfoRequest: AdminGetU
 			adminGetUserInfoPipeline.push(userInfoFilter)
 		}
 
+		if (adminGetUserInfoRequest.uid !== undefined && adminGetUserInfoRequest.uid !== null && adminGetUserInfoRequest.uid !== -1) {
+			const userInfoFilter = {
+				$match: {
+					uid: adminGetUserInfoRequest.uid,
+				},
+			}
+			adminGetUserInfoCountPipeline.push(userInfoFilter)
+			adminGetUserInfoPipeline.push(userInfoFilter)
+		}
+
 		const projectStep = {
 			$project: {
 				uid: 1,
 				UUID: 1,
 				userCreateDateTime: 1, // 用户创建日期
 				roles: 1, // 用户的角色
+				email: 1, // 用户的邮箱
 				username: '$user_info_data.username', // 用户名
 				userNickname: '$user_info_data.userNickname', // 用户昵称
 				avatar: '$user_info_data.avatar', // 用户头像
 				userBannerImage: '$user_info_data.userBannerImage', // 用户的背景图
 				signature: '$user_info_data.signature', // 用户的个性签名
 				gender: '$user_info_data.gender', // 用户的性别
+				userBirthday: '$user_info_data.userBirthday', // 用户出生日期
+				isUpdatedAfterReview: '$user_info_data.isUpdatedAfterReview', // 是否经过审核
+				editOperatorUUID: '$user_info_data.editOperatorUUID', // 编辑操作员的 UUID
+				editDateTime: '$user_info_data.editDateTime', // 编辑时间
 				totalCount: 1, // 总文档数
 			},
 		}
@@ -2771,6 +2828,7 @@ export const adminClearUserInfoService = async (adminClearUserInfoRequest: Admin
 			userLinkedAccounts: [] as UserInfo['userLinkedAccounts'], // TODO: Mongoose issue: #12420
 			userWebsite: { websiteName: '', websiteUrl: '' },
 			isUpdatedAfterReview: false, // 清除信息的直接设为 false
+			editOperatorUUID: adminUUID,
 			editDateTime: new Date().getTime(),
 		}
 		try {
@@ -2788,6 +2846,87 @@ export const adminClearUserInfoService = async (adminClearUserInfoRequest: Admin
 	} catch (error) {
 		console.error('ERROR', '管理员清空某个用户的信息时出错，未知错误：', error)
 		return { success: false, message: '管理员清空某个用户的信息时出错，未知错误' }
+	}
+}
+
+/**
+ * 管理员编辑用户信息
+ * @param AdminEditUserInfoRequestDto 管理员编辑用户信息的请求载荷
+ * @param adminUUID 管理员的 UUID
+ * @param adminToken 管理员的 Token
+ * @return 管理员编辑用户信息的请求响应
+ */
+export const adminEditUserInfoService = async (adminEditUserInfoRequest: AdminEditUserInfoRequestDto, adminUUID: string, adminToken: string): Promise<AdminEditUserInfoResponseDto> => {
+	try {
+		if (!checkAdminEditUserInfoRequest(adminEditUserInfoRequest)) {
+			console.error('ERROR', '管理员编辑用户信息失败，参数不合法')
+			return { success: false, message: '管理员编辑用户信息失败，参数不合法' }
+		}
+
+		const { uid } = adminEditUserInfoRequest
+
+		const { username } = adminEditUserInfoRequest.userInfo
+		const { collectionName: userInfoCollectionName, schemaInstance: userInfoSchemaInstance } = UserInfoSchema
+
+		if (username) {
+			const getUserInfoWhere: QueryType<UserInfo> = {
+				username: { $regex: new RegExp(`\\b${username}\\b`, 'iu') },
+			}
+			const getUserInfoSelect: SelectType<UserInfo> = {
+				uid: 1,
+				username: 1,
+			}
+			const checkUsernameResult = await selectDataFromMongoDB<UserInfo>(getUserInfoWhere, getUserInfoSelect, userInfoSchemaInstance, userInfoCollectionName)
+
+			let isSafeUsername = false
+			if (checkUsernameResult.success) {
+				if (checkUsernameResult.result.length === 0) {
+					isSafeUsername = true
+				}
+				if (checkUsernameResult.result.length === 1) {
+					if (checkUsernameResult.result[0].uid === uid) {
+						isSafeUsername = true
+					}
+				}
+			}
+
+			if (!isSafeUsername) {
+				console.error('ERROR', '更新用户信息失败，用户重名', { adminEditUserInfoRequest, uid })
+				return { success: false, message: '更新用户信息失败，用户重名' }
+			}
+		}
+
+		const UUID = await getUserUuid(uid)
+		if (!UUID) {
+			console.error('ERROR', '管理员编辑用户信息失败，UUID 不存在', { uid })
+			return { success: false, message: '管理员编辑用户信息失败，UUID 不存在' }
+		}
+
+		if (!await checkUserTokenByUUID(adminUUID, adminToken)) {
+			console.error('ERROR', '管理员编辑用户信息失败，用户校验未通过')
+			return { success: false, message: '管理员编辑用户信息失败，用户校验未通过' }
+		}
+
+		type UserInfo = InferSchemaType<typeof userInfoSchemaInstance>
+		const adminEditUserInfoWhere: QueryType<UserInfo> = {
+			UUID,
+		}
+		const adminEditUserInfoUpdate: UpdateType<UserInfo> = {
+			...adminEditUserInfoRequest.userInfo,
+			editOperatorUUID: adminUUID,
+			editDateTime: new Date().getTime(),
+		}
+
+		const updateUserInfoResult = await findOneAndUpdateData4MongoDB(adminEditUserInfoWhere, adminEditUserInfoUpdate, userInfoSchemaInstance, userInfoCollectionName)
+		if (!updateUserInfoResult.success) {
+			console.error('ERROR', '管理员编辑用户信息失败，向数据库更新数据失败')
+			return { success: false, message: '管理员编辑用户信息失败，向数据库更新数据失败' }
+		}
+		return { success: true, message: '管理员编辑用户信息成功' }
+
+	} catch (error) {
+		console.error('ERROR', '管理员编辑用户信息时出错，未知错误：', error)
+		return { success: false, message: '管理员编辑用户信息时出错，未知错误' }
 	}
 }
 
@@ -4424,6 +4563,18 @@ const checkDeleteUserEmailAuthenticatorRequest = (deleteUserEmailAuthenticatorRe
 	return (
 		!!deleteUserEmailAuthenticatorRequest.passwordHash
 		&& !!deleteUserEmailAuthenticatorRequest.verificationCode
+	)
+}
+
+/**
+ * 检查管理员编辑用户信息的请求载荷
+ * @param adminEditUserInfoRequest 管理员编辑用户信息的请求载荷
+ * @returns 检查结果，合法返回 true，不合法返回 false
+ */
+const checkAdminEditUserInfoRequest = (adminEditUserInfoRequest: AdminEditUserInfoRequestDto): boolean => {
+	return (
+		adminEditUserInfoRequest.uid !== null && adminEditUserInfoRequest.uid !== undefined
+		&& !!adminEditUserInfoRequest.userInfo
 	)
 }
 

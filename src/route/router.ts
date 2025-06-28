@@ -41,6 +41,7 @@ import {
 	deleteUserEmailAuthenticatorController,
 	sendDeleteUserEmailAuthenticatorController,
 	userExistsCheckByUIDController,
+	adminEditUserInfoController,
 } from '../controller/UserController.js'
 import { adminDeleteVideoCommentController, cancelVideoCommentDownvoteController, cancelVideoCommentUpvoteController, deleteSelfVideoCommentController, emitVideoCommentController, emitVideoCommentDownvoteController, emitVideoCommentUpvoteController, getVideoCommentListByKvidController } from '../controller/VideoCommentController.js'
 import { approvePendingReviewVideoController, checkVideoExistController, deleteVideoByKvidController, getPendingReviewVideoController, getThumbVideoController, getVideoByKvidController, getVideoByUidController, getVideoCoverUploadSignedUrlController, getVideoFileTusEndpointController, searchVideoByKeywordController, searchVideoByVideoTagIdController, updateVideoController } from '../controller/VideoController.js'
@@ -296,6 +297,18 @@ router.get('/user/blocked/info', getBlockedUserController) // 获取所有被封
 router.get('/user/adminGetUserInfo', adminGetUserInfoController) // 管理员获取用户信息 // WARN: 仅限管理员
 // https://localhost:9999/user/adminGetUserInfo?isOnlyShowUserInfoUpdatedAfterReview=true&page=1&pageSize=20
 // cookie: UUID, token
+
+router.post('/user/adminEditUserInfo', adminEditUserInfoController) // 更新用户信息 // WARN: 仅限管理员
+// https://localhost:9999/user/adminEditUserInfo
+// cookie: UUID, token
+// {
+// 	"UUID": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+// 	"userInfo" :{
+// 		"username": "XXXXXXXXX",
+// 		"signature": "aaaaaaaaaaaaaaa",
+// 		...
+// 	}
+// }
 
 router.post('/user/approveUserInfo', approveUserInfoController) // 管理员通过用户信息审核 // WARN: 仅限管理员
 // https://localhost:9999/user/approveUserInfo

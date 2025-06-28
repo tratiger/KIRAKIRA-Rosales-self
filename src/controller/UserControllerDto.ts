@@ -703,6 +703,25 @@ export type ReactivateUserByUIDResponseDto = {
 }
 
 /**
+ * 管理员获取用户信息的请求载荷
+ */
+export type GetBlockedUserRequestDto = {
+	/** 排序字段 */
+	sortBy: string;
+	/** 排序方法 */
+	sortOrder: string;
+	/** 查询 UID */
+	uid?: number;
+	/** 分页查询 */
+	pagination: {
+		/** 当前在第几页 */
+		page: number;
+		/** 一页显示多少条 */
+		pageSize: number;
+	};
+};
+
+/**
  * 获取所有被封禁用户的信息的请求响应
  */
 export type GetBlockedUserResponseDto = {
@@ -712,9 +731,13 @@ export type GetBlockedUserResponseDto = {
 	message?: string;
 	/** 请求响应，被封禁的用户 */
 	result?: (
-		GetUserInfoByUidResponseDto['result']
-		& { uid: number }
+		GetUserInfoByUidResponseDto["result"] & {
+			uid: number;
+			UUID: string;
+		}
 	)[];
+	/** 数据总长度 */
+	totalCount: number;
 }
 
 /**
@@ -723,6 +746,12 @@ export type GetBlockedUserResponseDto = {
 export type AdminGetUserInfoRequestDto = {
 	/** 是否只展示在上一次审核通过后修改了用户信息的用户 */
 	isOnlyShowUserInfoUpdatedAfterReview: boolean;
+	/** 排序字段 */
+	sortBy: string;
+	/** 排序方法 */
+	sortOrder: string;
+	/** 查询 UID */
+	uid?: number;
 	/** 分页查询 */
 	pagination: {
 		/** 当前在第几页 */
@@ -742,9 +771,15 @@ export type AdminGetUserInfoResponseDto = {
 	message?: string;
 	/** 请求响应 */
 	result?: (
-		GetSelfUserInfoResponseDto['result']
-		& { uid: number }
-		& { UUID: string }
+		GetSelfUserInfoResponseDto["result"] & {
+			avatar: string;
+			userBannerImage: string;
+			editDateTime: number;
+			editOperatorUUID: string;
+			isUpdatedAfterReview: boolean;
+			uid: number;
+			UUID: string;
+		}
 	)[];
 	/** 数据总长度 */
 	totalCount: number;
@@ -780,6 +815,45 @@ export type AdminClearUserInfoRequestDto = {
  * 管理员清空某个用户的信息的请求响应
  */
 export type AdminClearUserInfoResponseDto = {
+	/** 执行结果 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+}
+
+/**
+ * 管理员编辑用户信息的请求载荷
+ */
+export type AdminEditUserInfoRequestDto = {
+	/** 用户的 UID */
+	uid: number;
+	/** 编辑用户的信息 */
+	userInfo?: {
+		/** 用户名 */
+		username?: string;
+		/** 用户昵称 */
+		userNickname?: string;
+		/** 用户头像的链接 */
+		avatar?: string;
+		/** 用户背景图片的链接 */
+		userBannerImage?: string;
+		/** 用户的个性签名 */
+		signature?: string;
+		/** 用户的性别，男、女和自定义（字符串） */
+		gender?: string;
+		/** 用户生日 */
+		userBirthday?: number;
+		/** 用户主页 Markdown */
+		userProfileMarkdown?: string;
+		/** 审核状态 */
+		isUpdatedAfterReview?: boolean;
+	}
+}
+
+/**
+ * 管理员编辑用户信息的请求响应
+ */
+export type AdminEditUserInfoResponseDto = {
 	/** 执行结果 */
 	success: boolean;
 	/** 附加的文本消息 */
