@@ -18,7 +18,7 @@ export default {
 		mailText: "確認コードの有効期間は 30 分です。このコードは他の人には絶対に教えないでください。\n通知の受信を停止するには、KIRAKIRA サポートチームまでご連絡ください。",
 	},
 	UserEmailAuthenticator: {
-		mailTitle: "KIRAKIRA-2FA認証のための認証コード",
+		mailTitle: "KIRAKIRA - 2FA認証のための認証コード",
 		mailHeading: "認証システムを確認するための認証コードは",
 		mailText: "注意：このコードは認証システムを確認するための認証コードです。\nコードの有効期間は 30 分です。このコードは他の人には絶対に教えないでください。\n通知のを停止するには KIRAKIRA サポートチームに連絡してください。",
 	},
