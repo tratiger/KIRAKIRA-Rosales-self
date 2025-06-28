@@ -74,7 +74,7 @@ class FeedGroupSchemaFactory {
 		createDateTime: { type: Number, required: true },
 	}
 	/** MongoDB 集合名 */
-	collectionName = 'unfollowing'
+	collectionName = 'feed-group'
 	/** Mongoose Schema 实例 */
 	schemaInstance = new Schema(this.schema)
 }
