@@ -1,12 +1,27 @@
-import English from "../locales/English.js";
-import ChineseSimplified from "../locales/Chinese Simplified.js";
 import EmailTemplate from "./EmailTemplate.js";
+
+// 语言文件
+import English from "../locales/English.js"; // 英语
+import ChineseSimplified from "../locales/Chinese Simplified.js"; // 简体中文
+import French from "../locales/French.js"; // 法语
+import Japanese from "../locales/Japanese.js"; // 日语
+import Cantonese from "../locales/Cantonese.js"; // 粤语
+import Indonesian from "../locales/Indonesian.js"; // 印尼语
+import Korean from "../locales/Korean.js"; // 韩语
+import ChineseTraditional from "../locales/Chinese Traditional.js"; // 繁体中文
+import Vietnamese from "../locales/Vietnamese.js"; // 越南语
+
 
 const languagePacks = {
 	"zh-Hans-CN": ChineseSimplified,
-	"en-US": English,
-	// "fr-FR": French,
-	// "ja-JP": Japanese
+	"zh-Hant-TW": ChineseTraditional,
+	"en": English,
+	"fr": French,
+	"ja": Japanese,
+	"yue": Cantonese,
+	"id": Indonesian,
+	"ko": Korean,
+	"vi": Vietnamese,
 };
 
 /**
