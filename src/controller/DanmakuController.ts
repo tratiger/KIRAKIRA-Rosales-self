@@ -11,11 +11,11 @@ import { EmitDanmakuRequestDto, GetDanmakuByKvidRequestDto } from './DanmakuCont
  */
 export const emitDanmakuController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<EmitDanmakuRequestDto>
-	const uid = parseInt(ctx.cookies.get('uid'), 10)
+	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
 
 	// RBAC 权限验证
-	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
+	if (!await isPassRbacCheck({ uuid, apiPath: ctx.path }, ctx)) {
 		return
 	}
 
@@ -35,7 +35,7 @@ export const emitDanmakuController = async (ctx: koaCtx, next: koaNext) => {
 		/** 非空 - 是否启用彩虹弹幕，默认不启用 */
 		enableRainbow: data.enableRainbow,
 	}
-	const emitDanmakuResponse = await emitDanmakuService(emitDanmakuRequest, uid, token)
+	const emitDanmakuResponse = await emitDanmakuService(emitDanmakuRequest, uuid, token)
 	ctx.body = emitDanmakuResponse
 	await next()
 }

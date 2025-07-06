@@ -3,54 +3,115 @@ import { EmitDanmakuRequestDto, EmitDanmakuResponseDto, GetDanmakuByKvidDto, Get
 import { insertData2MongoDB, selectDataByAggregateFromMongoDB, selectDataFromMongoDB } from '../dbPool/DbClusterPool.js'
 import { QueryType, SelectType } from '../dbPool/DbClusterPoolTypes.js'
 import { DanmakuSchema } from '../dbPool/schema/DanmakuSchema.js'
-import { checkUserTokenService, getUserUuid } from './UserService.js'
-import { buildBlockListMongooseFilter } from './BlockService.js'
+import { checkUserTokenByUuidService, checkUserTokenService, getUserUid, getUserUuid } from './UserService.js'
+import { buildBlockListMongooseFilter, checkIsBlockedByOtherUserService } from './BlockService.js'
+import { getVideoByKvidService } from './VideoService.js'
+
+// /**
+//  * 用户发送弹幕
+//  * @param emitDanmakuRequest 用户发送的弹幕数据
+//  * @param uid cookie 中的用户 ID
+//  * @param token cookie 中的用户 token
+//  * @returns 用户发送弹幕的结果
+//  */
+// export const emitDanmakuService = async (emitDanmakuRequest: EmitDanmakuRequestDto, uid: number, token: string): Promise<EmitDanmakuResponseDto> => {
+// 	try {
+// 		if (checkEmitDanmakuRequest(emitDanmakuRequest)) {
+// 			if ((await checkUserTokenService(uid, token)).success) {
+// 				const uuid = await getUserUuid(uid) // DELETE ME 这是一个临时解决方法，Cookie 中应当存储 UUID
+// 				if (!uuid) {
+// 					console.error('ERROR', '发送弹幕失败，UUID 不存在', { uid })
+// 					return { success: false, message: '发送弹幕失败，UUID 不存在' }
+// 				}
+
+// 				const { collectionName, schemaInstance } = DanmakuSchema
+// 				type Danmaku = InferSchemaType<typeof schemaInstance>
+// 				const nowDate = new Date().getTime()
+// 				const danmaku: Danmaku = {
+// 					UUID: uuid,
+// 					uid,
+// 					...emitDanmakuRequest,
+// 					editDateTime: nowDate,
+// 				}
+// 				try {
+// 					const insertData2MongoDBResult = await insertData2MongoDB(danmaku, schemaInstance, collectionName)
+// 					if (insertData2MongoDBResult && insertData2MongoDBResult.success) {
+// 						return { success: true, message: '弹幕发送成功！', danmaku: emitDanmakuRequest }
+// 					}
+// 				} catch (error) {
+// 					console.error('ERROR', '弹幕发送失败，无法存储到 MongoDB', error)
+// 					return { success: false, message: '弹幕发送失败，存储弹幕数据失败' }
+// 				}
+// 			} else {
+// 				console.error('ERROR', '弹幕发送失败，用户校验未通过', { emitDanmakuRequest, uid, token })
+// 				return { success: false, message: '弹幕发送失败，用户校验未通过' }
+// 			}
+// 		} else {
+// 			console.error('ERROR', '弹幕发送失败，弹幕数据校验未通过：', { emitDanmakuRequest, uid, token })
+// 			return { success: false, message: '弹幕发送失败，弹幕数据错误' }
+// 		}
+// 	} catch (error) {
+// 		console.error('ERROR', '弹幕发送失败，错误信息：', error, { emitDanmakuRequest, uid, token })
+// 		return { success: false, message: '弹幕发送失败，未知原因' }
+// 	}
+// }
 
 /**
  * 用户发送弹幕
  * @param emitDanmakuRequest 用户发送的弹幕数据
- * @param uid cookie 中的用户 ID
- * @param token cookie 中的用户 token
+ * @param uuid 用户的 UUID
+ * @param token 用户的 token
  * @returns 用户发送弹幕的结果
  */
-export const emitDanmakuService = async (emitDanmakuRequest: EmitDanmakuRequestDto, uid: number, token: string): Promise<EmitDanmakuResponseDto> => {
+export const emitDanmakuService = async (emitDanmakuRequest: EmitDanmakuRequestDto, uuid: string, token: string): Promise<EmitDanmakuResponseDto> => {
 	try {
-		if (checkEmitDanmakuRequest(emitDanmakuRequest)) {
-			if ((await checkUserTokenService(uid, token)).success) {
-				const uuid = await getUserUuid(uid) // DELETE ME 这是一个临时解决方法，Cookie 中应当存储 UUID
-				if (!uuid) {
-					console.error('ERROR', '发送弹幕失败，UUID 不存在', { uid })
-					return { success: false, message: '发送弹幕失败，UUID 不存在' }
-				}
-
-				const { collectionName, schemaInstance } = DanmakuSchema
-				type Danmaku = InferSchemaType<typeof schemaInstance>
-				const nowDate = new Date().getTime()
-				const danmaku: Danmaku = {
-					UUID: uuid,
-					uid,
-					...emitDanmakuRequest,
-					editDateTime: nowDate,
-				}
-				try {
-					const insertData2MongoDBResult = await insertData2MongoDB(danmaku, schemaInstance, collectionName)
-					if (insertData2MongoDBResult && insertData2MongoDBResult.success) {
-						return { success: true, message: '弹幕发送成功！', danmaku: emitDanmakuRequest }
-					}
-				} catch (error) {
-					console.error('ERROR', '弹幕发送失败，无法存储到 MongoDB', error)
-					return { success: false, message: '弹幕发送失败，存储弹幕数据失败' }
-				}
-			} else {
-				console.error('ERROR', '弹幕发送失败，用户校验未通过', { emitDanmakuRequest, uid, token })
-				return { success: false, message: '弹幕发送失败，用户校验未通过' }
-			}
-		} else {
-			console.error('ERROR', '弹幕发送失败，弹幕数据校验未通过：', { emitDanmakuRequest, uid, token })
+		if (!checkEmitDanmakuRequest(emitDanmakuRequest)) {
+			console.error('ERROR', '弹幕发送失败，弹幕数据校验未通过：', { emitDanmakuRequest, uuid, token })
 			return { success: false, message: '弹幕发送失败，弹幕数据错误' }
 		}
+
+		const { videoId } = emitDanmakuRequest
+		const uid = await getUserUid(uuid)
+		if (!uid) {
+			console.error('ERROR', '弹幕发送失败，用户ID不存在', { emitDanmakuRequest, uuid, token })
+			return { success: false, message: '弹幕发送失败，用户ID不存在' }
+		}
+		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
+			console.error('ERROR', '弹幕发送失败，用户校验未通过', { emitDanmakuRequest, uuid, token })
+			return { success: false, message: '弹幕发送失败，用户校验未通过' }
+		}
+		const selectorUuid = uuid
+		const selectorToken = token
+		if ((await getVideoByKvidService({ videoId }, selectorUuid, selectorToken)).isBlockedByOther) {
+			console.error('ERROR', '弹幕发送失败，用户被其他用户屏蔽', { emitDanmakuRequest, uuid, token })
+			return { success: false, message: '弹幕发送失败，用户被其他用户屏蔽' }
+		}
+		if ((await getVideoByKvidService({ videoId }, selectorUuid, selectorToken)).isBlocked) {
+			console.error('ERROR', '弹幕发送失败，用户已屏蔽上传者', { emitDanmakuRequest, uuid, token })
+			return { success: false, message: '弹幕发送失败，用户已屏蔽上传者' }
+		}
+
+		const { collectionName, schemaInstance } = DanmakuSchema
+		type Danmaku = InferSchemaType<typeof schemaInstance>
+		const nowDate = new Date().getTime()
+		const danmaku: Danmaku = {
+			UUID: uuid,
+			uid,
+			...emitDanmakuRequest,
+			editDateTime: nowDate,
+		}
+		try {
+			const insertData2MongoDBResult = await insertData2MongoDB(danmaku, schemaInstance, collectionName)
+			if (insertData2MongoDBResult && insertData2MongoDBResult.success) {
+				return { success: true, message: '弹幕发送成功！', danmaku: emitDanmakuRequest }
+			}
+		} catch (error) {
+			console.error('ERROR', '弹幕发送失败，无法存储到 MongoDB', error)
+			return { success: false, message: '弹幕发送失败，存储弹幕数据失败' }
+		}
+
 	} catch (error) {
-		console.error('ERROR', '弹幕发送失败，错误信息：', error, { emitDanmakuRequest, uid, token })
+		console.error('ERROR', '弹幕发送失败，错误信息：', error, { emitDanmakuRequest, uuid, token })
 		return { success: false, message: '弹幕发送失败，未知原因' }
 	}
 }
@@ -127,7 +188,7 @@ export const getDanmakuListByKvidService = async (getDanmakuByKvidRequest: GetDa
 			]
 
 			const danmakuResult = await selectDataByAggregateFromMongoDB<Danmaku>(schemaInstance, collectionName, getDanmakuPipeline)
-			
+
 			if (!danmakuResult.success) {
 				console.error('ERROR', '获取弹幕列表失败，查询失败或结果为空：', getDanmakuByKvidRequest)
 				return { success: false, message: '获取弹幕列表失败，查询失败' }
