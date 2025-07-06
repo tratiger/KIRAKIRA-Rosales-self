@@ -296,6 +296,7 @@ export const getVideoCommentListByKvidService = async (getVideoCommentByKvidRequ
 						signature: '$user_info_data.signature', // 用户的个性签名
 						gender: '$user_info_data.gender' // 用户的性别
 					},
+					...blockListFilter.additionalFields, // 黑名单过滤器的额外字段
 				},
 			},
 		]

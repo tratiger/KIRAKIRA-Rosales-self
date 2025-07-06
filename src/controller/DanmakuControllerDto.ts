@@ -60,5 +60,5 @@ export type GetDanmakuByKvidResponseDto = {
 	/** 附加的文本消息 */
 	message?: string;
 	/** 发送成功的话，返回弹幕的数据列表（不包含用户 ID，包含最后编辑时间） */
-	danmaku?: GetDanmakuByKvidDto[];
+	danmaku?: (GetDanmakuByKvidDto & { isBlockedByOther?: boolean })[];
 }

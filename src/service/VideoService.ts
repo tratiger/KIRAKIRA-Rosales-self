@@ -206,6 +206,7 @@ export const getThumbVideoService = async (uuid?: string, token?: string): Promi
 					editDateTime: 1,
 					uploader: '$uploader_info.username', // 上传者的名字
 					uploaderNickname: '$uploader_info.userNickname', // 上传者的昵称
+					...blockListFilter.additionalFields, // 黑名单过滤器的额外字段
 				}
 			}
 		]
@@ -290,11 +291,12 @@ export const getVideoByKvidService = async (getVideoByKvidRequest: GetVideoByKvi
 		const { collectionName: videoCollectionName, schemaInstance: videoSchemaInstance } = VideoSchema
 
 		let isHidden = false
+		let isBlockedByOther = false
 
 		// 判断请求参数是否合法
 		if (!checkGetVideoByKvidRequest(getVideoByKvidRequest)) {
 			console.error('ERROR', '视频页 - KVID 为空')
-			return { success: false, message: '视频页 - 必要的请求参数为空', isBlocked: false, isBlockedByOther: false, isHidden }
+			return { success: false, message: '视频页 - 必要的请求参数为空', isBlocked: false, isBlockedByOther, isHidden }
 		}
 
 		// 构建视频查询 Pipeline
@@ -354,7 +356,7 @@ export const getVideoByKvidService = async (getVideoByKvidRequest: GetVideoByKvi
 			const video = result.result?.[0] as GetVideoByKvidResponseDto['video']
 			if (!result.success || !video) {
 				console.error('ERROR', '视频页 - 获取到的视频结果或视频数组为空')
-				return { success: false, message: '视频页 - 未获取到视频', isBlocked: false, isBlockedByOther: false, isHidden }
+				return { success: false, message: '视频页 - 未获取到视频', isBlocked: false, isBlockedByOther, isHidden }
 			}
 
 			video.uploaderInfo.isFollowing = false // 默认没有关注上传者
@@ -369,20 +371,21 @@ export const getVideoByKvidService = async (getVideoByKvidRequest: GetVideoByKvi
 					isHidden = true
 				}
 
-				// 2. 检查当前用户是否与上传者双向屏蔽
-				if (checkBlockUserResult.isBlocked && checkIsBlockedByOtherUserResult.isBlocked) {
-					return { success: true, message: '视频页 - 未获取到视频，你与该用户已双向屏蔽', isBlockedByOther: true, isBlocked: true, isHidden }
-				}
-
-				// 3. 检查上传者是否已经被当前用户屏蔽
-				if (checkBlockUserResult.isBlocked) {
-					return { success: true, message: '视频页 - 未获取到视频，你已屏蔽该用户', isBlockedByOther: false, isBlocked: true, isHidden }
-				}
-
-				// 4. 检查当前用户是否已经被上传者屏蔽
+				// 2. 检查当前用户是否已经被上传者屏蔽
 				if (checkIsBlockedByOtherUserResult.isBlocked) {
-					return { success: true, message: '视频页 - 未获取到视频，你已被该用户屏蔽', isBlockedByOther: true, isBlocked: false, isHidden }
+					isBlockedByOther = true
 				}
+
+				// 3. 检查当前用户是否与上传者双向屏蔽
+				if (checkBlockUserResult.isBlocked && checkIsBlockedByOtherUserResult.isBlocked) {
+					return { success: true, message: '视频页 - 未获取到视频，你与该用户已双向屏蔽', isBlockedByOther, isBlocked: true, isHidden }
+				}
+
+				// 4. 检查上传者是否已经被当前用户屏蔽
+				if (checkBlockUserResult.isBlocked) {
+					return { success: true, message: '视频页 - 未获取到视频，你已屏蔽该用户', isBlockedByOther, isBlocked: true, isHidden }
+				}
+
 
 				// 5. 存储浏览历史记录
 				const createOrUpdateBrowsingHistoryRequest: CreateOrUpdateBrowsingHistoryRequestDto = {
@@ -421,12 +424,12 @@ export const getVideoByKvidService = async (getVideoByKvidRequest: GetVideoByKvi
 				message: '视频页 - 获取视频成功',
 				video,
 				isBlocked: false,
-				isBlockedByOther: false,
+				isBlockedByOther,
 				isHidden,
 			}
 		} catch (error) {
 			console.error('ERROR', '视频页 - 视频查询失败：', error)
-			return { success: false, message: '视频页 - 视频查询失败', isBlocked: false, isBlockedByOther: false, isHidden }
+			return { success: false, message: '视频页 - 视频查询失败', isBlocked: false, isBlockedByOther, isHidden }
 		}
 	} catch (error) {
 		console.error('ERROR', '获取视频失败：', error)
@@ -442,10 +445,11 @@ export const getVideoByKvidService = async (getVideoByKvidRequest: GetVideoByKvi
 export const getVideoByUidRequestService = async (getVideoByUidRequest: GetVideoByUidRequestDto, selectorUuid?: string, selectorToken?: string): Promise<GetVideoByUidResponseDto> => {
 	try {
 		let isHidden = false
+		let isBlockedByOther = false
 
 		if (!checkGetVideoByUidRequest(getVideoByUidRequest)) {
 			console.error('ERROR', '根据 UID 获取视频失败，请求的 UID 为空：')
-			return { success: false, message: '根据 UID 获取视频失败，请求的 UID 为空', videosCount: 0, videos: [], isBlockedByOther: false, isBlocked: false, isHidden }
+			return { success: false, message: '根据 UID 获取视频失败，请求的 UID 为空', videosCount: 0, videos: [], isBlockedByOther, isBlocked: false, isHidden }
 		}
 
 		const { uid } = getVideoByUidRequest
@@ -459,19 +463,19 @@ export const getVideoByUidRequestService = async (getVideoByUidRequest: GetVideo
 				isHidden = true
 			}
 
-			// 2. 检查当前用户是否与上传者双向屏蔽
-			if (checkBlockUserResult.isBlocked && checkIsBlockedByOtherUserResult.isBlocked) {
-				return { success: true, message: '根据 UID 获取视频失败，你与该用户已双向屏蔽', videosCount: 0, videos: [], isBlockedByOther: true, isBlocked: true, isHidden }
-			}
-
-			// 3. 检查上传者是否已经被当前用户屏蔽
-			if (checkBlockUserResult.isBlocked) {
-				return { success: true, message: '根据 UID 获取视频失败，你已屏蔽该用户', videosCount: 0, videos: [], isBlockedByOther: false, isBlocked: true, isHidden }
-			}
-
-			// 4. 检查当前用户是否已经被上传者屏蔽
+			// 2. 检查当前用户是否已经被上传者屏蔽
 			if (checkIsBlockedByOtherUserResult.isBlocked) {
-				return { success: true, message: '根据 UID 获取视频失败，你已被该用户屏蔽', videosCount: 0, videos: [], isBlockedByOther: true, isBlocked: false, isHidden }
+				isBlockedByOther = true
+			}
+
+			// 3. 检查当前用户是否与上传者双向屏蔽
+			if (checkBlockUserResult.isBlocked && checkIsBlockedByOtherUserResult.isBlocked) {
+				return { success: true, message: '根据 UID 获取视频失败，你与该用户已双向屏蔽', videosCount: 0, videos: [], isBlockedByOther, isBlocked: true, isHidden }
+			}
+
+			// 4. 检查上传者是否已经被当前用户屏蔽
+			if (checkBlockUserResult.isBlocked) {
+				return { success: true, message: '根据 UID 获取视频失败，你已屏蔽该用户', videosCount: 0, videos: [], isBlockedByOther, isBlocked: true, isHidden }
 			}
 		}
 
@@ -498,19 +502,19 @@ export const getVideoByUidRequestService = async (getVideoByUidRequest: GetVideo
 			const videoResult = result.result
 			if (!result.success || !videoResult) {
 				console.error('ERROR', '根据 UID 获取视频失败，获取的结果失败或为空')
-				return { success: false, message: '根据 UID 获取视频失败，获取的结果失败或为空', videosCount: 0, videos: [], isBlockedByOther: false, isBlocked: false, isHidden }
+				return { success: false, message: '根据 UID 获取视频失败，获取的结果失败或为空', videosCount: 0, videos: [], isBlockedByOther, isBlocked: false, isHidden }
 			}
 
 			const videoResultLength = videoResult?.length
 
 			if (videoResultLength <= 0) {
-				return { success: true, message: '该用户似乎未上传过视频', videosCount: 0, videos: [], isBlockedByOther: false, isBlocked: false, isHidden }
+				return { success: true, message: '该用户似乎未上传过视频', videosCount: 0, videos: [], isBlockedByOther, isBlocked: false, isHidden }
 			}
 
-			return { success: true, message: '根据 UID 获取视频成功', videosCount: videoResultLength, videos: videoResult, isBlockedByOther: false, isBlocked: false, isHidden }
+			return { success: true, message: '根据 UID 获取视频成功', videosCount: videoResultLength, videos: videoResult, isBlockedByOther, isBlocked: false, isHidden }
 		} catch (error) {
 			console.error('ERROR', '根据 UID 获取视频失败，检索视频出错：', error)
-			return { success: false, message: '根据 UID 获取视频失败，检索视频出错', videosCount: 0, videos: [], isBlockedByOther: false, isBlocked: false, isHidden }
+			return { success: false, message: '根据 UID 获取视频失败，检索视频出错', videosCount: 0, videos: [], isBlockedByOther, isBlocked: false, isHidden }
 		}
 	} catch (error) {
 		console.error('ERROR', '根据 UID 获取视频失败，未知原因：', error)

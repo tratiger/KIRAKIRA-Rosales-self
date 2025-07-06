@@ -979,10 +979,11 @@ export const getUserInfoByUidService = async (getUserInfoByUidRequest: GetUserIn
 	try {
 		const { uid } = getUserInfoByUidRequest
 		let isHidden = false
+		let isBlockedByOther = false
 
 		if (uid === null || uid === undefined) {
 			console.error('ERROR', '获取用户信息时失败，传入的 uid 或 token 为空')
-			return { success: false, message: '获取用户信息时失败，必要的参数为空', isBlockedByOther: false, isBlocked: false, isHidden }
+			return { success: false, message: '获取用户信息时失败，必要的参数为空', isBlockedByOther, isBlocked: false, isHidden }
 		}
 
 		const checkBlockUserResult = await checkBlockUserService({ uid }, selectorUuid, selectorToken)
@@ -993,19 +994,19 @@ export const getUserInfoByUidService = async (getUserInfoByUidRequest: GetUserIn
 			isHidden = true
 		}
 
-		// 2. 检查当前用户是否与目标用户双向屏蔽
-		if (checkBlockUserResult.isBlocked && checkIsBlockedByOtherUserResult.isBlocked) {
-			return { success: true, message: '获取用户信息时失败，你与该用户已双向屏蔽', isBlockedByOther: true, isBlocked: true, isHidden }
-		}
-
-		// 3. 检查目标用户是否已经被当前用户屏蔽
-		if (checkBlockUserResult.isBlocked) {
-			return { success: true, message: '获取用户信息时失败，你已屏蔽该用户', isBlockedByOther: false, isBlocked: true, isHidden }
-		}
-
-		// 4. 检查当前用户是否已经被目标用户屏蔽
+		// 2. 检查当前用户是否已经被目标用户屏蔽
 		if (checkIsBlockedByOtherUserResult.isBlocked) {
-			return { success: true, message: '获取用户信息时失败，你已被该用户屏蔽', isBlockedByOther: true, isBlocked: false, isHidden }
+			isBlockedByOther = true
+		}
+
+		// 3. 检查当前用户是否与目标用户双向屏蔽
+		if (checkBlockUserResult.isBlocked && checkIsBlockedByOtherUserResult.isBlocked) {
+			return { success: true, message: '获取用户信息时失败，你与该用户已双向屏蔽', isBlockedByOther, isBlocked: true, isHidden }
+		}
+
+		// 4. 检查目标用户是否已经被当前用户屏蔽
+		if (checkBlockUserResult.isBlocked) {
+			return { success: true, message: '获取用户信息时失败，你已屏蔽该用户', isBlockedByOther, isBlocked: true, isHidden }
 		}
 
 		const { collectionName: userAuthCollectionName, schemaInstance: userAuthSchemaInstance } = UserAuthSchema
@@ -1038,7 +1039,7 @@ export const getUserInfoByUidService = async (getUserInfoByUidRequest: GetUserIn
 			if (!userAuthResult || !userAuthResult.success || !userInfoResult || !userInfoResult.success) {
 				await abortAndEndSession(session)
 				console.error('ERROR', '获取用户信息时失败，获取到的结果为空')
-				return { success: false, message: '获取用户信息时失败，结果为空', isBlockedByOther: false, isBlocked: false, isHidden }
+				return { success: false, message: '获取用户信息时失败，结果为空', isBlockedByOther, isBlocked: false, isHidden }
 			}
 			const userAuth = userAuthResult?.result
 			const uuid = userAuth?.[0]?.UUID
@@ -1046,7 +1047,7 @@ export const getUserInfoByUidService = async (getUserInfoByUidRequest: GetUserIn
 			if (userInfo?.length !== 1 || !userInfo[0] || userAuth?.length !== 1 || !uuid) {
 				await abortAndEndSession(session)
 				console.error('ERROR', '获取用户信息时失败，获取到的结果长度不为 1')
-				return { success: false, message: '获取用户信息时失败，结果异常', isBlockedByOther: false, isBlocked: false, isHidden }
+				return { success: false, message: '获取用户信息时失败，结果异常', isBlockedByOther, isBlocked: false, isHidden }
 			}
 
 			let isSelf = uuid === selectorUuid // 查询的用户是否是自己。
@@ -1083,13 +1084,13 @@ export const getUserInfoByUidService = async (getUserInfoByUidRequest: GetUserIn
 					isFollowing,
 					isSelf,
 				},
-				isBlockedByOther: false,
+				isBlockedByOther,
 				isBlocked: false,
 				isHidden,
 			}
 		} catch (error) {
 			console.error('ERROR', '获取用户信息时失败，查询数据时出错：', error)
-			return { success: false, message: '获取用户信息时失败', isBlockedByOther: false, isBlocked: false, isHidden }
+			return { success: false, message: '获取用户信息时失败', isBlockedByOther, isBlocked: false, isHidden }
 		}
 	} catch (error) {
 		console.error('ERROR', '获取用户信息时失败，未知错误：', error)
