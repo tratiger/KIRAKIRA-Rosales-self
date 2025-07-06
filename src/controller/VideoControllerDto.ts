@@ -92,6 +92,8 @@ export type ThumbVideoResponseDto = {
 		duration?: number;
 		/** 视频描述 */
 		description?: string;
+		/** 是否被屏蔽 */
+		isBlockedByOther?: boolean;
 	}[];
 }
 

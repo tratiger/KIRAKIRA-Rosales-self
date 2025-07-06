@@ -993,8 +993,13 @@ export const getBlockListService = async (getBlockListRequest: GetBlockListReque
 type BlockListFilterCategory = 'block-uuid' | 'hide-uuid' | 'keyword' | 'tag-id' | 'regex'
 /** 设置哪些属性需要使用哪种类型的黑名单过滤，其中 attr 参数**必须**为开发者硬编码的安全字段，**禁止**由用户传入 */
 type BlockListAttrs = { attr: string, category: BlockListFilterCategory }[]
+/** 黑名单功能的附加字段 Project */
+type AdditionalFieldsProject = {
+	/** 是否被其他用户屏蔽 */
+	isBlockedByOther?: 1;
+}
 /** 返回值，一个构建好的 Monogoose Pipeline 查询 */
-type BlockListFilterResult = { success: boolean, filter: PipelineStage.Match[] } 
+type BlockListFilterResult = { success: boolean, filter: PipelineStage.Match[], additionalFields: AdditionalFieldsProject } 
 /**
  * 构建 Mongoose Pipeline 黑名单过滤器
  * @param attrs 哪些属性需要过滤，以及使用的过滤方式
@@ -1006,12 +1011,12 @@ export const buildBlockListMongooseFilter = async (attrs: BlockListAttrs, uuid?:
 	// MEME: Is that a dog...?
 	try {
 		if (!uuid || !token) {
-			return { success: false, filter: [] }
+			return { success: false, filter: [], additionalFields: { } }
 		}
 
 		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
 			console.error('ERROR', '构建黑名单过滤器失败，用户 Token 不合法')
-			return { success: false, filter: [] }
+			return { success: false, filter: [], additionalFields: { } }
 		}
 
 		const { collectionName: blockListCollectionName, schemaInstance: blockListSchemaInstance } = BlockListSchema
@@ -1027,16 +1032,9 @@ export const buildBlockListMongooseFilter = async (attrs: BlockListAttrs, uuid?:
 			operatorUUID: 1,
 		}
 		
-		const { result: blockListResult, success: blockListOk } = await selectDataFromMongoDB<BlockListSchemaType>(getBlockListWhere, getBlockListSelect, blockListSchemaInstance, blockListCollectionName)
+		const { result: blockListResult, success: blockListSuccess } = await selectDataFromMongoDB<BlockListSchemaType>(getBlockListWhere, getBlockListSelect, blockListSchemaInstance, blockListCollectionName)
 
-		if (!blockListOk) {
-			console.error('ERROR', '构建黑名单过滤器失败，获取黑名单失败')
-			return { success: false, filter: [] }
-		}
-
-		if (blockListResult.length === 0) {
-			return { success: true, filter: [] }
-		}
+		const isBlockListOk = blockListSuccess && blockListResult.length > 0
 
 		const blockUuidList = []
 		const hideUuidList = []
@@ -1069,75 +1067,126 @@ export const buildBlockListMongooseFilter = async (attrs: BlockListAttrs, uuid?:
 			keywordReg = new RegExp(keywordList.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'))
 		}
 
+		const additionalFields = { }
 		const blockListMongooseFilter = []
 		for (const { attr, category } of attrs) {
-			switch (category) {
-				case 'block-uuid': {
-					if (blockUuidList.length > 0)
-						blockListMongooseFilter.push({ $match: { [attr]: { $nin: blockUuidList } } })
-					blockListMongooseFilter.push(
-						// 1. 关联 BlockList 集合，获取上传者屏蔽的用户列表（仅 type = 'user'）
-						{
-							$lookup: {
-								from: 'blocklists',
-								let: { uuid: `$${attr}` },
-								pipeline: [
-									{
-										$match: {
-											$expr: { 
-												$and: [
-													{ $eq: ['$operatorUUID', '$$uuid'] },
-													{ $eq: ['$type', 'block'] },
-												],
+			if (!isBlockListOk) {
+				switch (category) {
+					case 'block-uuid': {
+						blockListMongooseFilter.push(
+							// 1. 关联 BlockList 集合，获取上传者屏蔽的用户列表（仅 type = 'user'）
+							{
+								$lookup: {
+									from: 'blocklists',
+									let: { uuid: `$${attr}` },
+									pipeline: [
+										{
+											$match: {
+												$expr: { 
+													$and: [
+														{ $eq: ['$operatorUUID', '$$uuid'] },
+														{ $eq: ['$type', 'block'] },
+													],
+												},
 											},
 										},
-									},
-									{
-										$project: {
-											_id: 0,
-											blockedUserUUID: '$value', // value 字段存储被屏蔽的用户 UUID
+										{
+											$project: {
+												_id: 0,
+												blockedUserUUID: '$value', // value 字段存储被屏蔽的用户 UUID
+											},
 										},
+									],
+									as: 'block_by_others_data',
+								},
+							},
+							// 2. 过滤：排除上传者屏蔽了当前用户的视频
+							{
+								$addFields: {
+									isBlockedByOther: {
+										$in: [ uuid, '$block_by_others_data.blockedUserUUID' ]
 									},
-								],
-								as: 'block_by_others_data',
+								},
 							},
-						},
-						// 2. 过滤：排除上传者屏蔽了当前用户的视频
-						{
-							$match: {
-								'block_by_others_data.blockedUserUUID': { $ne: uuid },
+						)
+						additionalFields['isBlockedByOther'] = 1
+						break;
+					}
+				}
+				continue
+			} else {
+				switch (category) {
+					case 'block-uuid': {
+						if (blockUuidList.length > 0) {
+							blockListMongooseFilter.push({ $match: { [attr]: { $nin: blockUuidList } } })
+						}
+						blockListMongooseFilter.push(
+							// 1. 关联 BlockList 集合，获取上传者屏蔽的用户列表（仅 type = 'user'）
+							{
+								$lookup: {
+									from: 'blocklists',
+									let: { uuid: `$${attr}` },
+									pipeline: [
+										{
+											$match: {
+												$expr: { 
+													$and: [
+														{ $eq: ['$operatorUUID', '$$uuid'] },
+														{ $eq: ['$type', 'block'] },
+													],
+												},
+											},
+										},
+										{
+											$project: {
+												_id: 0,
+												blockedUserUUID: '$value', // value 字段存储被屏蔽的用户 UUID
+											},
+										},
+									],
+									as: 'block_by_others_data',
+								},
 							},
-						},
-					)
-					break;
+							// 2. 过滤：排除上传者屏蔽了当前用户的视频
+							{
+								$addFields: {
+									isBlockedByOther: {
+										$in: [ uuid, '$block_by_others_data.blockedUserUUID' ]
+									},
+								},
+							},
+						)
+						additionalFields['isBlockedByOther'] = 1
+						break;
+					}
+					case 'hide-uuid': {
+						if (hideUuidList.length > 0)
+							blockListMongooseFilter.push({ $match: { [attr]: { $nin: hideUuidList } } })
+						break;
+					}
+					case 'keyword': {
+						if (keywordReg)
+							blockListMongooseFilter.push({ $match: { [attr]: { $not: { $regex: keywordReg, $options: 'i' } } } })
+						break;
+					}
+					case 'tag-id': {
+						if (tagIdList.length > 0)
+							blockListMongooseFilter.push({ $match: { [attr]: { $nin: tagIdList } } })
+						break;
+					}
+					case 'regex': {
+						if (regexList.length > 0)
+							blockListMongooseFilter.push({ $match: { $nor: regexList.map(rx => ({ [attr]: { $regex: rx, $options: 'i' } })) } })
+						break;
+					}
 				}
-				case 'hide-uuid': {
-					if (hideUuidList.length > 0)
-						blockListMongooseFilter.push({ $match: { [attr]: { $nin: hideUuidList } } })
-					break;
-				}
-				case 'keyword': {
-					if (keywordReg)
-						blockListMongooseFilter.push({ $match: { [attr]: { $not: { $regex: keywordReg, $options: 'i' } } } })
-					break;
-				}
-				case 'tag-id': {
-					if (tagIdList.length > 0)
-						blockListMongooseFilter.push({ $match: { [attr]: { $nin: tagIdList } } })
-					break;
-				}
-				case 'regex': {
-					if (regexList.length > 0)
-						blockListMongooseFilter.push({ $match: { $nor: regexList.map(rx => ({ [attr]: { $regex: rx, $options: 'i' } })) } })
-					break;
-				}
-			} 
+			}
 		}
 
-		return { success: true, filter: blockListMongooseFilter }
+		return { success: true, filter: blockListMongooseFilter, additionalFields }
 	} catch (error) {
 		console.error('ERROR', '构建黑名单过滤器时出错，未知错误', error)
-		return { success: false, filter: [] }
+		return { success: false, filter: [], additionalFields: { } }
 	}
 }
 

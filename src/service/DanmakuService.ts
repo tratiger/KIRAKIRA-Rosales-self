@@ -183,6 +183,7 @@ export const getDanmakuListByKvidService = async (getDanmakuByKvidRequest: GetDa
 						mode: 1,
 						enableRainbow: 1,
 						editDateTime: 1,
+						...blockListFilter.additionalFields, // 黑名单过滤器的额外字段
 					}
 				}
 			]

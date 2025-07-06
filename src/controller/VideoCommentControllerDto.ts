@@ -176,7 +176,7 @@ export type GetVideoCommentByKvidResponseDto = {
 	/** 视频评论总数量 */
 	videoCommentCount: number;
 	/** 视频评论 */
-	videoCommentList: VideoCommentResult[];
+	videoCommentList: (VideoCommentResult& { isBlockedByOther?: boolean })[];
 }
 
 /**
