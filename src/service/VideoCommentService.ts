@@ -7,7 +7,7 @@ import { RemovedVideoCommentSchema, VideoCommentDownvoteSchema, VideoCommentSche
 import { getNextSequenceValueService } from './SequenceValueService.js'
 import { checkUserTokenByUuidService, checkUserTokenService, getUserInfoByUidService, getUserUuid } from './UserService.js'
 import { buildBlockListMongooseFilter } from './BlockService.js'
-import { getVideoByKvidService } from './VideoService.js'
+import { checkVideoBlockedByKvidService, getVideoByKvidService } from './VideoService.js'
 
 /**
  * 用户发送视频评论
@@ -25,16 +25,24 @@ export const emitVideoCommentService = async (emitVideoCommentRequest: EmitVideo
 					console.error('ERROR', '评论发送失败，UUID 不存在', { uid })
 					return { success: false, message: '评论发送失败，UUID 不存在' }
 				}
-				const { videoId } = emitVideoCommentRequest
 
+				// 检查视频是否被屏蔽
+				const { videoId } = emitVideoCommentRequest
 				const selectorUuid = UUID
 				const selectorToken = token
-				if ((await getVideoByKvidService({ videoId }, selectorUuid, selectorToken)).isBlockedByOther) {
-					console.error('ERROR', '评论发送失败，用户被其他用户屏蔽', { emitVideoCommentRequest, uid, token })
+
+				const checkVideoBlockedResult = await checkVideoBlockedByKvidService(videoId, selectorUuid, selectorToken)
+				if (!checkVideoBlockedResult.success) {
+					console.error('ERROR', '评论发送失败，检查视频是否被屏蔽失败', { uid, token })
+					return { success: false, message: '评论发送失败，检查视频是否被屏蔽失败' }
+				}
+
+				if (checkVideoBlockedResult.isBlockedByOther) {
+					console.error('ERROR', '评论发送失败，用户被其他用户屏蔽', { uid, token })
 					return { success: false, message: '评论发送失败，用户被其他用户屏蔽' }
 				}
-				if ((await getVideoByKvidService({ videoId }, selectorUuid, selectorToken)).isBlocked) {
-					console.error('ERROR', '评论发送失败，用户已屏蔽上传者', { emitVideoCommentRequest, uid, token })
+				if (checkVideoBlockedResult.isBlocked) {
+					console.error('ERROR', '评论发送失败，用户已屏蔽上传者', { uid, token })
 					return { success: false, message: '评论发送失败，用户已屏蔽上传者' }
 				}
 

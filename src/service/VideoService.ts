@@ -5,7 +5,7 @@ import { createCloudflareImageUploadSignedUrl } from '../cloudflare/index.js'
 import { isEmptyObject } from '../common/ObjectTool.js'
 import { generateSecureRandomString } from '../common/RandomTool.js'
 import { CreateOrUpdateBrowsingHistoryRequestDto } from '../controller/BrowsingHistoryControllerDto.js'
-import { ApprovePendingReviewVideoRequestDto, ApprovePendingReviewVideoResponseDto, CheckVideoExistRequestDto, CheckVideoExistResponseDto, DeleteVideoRequestDto, DeleteVideoResponseDto, GetVideoByKvidRequestDto, GetVideoByKvidResponseDto, GetVideoByUidRequestDto, GetVideoByUidResponseDto, GetVideoCoverUploadSignedUrlResponseDto, GetVideoFileTusEndpointRequestDto, PendingReviewVideoResponseDto, SearchVideoByKeywordRequestDto, SearchVideoByKeywordResponseDto, SearchVideoByVideoTagIdRequestDto, SearchVideoByVideoTagIdResponseDto, ThumbVideoResponseDto, UploadVideoRequestDto, UploadVideoResponseDto, VideoPartDto } from '../controller/VideoControllerDto.js'
+import { ApprovePendingReviewVideoRequestDto, ApprovePendingReviewVideoResponseDto, CheckVideoBlockedByKvidResponseDto, CheckVideoExistRequestDto, CheckVideoExistResponseDto, DeleteVideoRequestDto, DeleteVideoResponseDto, GetVideoByKvidRequestDto, GetVideoByKvidResponseDto, GetVideoByUidRequestDto, GetVideoByUidResponseDto, GetVideoCoverUploadSignedUrlResponseDto, GetVideoFileTusEndpointRequestDto, PendingReviewVideoResponseDto, SearchVideoByKeywordRequestDto, SearchVideoByKeywordResponseDto, SearchVideoByVideoTagIdRequestDto, SearchVideoByVideoTagIdResponseDto, ThumbVideoResponseDto, UploadVideoRequestDto, UploadVideoResponseDto, VideoPartDto } from '../controller/VideoControllerDto.js'
 import { DbPoolOptions, deleteDataFromMongoDB, findOneAndUpdateData4MongoDB, insertData2MongoDB, selectDataByAggregateFromMongoDB, selectDataFromMongoDB } from '../dbPool/DbClusterPool.js'
 import { OrderByType, QueryType, SelectType, UpdateType } from '../dbPool/DbClusterPoolTypes.js'
 import { UserInfoSchema } from '../dbPool/schema/UserSchema.js'
@@ -15,7 +15,7 @@ import { EsSchema2TsType } from '../elasticsearchPool/ElasticsearchClusterPoolTy
 import { VideoDocument } from '../elasticsearchPool/template/VideoDocument.js'
 import { createOrUpdateBrowsingHistoryService } from './BrowsingHistoryService.js'
 import { getNextSequenceValueEjectService } from './SequenceValueService.js'
-import { checkUserTokenByUuidService, checkUserTokenService, getUserUuid } from './UserService.js'
+import { checkUserTokenByUuidService, checkUserTokenService, getUserUid, getUserUuid } from './UserService.js'
 import { FollowingSchema } from '../dbPool/schema/FeedSchema.js'
 import { buildBlockListMongooseFilter, checkBlockUserService, checkIsBlockedByOtherUserService } from './BlockService.js'
 
@@ -277,6 +277,76 @@ export const checkVideoExistByKvidService = async (checkVideoExistRequestDto: Ch
 	} catch (error) {
 		console.error('ERROR', '获取视频失败：', error)
 		return { success: false, message: "获取视频信息错误，未知错误", exist: false }
+	}
+}
+
+/**
+ * 根据 kvid 判断用户是否被屏蔽
+ * @param videoId 视频的 KVID
+ * @param selectorUuid 用户的 UUID
+ * @param selectorToken 用户的 Token
+ */
+export const checkVideoBlockedByKvidService = async (videoId: number, selectorUuid: string, selectorToken: string): Promise<CheckVideoBlockedByKvidResponseDto> => {
+	try {
+		let isBlocked = false
+		let isBlockedByOther = false
+		let isHidden = false
+
+		const { collectionName, schemaInstance } = VideoSchema
+		type Video = InferSchemaType<typeof schemaInstance>
+		const where: QueryType<Video> = {
+			videoId,
+		}
+		const select: SelectType<Video> = {
+			uploaderUUID: 1,
+		}
+		const videoResult = await selectDataFromMongoDB<Video>(where, select, schemaInstance, collectionName)
+		if (!videoResult.success || !videoResult.result || videoResult.result.length === 0) {
+			console.error('ERROR', '检查视频是否被屏蔽失败，未找到对应的视频')
+			return { success: false, message: '检查视频是否被屏蔽失败，未找到对应的视频'}
+		}
+		const video = videoResult.result?.[0]
+		const uploaderUUID = video.uploaderUUID
+		if (!uploaderUUID) {
+			console.error('ERROR', '检查视频是否被屏蔽失败，视频上传者 UID 为空')
+			return { success: false, message: '检查视频是否被屏蔽失败，视频上传者 UID 为空' }
+		}
+		const targetUid = await getUserUid(uploaderUUID)
+		if (!targetUid) {
+			console.error('ERROR', '检查视频是否被屏蔽失败，视频上传者 UID 不存在')
+			return { success: false, message: '检查视频是否被屏蔽失败，视频上传者 UID 不存在' }
+		}
+
+		const checkBlockUserResult = await checkBlockUserService({ uid: targetUid }, selectorUuid, selectorToken)
+		const checkIsBlockedByOtherUserResult = await checkIsBlockedByOtherUserService({ targetUid }, selectorUuid, selectorToken)
+		if (!checkBlockUserResult.success && !checkIsBlockedByOtherUserResult.success) {
+			console.error('ERROR', '检查视频是否被屏蔽失败，无法检查用户是否被屏蔽')
+			return { success: false, message: '检查视频是否被屏蔽失败，无法检查用户是否被屏蔽' }
+		}
+
+		// 1. 检查上传者是否已经被当前用户隐藏
+		if (checkBlockUserResult.isHidden) {
+			isHidden = true
+		}
+
+		// 2. 检查当前用户是否已经被上传者屏蔽
+		if (checkIsBlockedByOtherUserResult.isBlocked) {
+			isBlockedByOther = true
+		}
+
+		// 3. 检查当前用户是否与上传者双向屏蔽
+		if (checkBlockUserResult.isBlocked && checkIsBlockedByOtherUserResult.isBlocked) {
+			return { success: true, message: '你与该用户已双向屏蔽', isBlockedByOther, isBlocked: true, isHidden }
+		}
+
+		// 4. 检查上传者是否已经被当前用户屏蔽
+		if (checkBlockUserResult.isBlocked) {
+			return { success: true, message: '你已屏蔽该用户', isBlockedByOther, isBlocked: true, isHidden }
+		}
+		return { success: true, message: '未屏蔽', isBlocked, isBlockedByOther, isHidden }
+	} catch (error) {
+		console.error('ERROR', '检查视频是否被屏蔽失败：', error)
+		return { success: false, message: '检查视频是否被屏蔽失败，未知错误'}
 	}
 }
 

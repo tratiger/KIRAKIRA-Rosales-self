@@ -5,7 +5,7 @@ import { QueryType, SelectType } from '../dbPool/DbClusterPoolTypes.js'
 import { DanmakuSchema } from '../dbPool/schema/DanmakuSchema.js'
 import { checkUserTokenByUuidService, checkUserTokenService, getUserUid, getUserUuid } from './UserService.js'
 import { buildBlockListMongooseFilter, checkIsBlockedByOtherUserService } from './BlockService.js'
-import { getVideoByKvidService } from './VideoService.js'
+import { checkVideoBlockedByKvidService, getVideoByKvidService } from './VideoService.js'
 
 // /**
 //  * 用户发送弹幕
@@ -80,14 +80,22 @@ export const emitDanmakuService = async (emitDanmakuRequest: EmitDanmakuRequestD
 			console.error('ERROR', '弹幕发送失败，用户校验未通过', { emitDanmakuRequest, uuid, token })
 			return { success: false, message: '弹幕发送失败，用户校验未通过' }
 		}
+
+		// 检查视频是否被屏蔽
 		const selectorUuid = uuid
 		const selectorToken = token
-		if ((await getVideoByKvidService({ videoId }, selectorUuid, selectorToken)).isBlockedByOther) {
-			console.error('ERROR', '弹幕发送失败，用户被其他用户屏蔽', { emitDanmakuRequest, uuid, token })
+		const checkVideoBlockedResult = await checkVideoBlockedByKvidService(videoId, selectorUuid, selectorToken)
+		if (!checkVideoBlockedResult.success) {
+			console.error('ERROR', '弹幕发送失败，检查视频是否被屏蔽失败', { uid, token })
+			return { success: false, message: '弹幕发送失败，检查视频是否被屏蔽失败' }
+		}
+
+		if (checkVideoBlockedResult.isBlockedByOther) {
+			console.error('ERROR', '弹幕发送失败，用户被其他用户屏蔽', { uid, token })
 			return { success: false, message: '弹幕发送失败，用户被其他用户屏蔽' }
 		}
-		if ((await getVideoByKvidService({ videoId }, selectorUuid, selectorToken)).isBlocked) {
-			console.error('ERROR', '弹幕发送失败，用户已屏蔽上传者', { emitDanmakuRequest, uuid, token })
+		if (checkVideoBlockedResult.isBlocked) {
+			console.error('ERROR', '弹幕发送失败，用户已屏蔽上传者', { uid, token })
 			return { success: false, message: '弹幕发送失败，用户已屏蔽上传者' }
 		}
 

@@ -176,7 +176,7 @@ export type GetVideoByKvidResponseDto = {
 } & BlockState
 
 /**
- * 根据视频 ID (KVID) 检查视频是否存在的请求参数
+ * 根据视频 ID (KVID) 检查视频是否存在的请求载荷
  */
 export type CheckVideoExistRequestDto = {
 	/** 视频 ID (KVID) */
@@ -193,6 +193,22 @@ export type CheckVideoExistResponseDto = {
 	message?: string;
 	/** 视频是否存在 */
 	exist: boolean;
+}
+
+/**
+ * 根据视频 ID (KVID) 检查视频是否被屏蔽的请求响应
+ */
+export type CheckVideoBlockedByKvidResponseDto = {
+	/** 是否请求成功 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 是否屏蔽用户 */
+	isBlocked?: boolean;
+	/** 是否被其他用户屏蔽 */
+	isBlockedByOther?: boolean;
+	/** 是否被隐藏 */
+	isHidden?: boolean;
 }
 
 /**
