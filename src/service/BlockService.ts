@@ -69,7 +69,7 @@ export const blockUserByUidService = async (blockUserByUidRequest: BlockUserByUi
 		const blockListData: BlockListSchemaType = {
 			type: 'block',
 			value: userUuid,
-			operatorUid: operatorUid,
+			operatorUid,
 			operatorUUID: uuid,
 			createDateTime: now,
 		}
@@ -145,7 +145,7 @@ export const hideUserByUidService = async (hideUserByUidRequest: HideUserByUidRe
 		const blockListData: BlockListSchemaType = {
 			type: 'hide',
 			value: userUuid,
-			operatorUid: operatorUid,
+			operatorUid,
 			operatorUUID: uuid,
 			createDateTime: now,
 		}
@@ -220,7 +220,7 @@ export const blockKeywordService = async (blockKeywordRequest: BlockKeywordReque
 		const blockListData: BlockListSchemaType = {
 			type: 'keyword',
 			value: blockKeyword,
-			operatorUid: operatorUid,
+			operatorUid,
 			operatorUUID: uuid,
 			createDateTime: now,
 		}
@@ -290,7 +290,7 @@ export const blockTagService = async (blockTagRequest: BlockTagRequestDto, uuid:
 		const blockListData: BlockListSchemaType = {
 			type: 'tag',
 			value: tagId,
-			operatorUid: operatorUid,
+			operatorUid,
 			operatorUUID: uuid,
 			createDateTime: now,
 		}
@@ -364,7 +364,7 @@ export const addRegexService = async (addRegexRequest: AddRegexRequestDto, uuid:
 		const blockListData: BlockListSchemaType = {
 			type: 'regex',
 			value: blockRegex,
-			operatorUid: operatorUid,
+			operatorUid,
 			operatorUUID: uuid,
 			createDateTime: now,
 		}
@@ -1444,7 +1444,6 @@ export const checkIsBlockedByOtherUserService = async (checkIsBlockedByOtherRequ
 const getBlocklistCount = async (blocklistType: string, uuid: string): Promise<number> => {
 	try {
 		const { collectionName: blockListCollectionName, schemaInstance: blockListSchemaInstance } = BlockListSchema
-		type BlockListSchemaType = InferSchemaType<typeof blockListSchemaInstance>
 		const countBlocklistPipeline: PipelineStage[] = [
 			{
 				$match: {

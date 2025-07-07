@@ -7,55 +7,6 @@ import { checkUserTokenByUuidService, checkUserTokenService, getUserUid, getUser
 import { buildBlockListMongooseFilter, checkIsBlockedByOtherUserService } from './BlockService.js'
 import { checkVideoBlockedByKvidService, getVideoByKvidService } from './VideoService.js'
 
-// /**
-//  * 用户发送弹幕
-//  * @param emitDanmakuRequest 用户发送的弹幕数据
-//  * @param uid cookie 中的用户 ID
-//  * @param token cookie 中的用户 token
-//  * @returns 用户发送弹幕的结果
-//  */
-// export const emitDanmakuService = async (emitDanmakuRequest: EmitDanmakuRequestDto, uid: number, token: string): Promise<EmitDanmakuResponseDto> => {
-// 	try {
-// 		if (checkEmitDanmakuRequest(emitDanmakuRequest)) {
-// 			if ((await checkUserTokenService(uid, token)).success) {
-// 				const uuid = await getUserUuid(uid) // DELETE ME 这是一个临时解决方法，Cookie 中应当存储 UUID
-// 				if (!uuid) {
-// 					console.error('ERROR', '发送弹幕失败，UUID 不存在', { uid })
-// 					return { success: false, message: '发送弹幕失败，UUID 不存在' }
-// 				}
-
-// 				const { collectionName, schemaInstance } = DanmakuSchema
-// 				type Danmaku = InferSchemaType<typeof schemaInstance>
-// 				const nowDate = new Date().getTime()
-// 				const danmaku: Danmaku = {
-// 					UUID: uuid,
-// 					uid,
-// 					...emitDanmakuRequest,
-// 					editDateTime: nowDate,
-// 				}
-// 				try {
-// 					const insertData2MongoDBResult = await insertData2MongoDB(danmaku, schemaInstance, collectionName)
-// 					if (insertData2MongoDBResult && insertData2MongoDBResult.success) {
-// 						return { success: true, message: '弹幕发送成功！', danmaku: emitDanmakuRequest }
-// 					}
-// 				} catch (error) {
-// 					console.error('ERROR', '弹幕发送失败，无法存储到 MongoDB', error)
-// 					return { success: false, message: '弹幕发送失败，存储弹幕数据失败' }
-// 				}
-// 			} else {
-// 				console.error('ERROR', '弹幕发送失败，用户校验未通过', { emitDanmakuRequest, uid, token })
-// 				return { success: false, message: '弹幕发送失败，用户校验未通过' }
-// 			}
-// 		} else {
-// 			console.error('ERROR', '弹幕发送失败，弹幕数据校验未通过：', { emitDanmakuRequest, uid, token })
-// 			return { success: false, message: '弹幕发送失败，弹幕数据错误' }
-// 		}
-// 	} catch (error) {
-// 		console.error('ERROR', '弹幕发送失败，错误信息：', error, { emitDanmakuRequest, uid, token })
-// 		return { success: false, message: '弹幕发送失败，未知原因' }
-// 	}
-// }
-
 /**
  * 用户发送弹幕
  * @param emitDanmakuRequest 用户发送的弹幕数据
