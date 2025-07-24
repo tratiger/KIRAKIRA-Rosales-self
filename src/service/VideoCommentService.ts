@@ -5,9 +5,9 @@ import { findOneAndPlusByMongodbId, insertData2MongoDB, selectDataFromMongoDB, u
 import { QueryType, SelectType } from '../dbPool/DbClusterPoolTypes.js'
 import { RemovedVideoCommentSchema, VideoCommentDownvoteSchema, VideoCommentSchema, VideoCommentUpvoteSchema } from '../dbPool/schema/VideoCommentSchema.js'
 import { getNextSequenceValueService } from './SequenceValueService.js'
-import { checkUserTokenByUuidService, checkUserTokenService, getUserInfoByUidService, getUserUuid } from './UserService.js'
+import { checkUserTokenByUuidService, checkUserTokenService, getUserInfoByUidService, getUserUid, getUserUuid } from './UserService.js'
 import { buildBlockListMongooseFilter } from './BlockService.js'
-import { checkVideoBlockedByKvidService, getVideoByKvidService } from './VideoService.js'
+import { checkVideoBlockedByKvidService } from './VideoService.js'
 
 /**
  * 用户发送视频评论
@@ -16,134 +16,140 @@ import { checkVideoBlockedByKvidService, getVideoByKvidService } from './VideoSe
  * @param token cookie 中的用户 token
  * @returns 用户发送弹幕的结果
  */
-export const emitVideoCommentService = async (emitVideoCommentRequest: EmitVideoCommentRequestDto, uid: number, token: string): Promise<EmitVideoCommentResponseDto> => {
+export const emitVideoCommentService = async (emitVideoCommentRequest: EmitVideoCommentRequestDto, uuid: string, token: string): Promise<EmitVideoCommentResponseDto> => {
 	try {
-		if (checkEmitVideoCommentRequest(emitVideoCommentRequest)) {
-			if ((await checkUserTokenService(uid, token)).success) {
-				const UUID = await getUserUuid(uid) // DELETE ME 这是一个临时解决方法，Cookie 中应当存储 UUID
-				if (!UUID) {
-					console.error('ERROR', '评论发送失败，UUID 不存在', { uid })
-					return { success: false, message: '评论发送失败，UUID 不存在' }
+		if (!checkEmitVideoCommentRequest(emitVideoCommentRequest)) {
+			console.error('ERROR', '视频评论发送失败，弹幕数据校验未通过：', { videoId: emitVideoCommentRequest.videoId, uuid })
+			return { success: false, message: '视频评论发送失败，视频评论数据错误' }
+		}
+		
+		if (!(await checkUserTokenByUuidService(uuid, token)).success) {
+			console.error('ERROR', '视频评论发送失败，用户校验未通过', { videoId: emitVideoCommentRequest.videoId, uuid })
+			return { success: false, message: '视频评论发送失败，用户校验未通过' }
+		}
+
+		if (!uuid) {
+			console.error('ERROR', '评论发送失败，UUID 不存在', { uuid })
+			return { success: false, message: '评论发送失败，UUID 不存在' }
+		}
+
+		const uid = await getUserUid(uuid)
+		if (uid === undefined || uid === null || uid < 1) {
+			console.error('ERROR', '评论发送失败，获取发送者 UID 失败。', { uuid })
+			return { success: false, message: '评论发送失败，获取发送者 UID 失败。' }
+		}
+
+		// 检查视频是否被屏蔽
+		const { videoId } = emitVideoCommentRequest
+		const selectorUuid = uuid
+		const selectorToken = token
+
+		const checkVideoBlockedResult = await checkVideoBlockedByKvidService(videoId, selectorUuid, selectorToken)
+		if (!checkVideoBlockedResult.success) {
+			console.error('ERROR', '评论发送失败，检查视频是否被屏蔽失败', { uuid })
+			return { success: false, message: '评论发送失败，检查视频是否被屏蔽失败' }
+		}
+
+		if (checkVideoBlockedResult.isBlockedByOther) {
+			console.error('ERROR', '评论发送失败，用户被其他用户屏蔽', { uuid })
+			return { success: false, message: '评论发送失败，用户被其他用户屏蔽' }
+		}
+		if (checkVideoBlockedResult.isBlocked) {
+			console.error('ERROR', '评论发送失败，用户已屏蔽上传者', { uuid })
+			return { success: false, message: '评论发送失败，用户已屏蔽上传者' }
+		}
+
+		// 启动事务
+		const session = await mongoose.startSession()
+		session.startTransaction()
+
+		const getCommentIndexResult = await getNextSequenceValueService(`KVID-${emitVideoCommentRequest.videoId}`, 1, 1, session) // 以视频 ID 为键，获取下一个值，即评论楼层
+		const commentIndex = getCommentIndexResult.sequenceValue
+		if (!getCommentIndexResult.success || commentIndex === undefined || commentIndex === null) {
+			if (session.inTransaction()) {
+				await session.abortTransaction()
+			}
+			session.endSession()
+			console.error('ERROR', '视频评论发送失败，获取楼层数据失败，无法根据视频 ID 获取序列下一个值', { videoId: emitVideoCommentRequest.videoId, uid })
+			return { success: false, message: '视频评论发送失败，获取楼层数据失败' }
+		}
+
+		const { collectionName, schemaInstance } = VideoCommentSchema
+		type VideoComment = InferSchemaType<typeof schemaInstance>
+		const nowDate = new Date().getTime()
+		const videoComment: VideoComment = {
+			...emitVideoCommentRequest,
+			UUID: uuid,
+			uid,
+			commentRoute: `${emitVideoCommentRequest.videoId}.${commentIndex}`,
+			commentIndex,
+			emitTime: nowDate,
+			upvoteCount: 0,
+			downvoteCount: 0,
+			subComments: [] as VideoComment['subComments'], // TODO: Mongoose issue: #12420
+			subCommentsCount: 0,
+			editDateTime: nowDate,
+		}
+		try {
+			const insertData2MongoDBResult = await insertData2MongoDB(videoComment, schemaInstance, collectionName, { session })
+			
+			if (!insertData2MongoDBResult || !insertData2MongoDBResult.success) {
+				if (session.inTransaction()) {
+					await session.abortTransaction()
 				}
+				session.endSession()
+				console.error('ERROR', '视频评论发送失败，未返回结果', { videoId: emitVideoCommentRequest.videoId, uid })
+				return { success: false, message: '视频评论发送失败，存储视频评论数据失败' }
+			}
 
-				// 检查视频是否被屏蔽
-				const { videoId } = emitVideoCommentRequest
-				const selectorUuid = UUID
-				const selectorToken = token
-
-				const checkVideoBlockedResult = await checkVideoBlockedByKvidService(videoId, selectorUuid, selectorToken)
-				if (!checkVideoBlockedResult.success) {
-					console.error('ERROR', '评论发送失败，检查视频是否被屏蔽失败', { uid, token })
-					return { success: false, message: '评论发送失败，检查视频是否被屏蔽失败' }
-				}
-
-				if (checkVideoBlockedResult.isBlockedByOther) {
-					console.error('ERROR', '评论发送失败，用户被其他用户屏蔽', { uid, token })
-					return { success: false, message: '评论发送失败，用户被其他用户屏蔽' }
-				}
-				if (checkVideoBlockedResult.isBlocked) {
-					console.error('ERROR', '评论发送失败，用户已屏蔽上传者', { uid, token })
-					return { success: false, message: '评论发送失败，用户已屏蔽上传者' }
-				}
-
-				// 启动事务
-				const session = await mongoose.startSession()
-				session.startTransaction()
-
-				const getCommentIndexResult = await getNextSequenceValueService(`KVID-${emitVideoCommentRequest.videoId}`, 1, 1, session) // 以视频 ID 为键，获取下一个值，即评论楼层
-				const commentIndex = getCommentIndexResult.sequenceValue
-				if (getCommentIndexResult.success && commentIndex !== undefined && commentIndex !== null) {
-					const { collectionName, schemaInstance } = VideoCommentSchema
-					type VideoComment = InferSchemaType<typeof schemaInstance>
-					const nowDate = new Date().getTime()
-					const videoComment: VideoComment = {
-						...emitVideoCommentRequest,
-						UUID,
-						uid,
-						commentRoute: `${emitVideoCommentRequest.videoId}.${commentIndex}`,
-						commentIndex,
-						emitTime: nowDate,
-						upvoteCount: 0,
-						downvoteCount: 0,
-						subComments: [] as VideoComment['subComments'], // TODO: Mongoose issue: #12420
-						subCommentsCount: 0,
-						editDateTime: nowDate,
-					}
-					try {
-						const insertData2MongoDBResult = await insertData2MongoDB(videoComment, schemaInstance, collectionName, { session })
-						if (insertData2MongoDBResult && insertData2MongoDBResult.success) {
-							const getUserInfoByUidRequest: GetUserInfoByUidRequestDto = { uid: videoComment.uid }
-							try {
-								const videoCommentSenderUserInfo = await getUserInfoByUidService(getUserInfoByUidRequest)
-								const videoCommentSenderUserInfoResult = videoCommentSenderUserInfo.result
-								if (videoCommentSenderUserInfo.success && videoCommentSenderUserInfoResult) {
-									const videoCommentResult: VideoCommentResult = {
-										_id: insertData2MongoDBResult.result?.[0]?._id?.toString(),
-										...videoComment,
-										userInfo: {
-											userNickname: videoCommentSenderUserInfoResult.userNickname,
-											username: videoCommentSenderUserInfoResult.username,
-											avatar: videoCommentSenderUserInfoResult.avatar,
-											userBannerImage: videoCommentSenderUserInfoResult.userBannerImage,
-											signature: videoCommentSenderUserInfoResult.signature,
-											gender: videoCommentSenderUserInfoResult.gender,
-										},
-										isUpvote: false,
-										isDownvote: false,
-									}
-									await session.commitTransaction()
-									session.endSession()
-									return { success: true, message: '视频评论发送成功！', videoComment: videoCommentResult }
-								} else {
-									if (session.inTransaction()) {
-										await session.abortTransaction()
-									}
-									session.endSession()
-									console.warn('WARN', 'WARNING', '视频评论发送成功，但是获取回显数据为空', { videoId: emitVideoCommentRequest.videoId, uid })
-									return { success: false, message: '视频评论发送成功，请尝试刷新页面' }
-								}
-							} catch (error) {
-								if (session.inTransaction()) {
-									await session.abortTransaction()
-								}
-								session.endSession()
-								console.warn('WARN', 'WARNING', '视频评论发送成功，但是获取回显数据失败', error, { videoId: emitVideoCommentRequest.videoId, uid })
-								return { success: false, message: '视频评论发送成功，请刷新页面' }
-							}
-						} else {
-							if (session.inTransaction()) {
-								await session.abortTransaction()
-							}
-							session.endSession()
-							console.error('ERROR', '视频评论发送失败，未返回结果', { videoId: emitVideoCommentRequest.videoId, uid })
-							return { success: false, message: '视频评论发送失败，存储视频评论数据失败' }
-						}
-					} catch (error) {
-						if (session.inTransaction()) {
-							await session.abortTransaction()
-						}
-						session.endSession()
-						console.error('ERROR', '视频评论发送失败，无法存储到 MongoDB', error, { videoId: emitVideoCommentRequest.videoId, uid })
-						return { success: false, message: '视频评论发送失败，存储视频评论数据失败' }
-					}
-				} else {
+			const getUserInfoByUidRequest: GetUserInfoByUidRequestDto = { uid: videoComment.uid }
+			try {
+				const videoCommentSenderUserInfo = await getUserInfoByUidService(getUserInfoByUidRequest)
+				const videoCommentSenderUserInfoResult = videoCommentSenderUserInfo.result
+				if (!videoCommentSenderUserInfo.success || !videoCommentSenderUserInfoResult) {
 					if (session.inTransaction()) {
 						await session.abortTransaction()
 					}
 					session.endSession()
-					console.error('ERROR', '视频评论发送失败，获取楼层数据失败，无法根据视频 ID 获取序列下一个值', { videoId: emitVideoCommentRequest.videoId, uid })
-					return { success: false, message: '视频评论发送失败，获取楼层数据失败' }
+					console.warn('WARN', 'WARNING', '视频评论发送成功，但是获取回显数据为空', { videoId: emitVideoCommentRequest.videoId, uid })
+					return { success: false, message: '视频评论发送成功，请尝试刷新页面' }
 				}
-			} else {
-				console.error('ERROR', '视频评论发送失败，用户校验未通过', { videoId: emitVideoCommentRequest.videoId, uid })
-				return { success: false, message: '视频评论发送失败，用户校验未通过' }
+
+				const videoCommentResult: VideoCommentResult = {
+					_id: insertData2MongoDBResult.result?.[0]?._id?.toString(),
+					...videoComment,
+					userInfo: {
+						userNickname: videoCommentSenderUserInfoResult.userNickname,
+						username: videoCommentSenderUserInfoResult.username,
+						avatar: videoCommentSenderUserInfoResult.avatar,
+						userBannerImage: videoCommentSenderUserInfoResult.userBannerImage,
+						signature: videoCommentSenderUserInfoResult.signature,
+						gender: videoCommentSenderUserInfoResult.gender,
+					},
+					isUpvote: false,
+					isDownvote: false,
+				}
+				await session.commitTransaction()
+				session.endSession()
+				return { success: true, message: '视频评论发送成功！', videoComment: videoCommentResult }
+			} catch (error) {
+				if (session.inTransaction()) {
+					await session.abortTransaction()
+				}
+				session.endSession()
+				console.warn('WARN', 'WARNING', '视频评论发送成功，但是获取回显数据失败', error, { videoId: emitVideoCommentRequest.videoId, uid })
+				return { success: false, message: '视频评论发送成功，请刷新页面' }
 			}
-		} else {
-			console.error('ERROR', '视频评论发送失败，弹幕数据校验未通过：', { videoId: emitVideoCommentRequest.videoId, uid })
-			return { success: false, message: '视频评论发送失败，视频评论数据错误' }
+		} catch (error) {
+			if (session.inTransaction()) {
+				await session.abortTransaction()
+			}
+			session.endSession()
+			console.error('ERROR', '视频评论发送失败，无法存储到 MongoDB', error, { videoId: emitVideoCommentRequest.videoId, uid })
+			return { success: false, message: '视频评论发送失败，存储视频评论数据失败' }
 		}
 	} catch (error) {
-		console.error('ERROR', '视频评论发送失败，错误信息：', error, { videoId: emitVideoCommentRequest.videoId, uid })
+		console.error('ERROR', '视频评论发送失败，错误信息：', error, { videoId: emitVideoCommentRequest.videoId, uuid })
 		return { success: false, message: '视频评论发送失败，未知错误' }
 	}
 }

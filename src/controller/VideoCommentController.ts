@@ -10,11 +10,11 @@ import { AdminDeleteVideoCommentRequestDto, CancelVideoCommentDownvoteRequestDto
  */
 export const emitVideoCommentController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<EmitVideoCommentRequestDto>
-	const uid = parseInt(ctx.cookies.get('uid'), 10)
+	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
 
 	// RBAC 权限验证
-	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
+	if (!await isPassRbacCheck({ uuid, apiPath: ctx.path }, ctx)) {
 		return
 	}
 
@@ -24,7 +24,7 @@ export const emitVideoCommentController = async (ctx: koaCtx, next: koaNext) => 
 		/** 评论正文 */
 		text: data.text,
 	}
-	const emitVideoCommentResponse = await emitVideoCommentService(emitVideoCommentRequest, uid, token)
+	const emitVideoCommentResponse = await emitVideoCommentService(emitVideoCommentRequest, uuid, token)
 	ctx.body = emitVideoCommentResponse
 	await next()
 }

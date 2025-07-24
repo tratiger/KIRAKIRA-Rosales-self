@@ -2971,7 +2971,7 @@ export const getUserUuid = async (uid: number): Promise<string | void> => {
  * @param uuid 用户 UUID
  * @returns UID
  */
-export const getUserUid = async (uuid: string): Promise<number | void> => {
+export const getUserUid = async (uuid: string): Promise<number | undefined> => {
 	try {
 		if (!uuid) {
 			console.error('ERROR', '通过 UUID 获取 UID 失败，UUID 不合法')
@@ -2996,7 +2996,7 @@ export const getUserUid = async (uuid: string): Promise<number | void> => {
 		}
 	} catch (error) {
 		console.error('ERROR', '通过 UUID 获取 UID 时出错：', error)
-		return
+		return undefined
 	}
 }
 
