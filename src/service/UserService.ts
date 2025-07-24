@@ -828,69 +828,98 @@ export const checkUserExistsByUIDService = async (userExistsCheckByUIDRequest: U
 export const getSelfUserInfoService = async (getSelfUserInfoRequest: GetSelfUserInfoRequestDto): Promise<GetSelfUserInfoResponseDto> => {
 	try {
 		const { uid, token } = getSelfUserInfoRequest
-		if (uid !== null && uid !== undefined && token) {
-			if (await checkUserToken(uid, token)) {
-				const { collectionName: userAuthCollectionName, schemaInstance: userAuthSchemaInstance } = UserAuthSchema
-				type UserAuth = InferSchemaType<typeof userAuthSchemaInstance>
-				const userAuthWhere: QueryType<UserAuth> = { uid }
-				const userAuthSelect: SelectType<UserAuth> = {
+		if (!uid || !token) {
+			console.error('ERROR', '通过 UID 获取用户信息失败，uid 或 token 为空')
+			return { success: false, message: '通过 UID 获取用户信息失败，必要的参数为空' }
+		}
+
+		const UUID = await getUserUuid(uid) // DELETE ME: 此为 UID 兼容性代码，随着 UUID 的普及，uid 将被逐渐废弃
+
+		if (!await checkUserToken(uid, token)) {
+			console.error('ERROR', '通过 UID 获取用户信息时失败，用户的 token 校验未通过，非法用户！')
+			return { success: false, message: '通过 UID 获取用户信息时失败，非法用户！' }
+		}
+
+		const { collectionName: userAuthCollectionName, schemaInstance: userAuthSchemaInstance } = UserAuthSchema
+		type UserAuth = InferSchemaType<typeof userAuthSchemaInstance>
+
+		const selfUserInfoPipeline: PipelineStage[] = [
+			{
+				$match: {
+					UUID
+				},
+			},
+			{
+				$lookup: {
+					from: 'user-infos',
+					localField: 'UUID',
+					foreignField: 'UUID',
+					as: 'user_info_data'
+				}
+			},
+			{
+				$unwind: {
+					path: '$user_info_data',
+					preserveNullAndEmptyArrays: true // 保留没有用户信息的用户
+				},
+			},
+			{
+				$lookup: {
+					from: 'user-invitation-codes',
+					localField: 'UUID',
+					foreignField: 'assigneeUUID',
+					as: 'invitation_codes_data'
+				},
+			},
+			{
+				$unwind: {
+					path: '$invitation_codes_data',
+					preserveNullAndEmptyArrays: true
+				},
+			},
+			{
+				$project: {
 					email: 1, // 用户邮箱
 					userCreateDateTime: 1, // 用户创建日期
 					roles: 1, // 用户的角色
 					uid: 1, // 用户 UID
 					UUID: 1, // UUID
 					authenticatorType: 1, // 2FA 的类型
+					userNickname: '$user_info_data.userNickname', // 用户昵称
+					username: '$user_info_data.username', // 用户名
+					label: '$user_info_data.label', // 用户标签
+					avatar: '$user_info_data.avatar', // 用户头像
+					userBannerImage: '$user_info_data.userBannerImage', // 用户的背景图
+					signature: '$user_info_data.signature', // 用户的个性签名
+					gender: '$user_info_data.gender', // 用户的性别
+					invitationCode: '$invitation_codes_data.invitationCode', // 用户的邀请码
 				}
+			}
+		]
 
-				const { collectionName: userInfoCollectionName, schemaInstance: userInfoSchemaInstance } = UserInfoSchema
-				type UserInfo = InferSchemaType<typeof userInfoSchemaInstance>
-				const getUserInfoWhere: QueryType<UserInfo> = { uid }
-				const getUserInfoSelect: SelectType<UserInfo> = {
-					uid: 1, // 用户 UID
-					UUID: 1, // UUID
-					label: 1, // 用户标签
-					username: 1, // 用户名
-					userNickname: 1, // 用户昵称
-					avatar: 1, // 用户头像
-					userBannerImage: 1, // 用户的背景图
-					signature: 1, // 用户的个性签名
-					gender: 1, // 用户的性别
-				}
-
-				try {
-					const userAuthPromise = selectDataFromMongoDB<UserAuth>(userAuthWhere, userAuthSelect, userAuthSchemaInstance, userAuthCollectionName)
-					const userInfoPromise = selectDataFromMongoDB(getUserInfoWhere, getUserInfoSelect, userInfoSchemaInstance, userInfoCollectionName)
-					const [userAuthResult, userInfoResult] = await Promise.all([userAuthPromise, userInfoPromise])
-					if (userInfoResult && userAuthResult && userInfoResult.success && userAuthResult.success) {
-						const userAuth = userAuthResult?.result
-						const userInfo = userInfoResult?.result
-						if (userAuth?.length === 0 || userInfo?.length === 0) {
-							return { success: true, message: '用户未填写用户信息', result: { uid, email: userAuth?.[0]?.email, userCreateDateTime: userAuth[0].userCreateDateTime, roles: userAuth[0].roles, typeOf2FA: userAuth[0].authenticatorType } }
-						} else if (userAuth?.length === 1 && userAuth?.[0] && userInfo?.length === 1 && userInfo?.[0]) {
-							return { success: true, message: '获取用户信息成功', result: { ...userInfo[0], email: userAuth[0].email, userCreateDateTime: userAuth[0].userCreateDateTime, roles: userAuth[0].roles, typeOf2FA: userAuth[0].authenticatorType } }
-						} else {
-							console.error('ERROR', '获取用户信息时失败，获取到的结果长度不为 1')
-							return { success: false, message: '获取用户信息时失败，结果异常' }
-						}
-					} else {
-						console.error('ERROR', '获取用户信息时失败，获取到的结果为空')
-						return { success: false, message: '获取用户信息时失败，结果为空' }
-					}
-				} catch (error) {
-					console.error('ERROR', '获取用户信息时失败，查询数据时出错：', error)
-					return { success: false, message: '获取用户信息时失败' }
+		try {
+			const userSelfInfoResult = await selectDataByAggregateFromMongoDB<UserAuth>(userAuthSchemaInstance, userAuthCollectionName, selfUserInfoPipeline)
+			if (userSelfInfoResult && userSelfInfoResult.success) {
+				const userInfo = userSelfInfoResult?.result
+				if (userInfo?.length === 0) {
+					return { success: true, message: '用户未填写用户信息', result: undefined }
+				} else if (userInfo?.length === 1 && userInfo?.[0]) {
+					return { success: true, message: '获取用户信息成功', result: { ...userInfo[0], email: userInfo[0].email, userCreateDateTime: userInfo[0].userCreateDateTime, roles: userInfo[0].roles } }
+				} else {
+					console.error('ERROR', '通过 UID 获取用户信息时失败，获取到的结果长度不为 1')
+					return { success: false, message: '通过 UID 获取用户信息时失败，结果异常' }
 				}
 			} else {
-				console.error('ERROR', '获取用户信息时失败，用户的 token 校验未通过，非法用户！')
-				return { success: false, message: '获取用户信息时失败，非法用户！' }
+				console.error('ERROR', '通过 UUID 获取用户信息时失败，获取到的结果为空')
+				return { success: false, message: '通过 UID 获取用户信息时失败，结果为空' }
 			}
-		} else {
-			console.error('ERROR', '获取用户信息时失败，uid 或 token 为空')
-			return { success: false, message: '获取用户信息时失败，必要的参数为空' }
+		} catch (error) {
+			console.error('ERROR', '通过 UID 获取用户信息时出错，查询数据时出错：', error)
+			return { success: false, message: '通过 UID 获取用户信息时出错' }
 		}
 	} catch (error) {
-		console.error('ERROR', '获取用户信息时失败，未知错误：', error)
-		return { success: false, message: '获取用户信息时失败，未知错误' }
+		console.error('ERROR', '通过 UID 获取用户信息时出错，未知错误：', error)
+		return { success: false, message: '通过 UID 获取用户信息时出错，未知错误' }
 	}
 }
 
@@ -913,43 +942,64 @@ export const getSelfUserInfoByUuidService = async (getSelfUserInfoByUuidRequest:
 		}
 
 		const { collectionName: userAuthCollectionName, schemaInstance: userAuthSchemaInstance } = UserAuthSchema
-		const { collectionName: userInfoCollectionName, schemaInstance: userInfoSchemaInstance } = UserInfoSchema
-
 		type UserAuth = InferSchemaType<typeof userAuthSchemaInstance>
-		type UserInfo = InferSchemaType<typeof userInfoSchemaInstance>
 
-		const where: QueryType<UserAuth> | QueryType<UserInfo> = { UUID: uuid }
-
-		const userAuthSelect: SelectType<UserAuth> = {
-			email: 1, // 用户邮箱
-			userCreateDateTime: 1, // 用户创建日期
-			roles: 1, // 用户的角色
-			uid: 1, // 用户 UID
-			UUID: 1, // UUID
-		}
-		const getUserInfoSelect: SelectType<UserInfo> = {
-			uid: 1, // 用户 UID
-			UUID: 1, // UUID
-			label: 1, // 用户标签
-			username: 1, // 用户名
-			userNickname: 1, // 用户昵称
-			avatar: 1, // 用户头像
-			userBannerImage: 1, // 用户的背景图
-			signature: 1, // 用户的个性签名
-			gender: 1, // 用户的性别
-		}
+		const selfUserInfoPipeline: PipelineStage[] = [
+			{
+				$match: {
+					UUID: uuid
+				},
+			},
+			{
+				$lookup: {
+					from: 'user-infos',
+					localField: 'UUID',
+					foreignField: 'UUID',
+					as: 'user_info_data'
+				}
+			},
+			{
+				$unwind: {
+					path: '$user_info_data',
+					preserveNullAndEmptyArrays: true // 保留没有用户信息的用户
+				},
+			},
+			{
+				$lookup: {
+					from: 'user-invitation-codes',
+					localField: 'UUID',
+					foreignField: 'assigneeUUID',
+					as: 'invitation_codes_data'
+				},
+			},
+			{
+				$project: {
+					email: 1, // 用户邮箱
+					userCreateDateTime: 1, // 用户创建日期
+					roles: 1, // 用户的角色
+					uid: 1, // 用户 UID
+					UUID: 1, // UUID
+					authenticatorType: 1, // 2FA 的类型
+					userNickname: '$user_info_data.userNickname', // 用户昵称
+					username: '$user_info_data.username', // 用户名
+					label: '$user_info_data.label', // 用户标签
+					avatar: '$user_info_data.avatar', // 用户头像
+					userBannerImage: '$user_info_data.userBannerImage', // 用户的背景图
+					signature: '$user_info_data.signature', // 用户的个性签名
+					gender: '$user_info_data.gender', // 用户的性别
+					invitationCode: '$invitation_codes_data.invitationCode', // 用户的邀请码
+				}
+			}
+		]
 
 		try {
-			const userAuthPromise = selectDataFromMongoDB<UserAuth>(where, userAuthSelect, userAuthSchemaInstance, userAuthCollectionName)
-			const userInfoPromise = selectDataFromMongoDB<UserInfo>(where, getUserInfoSelect, userInfoSchemaInstance, userInfoCollectionName)
-			const [userAuthResult, userInfoResult] = await Promise.all([userAuthPromise, userInfoPromise])
-			if (userInfoResult && userAuthResult && userInfoResult.success && userAuthResult.success) {
-				const userAuth = userAuthResult?.result
-				const userInfo = userInfoResult?.result
-				if (userAuth?.length === 0 || userInfo?.length === 0) {
-					return { success: true, message: '用户未填写用户信息', result: { uuid, email: userAuth?.[0]?.email, userCreateDateTime: userAuth[0].userCreateDateTime, roles: userAuth[0].roles } }
-				} else if (userAuth?.length === 1 && userAuth?.[0] && userInfo?.length === 1 && userInfo?.[0]) {
-					return { success: true, message: '获取用户信息成功', result: { ...userInfo[0], email: userAuth[0].email, userCreateDateTime: userAuth[0].userCreateDateTime, roles: userAuth[0].roles } }
+			const userSelfInfoResult = await selectDataByAggregateFromMongoDB<UserAuth>(userAuthSchemaInstance, userAuthCollectionName, selfUserInfoPipeline)
+			if (userSelfInfoResult && userSelfInfoResult.success) {
+				const userInfo = userSelfInfoResult?.result
+				if (!userInfo || userInfo.length === 0) {
+					return { success: true, message: '用户未填写用户信息', result: undefined }
+				} else if (userInfo?.length === 1 && userInfo?.[0]) {
+					return { success: true, message: '获取用户信息成功', result: { ...userInfo[0], email: userInfo[0].email, userCreateDateTime: userInfo[0].userCreateDateTime, roles: userInfo[0].roles } }
 				} else {
 					console.error('ERROR', '通过 UUID 获取用户信息时失败，获取到的结果长度不为 1')
 					return { success: false, message: '通过 UUID 获取用户信息时失败，结果异常' }
@@ -1683,55 +1733,6 @@ export const checkInvitationCodeService = async (checkInvitationCodeRequestDto: 
 	} catch (error) {
 		console.error('ERROR', '检查邀请码可用性失败，未知错误', error)
 		return { success: false, isAvailableInvitationCode: false, message: '检查邀请码可用性失败，未知错误' }
-	}
-}
-
-/**
- * 获取用户注册时使用的邀请码
- * @param uuid 用户 UUID
- * @param token 用户 token
- * @returns 返回用户注册时使用的邀请码
- */
-export const getUserInvitationCodeService = async (uuid: string, token: string): Promise<GetUserInvitationCodeResponseDto> => {
-	try {
-		if (await checkUserTokenByUUID(uuid, token)) {
-			const { collectionName, schemaInstance } = UserInvitationCodeSchema
-			type UserInvitationCode = InferSchemaType<typeof schemaInstance>
-
-			// 查询条件：确保 assigneeUUID 字段等于传入的 uuid
-			const InvitationCodeWhere: QueryType<UserInvitationCode> = {
-				assigneeUUID: uuid,
-			}
-
-			const InvitationCodeSelect: SelectType<UserInvitationCode> = {
-				invitationCode: 1,
-			}
-
-			try {
-				const myInvitationCodeResult = await selectDataFromMongoDB<UserInvitationCode>(InvitationCodeWhere, InvitationCodeSelect, schemaInstance, collectionName)
-				if (myInvitationCodeResult.success) {
-					if (myInvitationCodeResult.result?.length <= 0) {
-						return { success: true, message: '邀请码为空' }
-					} else {
-						// 提取并返回第一个匹配的邀请码
-						const invitationCode = myInvitationCodeResult.result[0].invitationCode
-						return { success: true, message: '获取邀请码成功', invitationCode }
-					}
-				} else {
-					console.error('ERROR', '获取邀请码失败，请求失败', { uuid })
-					return { success: false, message: '获取邀请码失败，请求失败！' }
-				}
-			} catch (error) {
-				console.error('ERROR', '获取邀请码失败，请求时出错', { uuid, error })
-				return { success: false, message: '获取邀请码失败，请求时出错！' }
-			}
-		} else {
-			console.error('ERROR', '获取邀请码失败，非法用户！', { uuid })
-			return { success: false, message: '获取邀请码失败，非法用户！' }
-		}
-	} catch (error) {
-		console.error('ERROR', '获取邀请码失败，未知错误', error)
-		return { success: false, message: '获取邀请码失败，未知错误' }
 	}
 }
 
@@ -2503,9 +2504,9 @@ export const checkUserExistsByUuidService = async (checkUserExistsByUuidRequest:
  * @param GetBlockedUserRequest 获取被封禁用户的请求载荷
  * @returns 获取所有被封禁用户的信息的请求响应
  */
-export const getBlockedUserService = async (adminUUid: string, adminToken: string, GetBlockedUserRequest: GetBlockedUserRequestDto): Promise<GetBlockedUserResponseDto> => {
+export const getBlockedUserService = async (adminUUID: string, adminToken: string, GetBlockedUserRequest: GetBlockedUserRequestDto): Promise<GetBlockedUserResponseDto> => {
 	try {
-		if (await checkUserTokenByUUID(adminUUid, adminToken)) {
+		if (await checkUserTokenByUUID(adminUUID, adminToken)) {
 			const { sortBy, sortOrder } = GetBlockedUserRequest
 			let pageSize = undefined
 			let skip = 0

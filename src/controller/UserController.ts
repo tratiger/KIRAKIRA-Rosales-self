@@ -25,7 +25,6 @@ import {
 	updateUserEmailService,
 	userLoginService,
 	userRegistrationService,
-	getUserInvitationCodeService,
 	getUserUuid,
 	createUserTotpAuthenticatorService,
 	confirmUserTotpAuthenticatorService,
@@ -589,18 +588,6 @@ export const getMyInvitationCodeController = async (ctx: koaCtx, next: koaNext) 
 	const token = ctx.cookies.get('token')
 
 	ctx.body = await getMyInvitationCodeService(uid, token)
-	await next()
-}
-
-/**
- * 获取用户注册时使用的邀请码
- * @param ctx context
- * @param next context
- */
-export const getUserInvitationCodeController = async (ctx: koaCtx, next: koaNext) => {
-	const uuid = ctx.cookies.get('uuid')
-	const token = ctx.cookies.get('token')
-	ctx.body = await getUserInvitationCodeService(uuid, token)
 	await next()
 }
 
