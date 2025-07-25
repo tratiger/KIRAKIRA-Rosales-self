@@ -488,8 +488,10 @@ export type RequestSendVerificationCodeResponseDto = {
  * 邀请码类型
  */
 type InvitationCode = {
-	/** 生成邀请码的用户 - 非空 */
+	/** 生成邀请码的用户 UID - 非空 */
 	creatorUid: number;
+	/** 生成邀请码的用户 UUID - 非空 */
+	creatorUUID: string;
 	/** 邀请码 - 非空 */
 	invitationCode: string;
 	/** 生成邀请码的时间 - 非空 */
@@ -531,19 +533,36 @@ export type GetMyInvitationCodeResponseDto = {
 }
 
 /**
- * 获取用户自己注册的邀请码的请求响应
+ * 管理员根据 UID 查询用户邀请码的请求响应
  */
-export type GetUserInvitationCodeResponseDto = {
+export type AdminGetUserInvitationCodeResponseDto = {
 	/** 执行结果，程序执行成功，返回 true，程序执行失败，返回 false */
 	success: boolean;
 	/** 附加的文本消息 */
 	message?: string;
 	/** 注册时使用的邀请码 */
-	invitationCode?: string;
+	invitationCodeResult: InvitationCode[];
 }
 
 /**
- * 使用邀请码的参数
+ * 管理员根据邀请码查询用户的请求响应
+ */
+export type AdminGetUserByInvitationCodeResponseDto = {
+	/** 执行结果，程序执行成功，返回 true，程序执行失败，返回 false */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 邀请码查询结果 */
+	userInfoResult: {
+		/** 用户 UID */
+		uid?: number;
+		/** 用户 UUID */
+		uuid?: string;
+	};
+}
+
+/**
+ * 使用邀请码的的请求载荷
  */
 export type UseInvitationCodeDto = {
 	/** 被使用的邀请码 */
@@ -555,7 +574,7 @@ export type UseInvitationCodeDto = {
 }
 
 /**
- * 使用邀请码的结果
+ * 使用邀请码的请求响应
  */
 export type UseInvitationCodeResultDto = {
 	/** 是否成功使用验证码 */

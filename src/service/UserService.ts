@@ -29,7 +29,6 @@ import {
 	GetUserAvatarUploadSignedUrlResponseDto,
 	GetUserInfoByUidRequestDto,
 	GetUserInfoByUidResponseDto,
-	GetUserInvitationCodeResponseDto,
 	GetUserSettingsResponseDto,
 	ReactivateUserByUIDRequestDto,
 	ReactivateUserByUIDResponseDto,
@@ -77,7 +76,9 @@ import {
 	CheckUserExistsByUuidResponseDto,
 	AdminEditUserInfoRequestDto,
 	AdminEditUserInfoResponseDto,
-	GetBlockedUserRequestDto
+	GetBlockedUserRequestDto,
+	AdminGetUserInvitationCodeResponseDto,
+	AdminGetUserByInvitationCodeResponseDto
 } from '../controller/UserControllerDto.js'
 import { findOneAndUpdateData4MongoDB, insertData2MongoDB, selectDataFromMongoDB, updateData4MongoDB, selectDataByAggregateFromMongoDB, deleteDataFromMongoDB } from '../dbPool/DbClusterPool.js'
 import { DbPoolResultsType, QueryType, SelectType, UpdateType } from '../dbPool/DbClusterPoolTypes.js'
@@ -1733,6 +1734,118 @@ export const checkInvitationCodeService = async (checkInvitationCodeRequestDto: 
 	} catch (error) {
 		console.error('ERROR', '检查邀请码可用性失败，未知错误', error)
 		return { success: false, isAvailableInvitationCode: false, message: '检查邀请码可用性失败，未知错误' }
+	}
+}
+
+/**
+ * 管理员根据 UID 查询用户邀请码
+ * @param uid 用户 UID
+ * @param AdminUUID 管理员 UUID
+ * @param AdminToken 管理员 token
+ */
+export const adminGetUserInvitationCodeService = async (uid: number, AdminUUID: string, AdminToken: string): Promise<AdminGetUserInvitationCodeResponseDto> => {
+	try {
+		if (!uid || !AdminUUID || !AdminToken) {
+			console.error('ERROR', '管理员查询用户邀请码失败，参数不合法')
+			return { success: false, message: '管理员查询用户邀请码失败，参数不合法', invitationCodeResult: [] }
+		}
+
+		if (!(await checkUserTokenByUuidService(AdminUUID, AdminToken)).success) {
+			console.error('ERROR', '管理员查询用户邀请码失败，管理员验证失败')
+			return { success: false, message: '管理员查询用户邀请码失败，管理员验证失败', invitationCodeResult: [] }
+		}
+
+		if (!(await checkUserExistsByUIDService({ uid })).success) {
+			console.error('ERROR', '管理员查询用户邀请码失败，用户不存在', { uid })
+			return { success: false, message: '管理员查询用户邀请码失败，用户不存在', invitationCodeResult: [] }
+		}
+		const uuid = await getUserUuid(uid)
+		if (!uuid) {
+			console.error('ERROR', '管理员查询用户邀请码失败，用户 UUID 不存在', { uid })
+			return { success: false, message: '管理员查询用户邀请码失败，用户 UUID 不存在', invitationCodeResult: [] }
+		}
+
+		const { collectionName, schemaInstance } = UserInvitationCodeSchema
+		type UserInvitationCode = InferSchemaType<typeof schemaInstance>
+		const userInvitationCodeWhere: QueryType<UserInvitationCode> = {
+			assigneeUUID: uuid,
+		}
+		const userInvitationCodeSelect: SelectType<UserInvitationCode> = {
+			creatorUid: 1,
+			creatorUUID: 1,
+			invitationCode: 1,
+			generationDateTime: 1,
+			isPending: 1,
+			assignee: 1,
+			assigneeUUID: 1,
+			usedDateTime: 1,
+		}
+
+		const userInvitationCodeResult = await selectDataFromMongoDB<UserInvitationCode>(userInvitationCodeWhere, userInvitationCodeSelect, schemaInstance, collectionName)
+		if (userInvitationCodeResult.success) {
+			if (userInvitationCodeResult.result?.length > 0) {
+				return { success: true, message: '管理员查询用户邀请码成功', invitationCodeResult: userInvitationCodeResult.result }
+			} else {
+				return { success: true, message: '管理员查询用户邀请码成功，用户没有使用邀请码注册', invitationCodeResult: [] }
+			}
+		} else {
+			console.error('ERROR', '管理员查询用户邀请码失败，查询失败')
+			return { success: false, message: '管理员查询用户邀请码失败，查询失败', invitationCodeResult: [] }
+		}
+	} catch (error) {
+		console.error('ERROR', '管理员查询用户邀请码失败，未知错误', error)
+		return { success: false, message: '管理员查询用户邀请码失败，未知错误', invitationCodeResult: [] }
+	}
+}
+
+/**
+ * 管理员根据邀请码查询用户
+ * @param invitationCode 邀请码
+ * @param AdminUUID 管理员 UUID
+ * @param AdminToken 管理员 token
+ */
+export const adminGetUserByInvitationCodeService = async (invitationCode: string, AdminUUID: string, AdminToken: string): Promise<AdminGetUserByInvitationCodeResponseDto> => {
+	try {
+		if (!invitationCode || !AdminUUID || !AdminToken) {
+			console.error('ERROR', '管理员查询用户邀请码失败，参数不合法')
+			return { success: false, message: '管理员以邀请码查询用户失败，参数不合法', userInfoResult: {} }
+		}
+		if (!(await checkUserTokenByUuidService(AdminUUID, AdminToken)).success) {
+			console.error('ERROR', '管理员以邀请码查询用户失败，管理员验证失败')
+			return { success: false, message: '管理员以邀请码查询用户失败，管理员验证失败', userInfoResult: {} }
+		}
+
+		const checkInvitationCode = await checkInvitationCodeService({ invitationCode })
+		if (!checkInvitationCode.success || !!checkInvitationCode.isAvailableInvitationCode) {
+			console.error('ERROR', '管理员以邀请码查询用户失败，邀请码不可用', { invitationCode })
+			return { success: false, message: '管理员以邀请码查询用户失败，邀请码不可用', userInfoResult: {} }
+		}
+
+		const { collectionName, schemaInstance } = UserInvitationCodeSchema
+		type UserInvitationCode = InferSchemaType<typeof schemaInstance>
+		const userInvitationCodeWhere: QueryType<UserInvitationCode> = {
+			invitationCode,
+		}
+		const userInvitationCodeSelect: SelectType<UserInvitationCode> = {
+			assignee: 1,
+			assigneeUUID: 1,
+		}
+
+		const userInvitationCodeResult = await selectDataFromMongoDB<UserInvitationCode>(userInvitationCodeWhere, userInvitationCodeSelect, schemaInstance, collectionName)
+		const userInvitationCodeData = userInvitationCodeResult.result?.[0]
+		if (!userInvitationCodeResult.success) {
+			console.error('ERROR', '管理员查询用户邀请码失败，查询失败')
+			return { success: false, message: '管理员以邀请码查询用户失败，查询失败', userInfoResult: {} }
+		}
+		if (!userInvitationCodeData || !userInvitationCodeData.assignee || !userInvitationCodeData.assigneeUUID) {
+			console.error('ERROR', '管理员查询用户邀请码失败，未找到用户信息', { invitationCode })
+			return { success: false, message: '管理员以邀请码查询用户失败，未找到用户信息', userInfoResult: {} }
+		}
+		return { success: true, message: '管理员以邀请码查询用户成功', userInfoResult: { uid: userInvitationCodeData?.assignee, uuid: userInvitationCodeData?.assigneeUUID} }
+
+	} catch (error) {
+		console.error('ERROR', '管理员以邀请码查询用户失败，未知错误', error)
+		return { success: false, message: '管理员以邀请码查询用户失败，未知错误', userInfoResult: {} }
 	}
 }
 
