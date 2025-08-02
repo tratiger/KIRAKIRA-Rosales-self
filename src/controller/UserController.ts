@@ -38,7 +38,6 @@ import {
 	checkUserExistsByUIDService,
 	userEmailExistsCheckService,
 	adminEditUserInfoService,
-	adminGetUserInvitationCodeService,
 	adminGetUserByInvitationCodeService,
 } from '../service/UserService.js'
 import { koaCtx, koaNext } from '../type/koaTypes.js'
@@ -605,25 +604,6 @@ export const checkInvitationCodeController = async (ctx: koaCtx, next: koaNext) 
 		invitationCode: data.invitationCode || '',
 	}
 	ctx.body = await checkInvitationCodeService(checkInvitationCodeRequestDto)
-	await next()
-}
-
-/**
- * 管理员根据 UID 查询用户邀请码
- * @param ctx context
- * @param next context
- */
-export const adminGetUserInvitationCodeController = async (ctx: koaCtx, next: koaNext) => {
-	const adminUUID = ctx.cookies.get('uuid')
-	const adminToken = ctx.cookies.get('token')
-
-	// RBAC 权限验证
-	if (!await isPassRbacCheck({ uuid: adminUUID, apiPath: ctx.path }, ctx)) {
-		return
-	}
-	const uid = parseInt(ctx.query.uid as string, 10)
-
-	ctx.body = await adminGetUserInvitationCodeService(uid, adminUUID, adminToken)
 	await next()
 }
 

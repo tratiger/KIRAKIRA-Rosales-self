@@ -16,12 +16,12 @@ export default {
 	},
 	UserEmailAuthenticator: {
 		mailTitle: "KIRAKIRA - Verification Code For Verifying 2FA",
-		mailHeading: "Your verification code for verifying Authenticator is",
+		mailHeading: "Your verification code is",
 		mailText: "Note: Please make sure you will use this verification code to verify your Authenticator.\nVerification code is valid for 30 minutes. Please ensure do not disclose your verification code to others.\nTo stop receiving notifications, please contact the KIRAKIRA support team.",
 	},
 	DeleteUserEmailAuthenticator: {
 		mailTitle: "KIRAKIRA - Verification Code for Deleting 2FA",
-		mailHeading: "Your verification code for deleting Authenticator is",
+		mailHeading: "Your authenticator deletion code is",
 		mailText: "Note: Please make sure you will use this verification code to delete your Authenticator.\nVerification code is valid for 30 minutes. Please ensure do not disclose your verification code to others.\nTo stop receiving notifications, please contact the KIRAKIRA support team.",
 	},
 }

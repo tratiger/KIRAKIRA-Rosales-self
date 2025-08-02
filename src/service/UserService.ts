@@ -974,6 +974,12 @@ export const getSelfUserInfoByUuidService = async (getSelfUserInfoByUuidRequest:
 				},
 			},
 			{
+				$unwind: {
+					path: '$invitation_codes_data',
+					preserveNullAndEmptyArrays: true
+				},
+			},
+			{
 				$project: {
 					email: 1, // 用户邮箱
 					userCreateDateTime: 1, // 用户创建日期
@@ -1734,67 +1740,6 @@ export const checkInvitationCodeService = async (checkInvitationCodeRequestDto: 
 	} catch (error) {
 		console.error('ERROR', '检查邀请码可用性失败，未知错误', error)
 		return { success: false, isAvailableInvitationCode: false, message: '检查邀请码可用性失败，未知错误' }
-	}
-}
-
-/**
- * 管理员根据 UID 查询用户邀请码
- * @param uid 用户 UID
- * @param AdminUUID 管理员 UUID
- * @param AdminToken 管理员 token
- */
-export const adminGetUserInvitationCodeService = async (uid: number, AdminUUID: string, AdminToken: string): Promise<AdminGetUserInvitationCodeResponseDto> => {
-	try {
-		if (!uid || !AdminUUID || !AdminToken) {
-			console.error('ERROR', '管理员查询用户邀请码失败，参数不合法')
-			return { success: false, message: '管理员查询用户邀请码失败，参数不合法', invitationCodeResult: [] }
-		}
-
-		if (!(await checkUserTokenByUuidService(AdminUUID, AdminToken)).success) {
-			console.error('ERROR', '管理员查询用户邀请码失败，管理员验证失败')
-			return { success: false, message: '管理员查询用户邀请码失败，管理员验证失败', invitationCodeResult: [] }
-		}
-
-		if (!(await checkUserExistsByUIDService({ uid })).success) {
-			console.error('ERROR', '管理员查询用户邀请码失败，用户不存在', { uid })
-			return { success: false, message: '管理员查询用户邀请码失败，用户不存在', invitationCodeResult: [] }
-		}
-		const uuid = await getUserUuid(uid)
-		if (!uuid) {
-			console.error('ERROR', '管理员查询用户邀请码失败，用户 UUID 不存在', { uid })
-			return { success: false, message: '管理员查询用户邀请码失败，用户 UUID 不存在', invitationCodeResult: [] }
-		}
-
-		const { collectionName, schemaInstance } = UserInvitationCodeSchema
-		type UserInvitationCode = InferSchemaType<typeof schemaInstance>
-		const userInvitationCodeWhere: QueryType<UserInvitationCode> = {
-			assigneeUUID: uuid,
-		}
-		const userInvitationCodeSelect: SelectType<UserInvitationCode> = {
-			creatorUid: 1,
-			creatorUUID: 1,
-			invitationCode: 1,
-			generationDateTime: 1,
-			isPending: 1,
-			assignee: 1,
-			assigneeUUID: 1,
-			usedDateTime: 1,
-		}
-
-		const userInvitationCodeResult = await selectDataFromMongoDB<UserInvitationCode>(userInvitationCodeWhere, userInvitationCodeSelect, schemaInstance, collectionName)
-		if (userInvitationCodeResult.success) {
-			if (userInvitationCodeResult.result?.length > 0) {
-				return { success: true, message: '管理员查询用户邀请码成功', invitationCodeResult: userInvitationCodeResult.result }
-			} else {
-				return { success: true, message: '管理员查询用户邀请码成功，用户没有使用邀请码注册', invitationCodeResult: [] }
-			}
-		} else {
-			console.error('ERROR', '管理员查询用户邀请码失败，查询失败')
-			return { success: false, message: '管理员查询用户邀请码失败，查询失败', invitationCodeResult: [] }
-		}
-	} catch (error) {
-		console.error('ERROR', '管理员查询用户邀请码失败，未知错误', error)
-		return { success: false, message: '管理员查询用户邀请码失败，未知错误', invitationCodeResult: [] }
 	}
 }
 
@@ -2778,6 +2723,20 @@ export const adminGetUserInfoService = async (adminGetUserInfoRequest: AdminGetU
 					preserveNullAndEmptyArrays: true, // 保留空数组和null值
 				},
 			},
+			{
+				$lookup: {
+					from: 'user-invitation-codes',
+					localField: 'UUID',
+					foreignField: 'assigneeUUID',
+					as: 'invitation_codes_data'
+				},
+			},
+			{
+				$unwind: {
+					path: '$invitation_codes_data',
+					preserveNullAndEmptyArrays: true
+				},
+			},
 			{ $sort: { [`user_info_data.${sortBy}`]: sortOrder === 'descend' ? -1 : 1}},
 			{ $skip: skip }, // 跳过指定数量的文档
 			{ $limit: pageSize }, // 限制返回的文档数量
@@ -2817,6 +2776,7 @@ export const adminGetUserInfoService = async (adminGetUserInfoRequest: AdminGetU
 				signature: '$user_info_data.signature', // 用户的个性签名
 				gender: '$user_info_data.gender', // 用户的性别
 				userBirthday: '$user_info_data.userBirthday', // 用户出生日期
+				invitationCode: '$invitation_codes_data.invitationCode', // 用户的邀请码
 				isUpdatedAfterReview: '$user_info_data.isUpdatedAfterReview', // 是否经过审核
 				editOperatorUUID: '$user_info_data.editOperatorUUID', // 编辑操作员的 UUID
 				editDateTime: '$user_info_data.editDateTime', // 编辑时间
@@ -2979,7 +2939,6 @@ export const adminEditUserInfoService = async (adminEditUserInfoRequest: AdminEd
 		}
 
 		const { uid } = adminEditUserInfoRequest
-
 		const { username } = adminEditUserInfoRequest.userInfo
 		const { collectionName: userInfoCollectionName, schemaInstance: userInfoSchemaInstance } = UserInfoSchema
 

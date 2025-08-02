@@ -41,7 +41,6 @@ import {
 	sendDeleteUserEmailAuthenticatorController,
 	userExistsCheckByUIDController,
 	adminEditUserInfoController,
-	adminGetUserInvitationCodeController,
 	adminGetUserByInvitationCodeController,
 } from '../controller/UserController.js'
 import { adminDeleteVideoCommentController, cancelVideoCommentDownvoteController, cancelVideoCommentUpvoteController, deleteSelfVideoCommentController, emitVideoCommentController, emitVideoCommentDownvoteController, emitVideoCommentUpvoteController, getVideoCommentListByKvidController } from '../controller/VideoCommentController.js'
@@ -246,10 +245,6 @@ router.post('/user/checkInvitationCode', checkInvitationCodeController) // 检�
 // {
 // 	"invitationCode": "KIRA-XXXX-XXXX"
 // }
-
-router.get('/user/getUserInvitationCode', adminGetUserInvitationCodeController) // 管理员获取用户注册使用的邀请码 // WARN: 仅限管理员
-// https://localhost:9999/user/getUserInvitationCode?uid=1
-// cookie: uuid, token
 
 router.get('/user/getUserByInvitationCode', adminGetUserByInvitationCodeController) // 管理员根据邀请码查询用户 // WARN: 仅限管理员
 // https://localhost:9999/user/getUserByInvitationCode?invitationCode=KIRA-XXXX-XXXX
