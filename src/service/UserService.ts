@@ -3871,7 +3871,7 @@ export const sendUserEmailAuthenticatorService = async (sendUserEmailAuthenticat
 		}
 
 		try {
-			const mail = getI18nLanguagePack(clientLanguage, "UserEmailAuthenticator")
+			const mail = getI18nLanguagePack(clientLanguage, "SendLoginVerificationCode")
 			const correctMailTitle = mail?.mailTitle
 			const correctMailHTML = mail?.mailHtml?.replaceAll('{{verificationCode}}', verificationCode)
 
@@ -4024,7 +4024,7 @@ export const sendDeleteUserEmailAuthenticatorService = async (sendDeleteUserEmai
 		}
 
 		try {
-			const mail = getI18nLanguagePack(clientLanguage, "DeleteUserEmailAuthenticator")
+			const mail = getI18nLanguagePack(clientLanguage, "SendDisableUserEmail2FAVerificationCode")
 			const correctMailTitle = mail?.mailTitle
 			const correctMailHTML = mail?.mailHtml?.replaceAll('{{verificationCode}}', verificationCode)
 
