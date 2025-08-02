@@ -2,11 +2,9 @@
 
 
 export default {
-	SendVerificationCode: {
-		mailTitle: "KIRAKIRA - 注冊驗證碼",
-	},
+	SendVerificationCode: {},
 	SendChangeEmailVerificationCode: {},
 	SendChangePasswordVerificationCode: {},
-	UserEmailAuthenticator: {},
-	DeleteUserEmailAuthenticator: {},
+	SendLoginVerificationCode: {},
+	SendDisableUserEmail2FAVerificationCode: {},
 }

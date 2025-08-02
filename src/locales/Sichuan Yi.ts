@@ -3,7 +3,7 @@
 
 export default {
 	SendVerificationCode: {
-		mailTitle: "crwdns3155:0crwdne3155:0",
+		mailTitle: "crwdns3620:0crwdne3620:0",
 		mailHeading: "crwdns3157:0crwdne3157:0",
 		mailText: "crwdns3159:0crwdne3159:0",
 	},
@@ -17,14 +17,14 @@ export default {
 		mailHeading: "crwdns3169:0crwdne3169:0",
 		mailText: "crwdns3171:0crwdne3171:0",
 	},
-	UserEmailAuthenticator: {
-		mailTitle: "crwdns3173:0crwdne3173:0",
-		mailHeading: "crwdns3175:0crwdne3175:0",
-		mailText: "crwdns3177:0crwdne3177:0",
+	SendLoginVerificationCode: {
+		mailTitle: "crwdns3622:0crwdne3622:0",
+		mailHeading: "crwdns3624:0crwdne3624:0",
+		mailText: "crwdns3626:0crwdne3626:0",
 	},
-	DeleteUserEmailAuthenticator: {
-		mailTitle: "crwdns3179:0crwdne3179:0",
-		mailHeading: "crwdns3181:0crwdne3181:0",
-		mailText: "crwdns3183:0crwdne3183:0",
+	SendDisableUserEmail2FAVerificationCode: {
+		mailTitle: "crwdns3628:0crwdne3628:0",
+		mailHeading: "crwdns3630:0crwdne3630:0",
+		mailText: "crwdns3632:0crwdne3632:0",
 	},
 }
