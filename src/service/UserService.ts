@@ -1752,7 +1752,7 @@ export const checkInvitationCodeService = async (checkInvitationCodeRequestDto: 
 export const adminGetUserByInvitationCodeService = async (invitationCode: string, AdminUUID: string, AdminToken: string): Promise<AdminGetUserByInvitationCodeResponseDto> => {
 	try {
 		if (!invitationCode || !AdminUUID || !AdminToken) {
-			console.error('ERROR', '管理员查询用户邀请码失败，参数不合法')
+			console.error('ERROR', '管理员以邀请码查询用户失败，参数不合法')
 			return { success: false, message: '管理员以邀请码查询用户失败，参数不合法', userInfoResult: {} }
 		}
 		if (!(await checkUserTokenByUuidService(AdminUUID, AdminToken)).success) {
@@ -1779,11 +1779,11 @@ export const adminGetUserByInvitationCodeService = async (invitationCode: string
 		const userInvitationCodeResult = await selectDataFromMongoDB<UserInvitationCode>(userInvitationCodeWhere, userInvitationCodeSelect, schemaInstance, collectionName)
 		const userInvitationCodeData = userInvitationCodeResult.result?.[0]
 		if (!userInvitationCodeResult.success) {
-			console.error('ERROR', '管理员查询用户邀请码失败，查询失败')
+			console.error('ERROR', '管理员以邀请码查询用户失败，查询失败')
 			return { success: false, message: '管理员以邀请码查询用户失败，查询失败', userInfoResult: {} }
 		}
 		if (!userInvitationCodeData || !userInvitationCodeData.assignee || !userInvitationCodeData.assigneeUUID) {
-			console.error('ERROR', '管理员查询用户邀请码失败，未找到用户信息', { invitationCode })
+			console.error('ERROR', '管理员以邀请码查询用户失败，未找到用户信息', { invitationCode })
 			return { success: false, message: '管理员以邀请码查询用户失败，未找到用户信息', userInfoResult: {} }
 		}
 		return { success: true, message: '管理员以邀请码查询用户成功', userInfoResult: { uid: userInvitationCodeData?.assignee, uuid: userInvitationCodeData?.assigneeUUID} }

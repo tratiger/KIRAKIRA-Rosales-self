@@ -608,7 +608,7 @@ export const checkInvitationCodeController = async (ctx: koaCtx, next: koaNext) 
 }
 
 /**
- * 管理员根据邀请码查询用户邀请码
+ * 管理员根据邀请码查询用户
  * @param ctx context
  * @param next context
  */
