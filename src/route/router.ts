@@ -298,7 +298,7 @@ router.get('/user/adminGetUserInfo', adminGetUserInfoController) // 管理员获
 // https://localhost:9999/user/adminGetUserInfo?isOnlyShowUserInfoUpdatedAfterReview=true&page=1&pageSize=20
 // cookie: UUID, token
 
-router.post('/user/adminEditUserInfo', adminEditUserInfoController) // 更新用户信息 // WARN: 仅限管理员
+router.post('/user/adminEditUserInfo', adminEditUserInfoController) // 管理员强制更新用户信息 // WARN: 仅限管理员
 // https://localhost:9999/user/adminEditUserInfo
 // cookie: UUID, token
 // {
@@ -824,11 +824,13 @@ router.post('/rbac/updateApiPathPermissionsForRole', updateApiPathPermissionsFor
 // 	]
 // }
 
-router.post('/rbac/adminUpdateUserRole', adminUpdateUserRoleController) // 管理员更新用户角色
+router.post('/rbac/adminUpdateUserRole', adminUpdateUserRoleController) // 管理员更新用户角色 // WARN: 仅限管理员
 // https://localhost:9999/rbac/adminUpdateUserRole
 // cookie: uuid, token
+// uuid 和 uid 二选一即可
 // {
 // 	"uuid": "xxxxxxxxxxxxxxxxxxxxxxxxxx",
+// 	"uid": 123,
 // 	"newRoles": [
 // 		"administrator",
 // 		"user"

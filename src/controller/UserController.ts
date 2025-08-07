@@ -46,7 +46,6 @@ import {
 	AdminEditUserInfoRequestDto,
 	AdminGetUserInfoRequestDto,
 	ApproveUserInfoRequestDto,
-	BlockUserByUIDRequestDto,
 	CheckInvitationCodeRequestDto,
 	CheckUserHave2FARequestDto,
 	CheckUsernameRequestDto,
@@ -57,7 +56,6 @@ import {
 	GetSelfUserInfoRequestDto,
 	GetUserInfoByUidRequestDto,
 	GetUserSettingsRequestDto,
-	ReactivateUserByUIDRequestDto,
 	RequestSendChangeEmailVerificationCodeRequestDto,
 	RequestSendChangePasswordVerificationCodeRequestDto,
 	RequestSendVerificationCodeRequestDto,
@@ -701,44 +699,6 @@ export const checkUsernameController = async (ctx: koaCtx, next: koaNext) => {
 	await next()
 }
 
-// /**
-//  * 根据 UID 封禁一个用户
-//  * @param ctx context
-//  * @param next context
-//  * @return 封禁用户的请求响应
-//  */
-// export const blockUserByUIDController = async (ctx: koaCtx, next: koaNext) => {
-// 	const data = ctx.request.body as Partial<BlockUserByUIDRequestDto>
-// 	const blockUserByUIDRequest: BlockUserByUIDRequestDto = {
-// 		criminalUid: data.criminalUid ?? -1,
-// 	}
-// 	const uid = parseInt(ctx.cookies.get('uid'), 10)
-// 	const token = ctx.cookies.get('token')
-
-// 	const blockUserByUIDResponse = await blockUserByUIDService(blockUserByUIDRequest, uid, token)
-// 	ctx.body = blockUserByUIDResponse
-// 	await next()
-// }
-
-// /**
-//  * 根据 UID 重新激活一个用户
-//  * @param ctx context
-//  * @param next context
-//  * @return 重新激活用户的请求响应
-//  */
-// export const reactivateUserByUIDController = async (ctx: koaCtx, next: koaNext) => {
-// 	const data = ctx.request.body as Partial<ReactivateUserByUIDRequestDto>
-// 	const reactivateUserByUIDRequest: ReactivateUserByUIDRequestDto = {
-// 		uid: data.uid ?? -1,
-// 	}
-// 	const uid = parseInt(ctx.cookies.get('uid'), 10)
-// 	const token = ctx.cookies.get('token')
-
-// 	const reactivateUserByUIDResponse = await reactivateUserByUIDService(reactivateUserByUIDRequest, uid, token)
-// 	ctx.body = reactivateUserByUIDResponse
-// 	await next()
-// }
-
 /**
  * 获取所有被封禁用户的信息
  * @param ctx context
@@ -765,8 +725,8 @@ export const getBlockedUserController = async (ctx: koaCtx, next: koaNext) => {
 		sortOrder: sortOrder ?? 'ascend',
 		uid: uid ?? -1,
 		pagination: {
-			page: parseInt(page, 10) ?? 0,
-			pageSize: parseInt(pageSize, 10) ?? Infinity,
+			page: parseInt(page || '1', 10) ?? 1,
+			pageSize: Number.isFinite(parseInt(pageSize, 10)) ? parseInt(pageSize, 10) : Number.MAX_SAFE_INTEGER,
 		},
 	}
 
@@ -793,7 +753,7 @@ export const adminGetUserInfoController = async (ctx: koaCtx, next: koaNext) => 
 	const isOnlyShowUserInfoUpdatedAfterReviewString = ctx.query.isOnlyShowUserInfoUpdatedAfterReview as string
 	const sortBy = ctx.query.sortBy as string
 	const sortOrder = ctx.query.sortOrder as string
-	const uid = parseInt(ctx.query.uid as string, 10)
+	const uid = parseInt(ctx.query.uid as string || '-1', 10)
 	const page = ctx.query.page as string
 	const pageSize = ctx.query.pageSize as string
 
@@ -803,8 +763,8 @@ export const adminGetUserInfoController = async (ctx: koaCtx, next: koaNext) => 
 		sortOrder: sortOrder ?? 'ascend',
 		uid: uid ?? -1,
 		pagination: {
-			page: parseInt(page, 10) ?? 0,
-			pageSize: parseInt(pageSize, 10) ?? Infinity,
+			page: parseInt(page || '1', 10) ?? 1,
+			pageSize: parseInt(pageSize, 10) ?? Number.MAX_SAFE_INTEGER,
 		},
 	}
 
