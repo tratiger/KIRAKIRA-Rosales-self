@@ -2566,6 +2566,11 @@ export const getBlockedUserService = async (adminUUID: string, adminToken: strin
 	try {
 		if (await checkUserTokenByUUID(adminUUID, adminToken)) {
 			const { sortBy, sortOrder } = GetBlockedUserRequest
+			if (!checkSortVariables(sortBy, sortOrder)) {
+				console.error('ERROR', '获取所有被封禁用户的信息失败，排序参数不合法')
+				return { success: false, message: '获取所有被封禁用户的信息失败，排序参数不合法', totalCount: 0 }
+			}
+
 			let pageSize = undefined
 			let skip = 0
 			if (GetBlockedUserRequest.pagination && GetBlockedUserRequest.pagination.page > 0 && GetBlockedUserRequest.pagination.pageSize > 0) {
@@ -2683,6 +2688,11 @@ export const adminGetUserInfoService = async (adminGetUserInfoRequest: AdminGetU
 			return { success: false, message: '管理员获取用户信息失败，用户校验未通过', totalCount: 0 }
 		}
 		const { sortBy, sortOrder } = adminGetUserInfoRequest
+		if (!checkSortVariables(sortBy, sortOrder)) {
+			console.error('ERROR', '管理员获取用户信息失败，排序参数不合法')
+			return { success: false, message: '管理员获取用户信息失败，排序参数不合法', totalCount: 0 }
+		}
+
 		let pageSize = undefined
 		let skip = 0
 		if (adminGetUserInfoRequest.pagination && adminGetUserInfoRequest.pagination.page > 0 && adminGetUserInfoRequest.pagination.pageSize > 0) {
@@ -2882,6 +2892,14 @@ export const adminClearUserInfoService = async (adminClearUserInfoRequest: Admin
 			console.error('ERROR', '管理员清空某个用户的信息失败，UUID 不存在', { uid })
 			return { success: false, message: '管理员清空某个用户的信息失败，UUID 不存在' }
 		}
+		let username: string
+		while (true) {
+			username = `${UUID}_${generateSecureRandomString(6)}`
+			const checkResult = await checkUsernameService({ username })
+			if (checkResult.success && checkResult.isAvailableUsername) {
+				break
+			}
+		}
 
 		const { collectionName, schemaInstance } = UserInfoSchema
 		type UserInfo = InferSchemaType<typeof schemaInstance>
@@ -2891,7 +2909,7 @@ export const adminClearUserInfoService = async (adminClearUserInfoRequest: Admin
 			UUID,
 		}
 		const adminClearUserInfoUpdate: UpdateType<UserInfo> = {
-			username: `${UUID}`,
+			username,
 			userNickname: '[cleaned]',
 			avatar: '',
 			userBannerImage: '',
@@ -4659,4 +4677,21 @@ const checkAdminEditUserInfoRequest = (adminEditUserInfoRequest: AdminEditUserIn
  */
 const checkCheckUserExistsByUuidRequest = (checkUserExistsByUuidRequest: CheckUserExistsByUuidRequestDto): boolean => {
 	return ( !!checkUserExistsByUuidRequest.uuid )
+}
+
+/**
+ * 检查排序相关的变量
+ * @param sortBy 排序字段
+ * @param sortOrder 排序顺序
+ * @returns 检查结果，合法返回 true，不合法返回 false
+ */
+const checkSortVariables = (sortBy: string, sortOrder: string): boolean => {
+	const allowedSortFields = ['createDateTime', 'editDateTime', 'username', 'userNickname', 'uid'] // 允许的排序方式
+	if (!allowedSortFields.includes(sortBy)) {
+		return false
+	}
+	if (sortOrder !== 'ascend' && sortOrder !== 'descend') {
+		return false
+	}
+	return true
 }
