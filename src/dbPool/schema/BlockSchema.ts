@@ -1,8 +1,8 @@
 import { Schema } from 'mongoose';
 
 /**
-	* 用户屏蔽数据
-	*/
+  * 用户屏蔽数据
+  */
 class BlockListSchemaFactory {
 	schema = {
 		/** 黑名单类型 - 非空 */
