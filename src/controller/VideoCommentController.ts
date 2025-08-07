@@ -41,7 +41,7 @@ export const getVideoCommentListByKvidController = async (ctx: koaCtx, next: koa
 	const getVideoCommentByKvidRequest: GetVideoCommentByKvidRequestDto = {
 		videoId: videoId ? parseInt(videoId, 10) : -1, // WARN -1 means you can't find any video
 		pagination: {
-			page: parseInt(page, 10) ?? 1,
+			page: parseInt(page || '1', 10) ?? 1,
 			pageSize: parseInt(pageSize, 10) ?? Number.MAX_SAFE_INTEGER,
 		},
 	}

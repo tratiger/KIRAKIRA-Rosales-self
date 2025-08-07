@@ -185,7 +185,7 @@ export const getBlockListController = async (ctx: koaCtx, next: koaNext) => {
 	const getBlockListRequest: GetBlockListRequestDto = {
 		type: type ?? '',
 		pagination: {
-			page: parseInt(page, 10) ?? 1,
+			page: parseInt(page || '1', 10) ?? 1,
 			pageSize: parseInt(pageSize, 10) ?? Number.MAX_SAFE_INTEGER,
 		},
 	}
