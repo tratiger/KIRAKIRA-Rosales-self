@@ -624,8 +624,18 @@ export const adminUpdateUserRoleService = async (adminUpdateUserRoleRequest: Adm
 			return { success: false, message: '管理员更新用户角色失败，用户 Token 校验未通过' }
 		}
 
-		const { uuid, newRoles } = adminUpdateUserRoleRequest
+		const { uid, newRoles } = adminUpdateUserRoleRequest
+		let { uuid } = adminUpdateUserRoleRequest
 		const uniqueNewRoels = [...new Set(newRoles)]
+
+		if (uid && !uuid) {
+			uuid = await getUserUuid(uid) || ''
+		}
+
+		if (!uuid) {
+			console.error('ERROR', '管理员更新用户角色失败，未找到用户 UUID')
+			return { success: false, message: '管理员更新用户角色失败，未找到用户 UUID' }
+		}
 
 		const { collectionName: rbacRoleCollectionName, schemaInstance: rbacRoleSchemaInstance } = RbacRoleSchema
 		type RbacRole = InferSchemaType<typeof rbacRoleSchemaInstance>
@@ -854,7 +864,7 @@ const checkUpdateApiPathPermissionsForRoleRequest = (updateApiPathPermissionsFor
  */
 const checkAdminUpdateUserRoleRequest = (adminUpdateUserRoleRequest: AdminUpdateUserRoleRequestDto): boolean => {
 	return (
-		!!adminUpdateUserRoleRequest.uuid
+		(!!adminUpdateUserRoleRequest.uuid || (adminUpdateUserRoleRequest.uid !== undefined && adminUpdateUserRoleRequest !== null)) // uuid 和 uid 至少有一个不为空
 		&& !!adminUpdateUserRoleRequest.newRoles && Array.isArray(adminUpdateUserRoleRequest.newRoles)
 		&& adminUpdateUserRoleRequest.newRoles.every(role => !!role)
 	)

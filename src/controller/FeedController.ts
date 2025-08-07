@@ -268,7 +268,7 @@ export const getFeedContentController = async (ctx: koaCtx, next: koaNext) => {
 	const getFeedContentRequest: GetFeedContentRequestDto = {
 		feedGroupUuid: uuid ?? "",
 		pagination: {
-			page: parseInt(page, 10) ?? 0,
+			page: parseInt(page || '1', 10) ?? 1,
 			pageSize: parseInt(pageSize, 10) ?? 50,
 		},
 	}

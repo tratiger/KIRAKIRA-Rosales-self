@@ -7,7 +7,6 @@ import {
 	adminClearUserInfoController,
 	adminGetUserInfoController,
 	approveUserInfoController,
-	// blockUserByUIDController,
 	checkInvitationCodeController,
 	checkUsernameController,
 	checkUserTokenController,
@@ -18,7 +17,6 @@ import {
 	getUserAvatarUploadSignedUrlController,
 	getUserInfoByUidController,
 	getUserSettingsController,
-	// reactivateUserByUIDController,
 	requestSendChangeEmailVerificationCodeController,
 	requestSendChangePasswordVerificationCodeController,
 	requestSendVerificationCodeController,
@@ -276,20 +274,6 @@ router.post('/user/update/password', updateUserPasswordController) // 更新用�
 router.get('/user/checkUsername', checkUsernameController) // 检查用户名是否可用
 // https://localhost:9999/user/checkUsername?username=xxxxxxxx
 
-// router.post('/user/blockUser', blockUserByUIDController) // 根据 UID 封禁一个用户 // WARN: 仅限管理员
-// // https://localhost:9999/user/blockUser
-// // cookie: uid, token
-// // {
-// // 	"criminalUid": XXXX
-// // }
-
-// router.post('/user/reactivateUser', reactivateUserByUIDController) // 根据 UID 重新激活一个用户 // WARN: 仅限管理员
-// // https://localhost:9999/user/reactivateUser
-// // cookie: uid, token
-// // {
-// // 	"uid": XXXX
-// // }
-
 router.get('/user/blocked/info', getBlockedUserController) // 获取所有被封禁用户的信息 // WARN: 仅限管理员
 // https://localhost:9999/user/blocked/info
 // cookie: uid, token
@@ -298,7 +282,7 @@ router.get('/user/adminGetUserInfo', adminGetUserInfoController) // 管理员获
 // https://localhost:9999/user/adminGetUserInfo?isOnlyShowUserInfoUpdatedAfterReview=true&page=1&pageSize=20
 // cookie: UUID, token
 
-router.post('/user/adminEditUserInfo', adminEditUserInfoController) // 更新用户信息 // WARN: 仅限管理员
+router.post('/user/adminEditUserInfo', adminEditUserInfoController) // 管理员强制更新用户信息 // WARN: 仅限管理员
 // https://localhost:9999/user/adminEditUserInfo
 // cookie: UUID, token
 // {
@@ -824,11 +808,13 @@ router.post('/rbac/updateApiPathPermissionsForRole', updateApiPathPermissionsFor
 // 	]
 // }
 
-router.post('/rbac/adminUpdateUserRole', adminUpdateUserRoleController) // 管理员更新用户角色
+router.post('/rbac/adminUpdateUserRole', adminUpdateUserRoleController) // 管理员更新用户角色 // WARN: 仅限管理员
 // https://localhost:9999/rbac/adminUpdateUserRole
 // cookie: uuid, token
+// uuid 和 uid 二选一即可
 // {
 // 	"uuid": "xxxxxxxxxxxxxxxxxxxxxxxxxx",
+// 	"uid": 123,
 // 	"newRoles": [
 // 		"administrator",
 // 		"user"

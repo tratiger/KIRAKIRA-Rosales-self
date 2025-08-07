@@ -12,8 +12,6 @@ import {
 	AdminGetUserInfoResponseDto,
 	ApproveUserInfoRequestDto,
 	ApproveUserInfoResponseDto,
-	BlockUserByUIDRequestDto,
-	BlockUserByUIDResponseDto,
 	CheckInvitationCodeRequestDto,
 	CheckInvitationCodeResponseDto,
 	CheckUsernameRequestDto,
@@ -30,8 +28,6 @@ import {
 	GetUserInfoByUidRequestDto,
 	GetUserInfoByUidResponseDto,
 	GetUserSettingsResponseDto,
-	ReactivateUserByUIDRequestDto,
-	ReactivateUserByUIDResponseDto,
 	RequestSendChangeEmailVerificationCodeRequestDto,
 	RequestSendChangeEmailVerificationCodeResponseDto,
 	RequestSendChangePasswordVerificationCodeRequestDto,
@@ -2445,116 +2441,6 @@ export const checkUserExistsByUuidService = async (checkUserExistsByUuidRequest:
 	}
 }
 
-// /**
-//  * 根据 UID 封禁一个用户
-//  * @param blockUserByUIDRequest 封禁用户的请求载荷
-//  * @param adminUid 管理员的 UID
-//  * @param adminToken 管理员的 Token
-//  * @returns 封禁用户的请求响应
-//  */
-// export const blockUserByUIDService = async (blockUserByUIDRequest: BlockUserByUIDRequestDto, adminUid: number, adminToken: string): Promise<BlockUserByUIDResponseDto> => {
-// 	try {
-// 		if (checkBlockUserByUIDRequest(blockUserByUIDRequest)) {
-// 			if (await checkUserToken(adminUid, adminToken)) {
-// 				const isAdmin = await checkUserRoleService(adminUid, 'admin')
-// 				if (isAdmin) {
-// 					const { criminalUid } = blockUserByUIDRequest
-// 					const { collectionName, schemaInstance } = UserAuthSchema
-// 					type UserAuth = InferSchemaType<typeof schemaInstance>
-
-// 					const blockUserByUIDWhere: QueryType<UserAuth> = {
-// 						uid: criminalUid,
-// 						role: { $in: ["user"] },
-// 					}
-
-// 					const blockUserByUIDUpdate: UpdateType<UserAuth> = {
-// 						role: ['blocked-user'],
-// 					}
-// 					try {
-// 						const updateResult = await findOneAndUpdateData4MongoDB<UserAuth>(blockUserByUIDWhere, blockUserByUIDUpdate, schemaInstance, collectionName, undefined, false)
-// 						if (updateResult.success && updateResult.result) {
-// 							return { success: true, message: '封禁用户成功' }
-// 						} else {
-// 							console.error('ERROR', '封禁用户失败，返回结果失败或结果为空')
-// 							return { success: false, message: '封禁用户失败，返回结果失败或结果为空' }
-// 						}
-// 					} catch (error) {
-// 						console.error('ERROR', '封禁用户时出错，更新数据时出错', error)
-// 						return { success: false, message: '封禁用户时出错，更新数据出错' }
-// 					}
-// 				} else {
-// 					console.error('ERROR', '封禁用户失败，用户权限不足')
-// 					return { success: false, message: '封禁用户失败，用户权限不足' }
-// 				}
-// 			} else {
-// 				console.error('ERROR', '封禁用户失败，用户校验未通过')
-// 				return { success: false, message: '封禁用户失败，用户校验未通过' }
-// 			}
-// 		} else {
-// 			console.error('ERROR', '封禁用户失败，参数不合法')
-// 			return { success: false, message: '封禁用户失败，参数不合法' }
-// 		}
-// 	} catch (error) {
-// 		console.error('ERROR', '封禁用户时出错，未知错误', error)
-// 		return { success: false, message: '封禁用户时出错，未知错误' }
-// 	}
-// }
-
-// /**
-//  * 根据 UID 重新激活一个用户
-//  * @param reactivateUserByUIDRequest 重新激活用户的请求载荷
-//  * @param adminUid 管理员的 UID
-//  * @param adminToken 管理员的 Token
-//  * @returns 重新激活用户的请求响应
-//  */
-// export const reactivateUserByUIDService = async (reactivateUserByUIDRequest: ReactivateUserByUIDRequestDto, adminUid: number, adminToken: string): Promise<ReactivateUserByUIDResponseDto> => {
-// 	try {
-// 		if (checkReactivateUserByUIDRequest(reactivateUserByUIDRequest)) {
-// 			if (await checkUserToken(adminUid, adminToken)) {
-// 				const isAdmin = await checkUserRoleService(adminUid, 'admin')
-// 				if (isAdmin) {
-// 					const { uid } = reactivateUserByUIDRequest
-// 					const { collectionName, schemaInstance } = UserAuthSchema
-// 					type UserAuth = InferSchemaType<typeof schemaInstance>
-
-// 					const reactivateUserByUIDWhere: QueryType<UserAuth> = {
-// 						uid,
-// 						role: { $in: ['blocked-user'] },
-// 					}
-
-// 					const reactivateUserByUIDUpdate: UpdateType<UserAuth> = {
-// 						role: ['user'],
-// 					}
-// 					try {
-// 						const updateResult = await findOneAndUpdateData4MongoDB<UserAuth>(reactivateUserByUIDWhere, reactivateUserByUIDUpdate, schemaInstance, collectionName, undefined, false)
-// 						if (updateResult.success && updateResult.result) {
-// 							return { success: true, message: '重新激活用户成功' }
-// 						} else {
-// 							console.error('ERROR', '重新激活用户失败，返回结果失败或结果为空')
-// 							return { success: false, message: '重新激活用户失败，返回结果失败或结果为空' }
-// 						}
-// 					} catch (error) {
-// 						console.error('ERROR', '重新激活用户时出错，更新数据时出错', error)
-// 						return { success: false, message: '重新激活用户时出错，更新数据出错' }
-// 					}
-// 				} else {
-// 					console.error('ERROR', '重新激活用户失败，用户权限不足')
-// 					return { success: false, message: '重新激活用户失败，用户权限不足' }
-// 				}
-// 			} else {
-// 				console.error('ERROR', '重新激活用户失败，用户校验未通过')
-// 				return { success: false, message: '重新激活用户失败，用户校验未通过' }
-// 			}
-// 		} else {
-// 			console.error('ERROR', '重新激活用户失败，参数不合法')
-// 			return { success: false, message: '重新激活用户失败，参数不合法' }
-// 		}
-// 	} catch (error) {
-// 		console.error('ERROR', '重新激活用户时出错，未知错误', error)
-// 		return { success: false, message: '重新激活用户时出错，未知错误' }
-// 	}
-// }
-
 /**
  * 获取所有被封禁用户的信息
  * @param adminUid 管理员的 UID
@@ -4557,24 +4443,6 @@ const checkUpdateUserPasswordRequest = (updateUserPasswordRequest: UpdateUserPas
  */
 const checkCheckUsernameRequest = (checkUsernameRequest: CheckUsernameRequestDto): boolean => {
 	return (!!checkUsernameRequest.username && checkUsernameRequest.username?.length <= 200 && checkUsernameRequest.username?.length > 0)
-}
-
-/**
- * 检查封禁用户的请求载荷
- * @param blockUserByUIDRequest 封禁用户的请求载荷
- * @returns 检查结果，合法返回 true，不合法返回 false
- */
-const checkBlockUserByUIDRequest = (blockUserByUIDRequest: BlockUserByUIDRequestDto): boolean => {
-	return (blockUserByUIDRequest.criminalUid !== null && blockUserByUIDRequest.criminalUid !== undefined)
-}
-
-/**
- * 检查重新激活用户的请求载荷
- * @param blockUserByUIDRequest 重新激活用户的请求载荷
- * @returns 检查结果，合法返回 true，不合法返回 false
- */
-const checkReactivateUserByUIDRequest = (reactivateUserByUIDRequest: ReactivateUserByUIDRequestDto): boolean => {
-	return (reactivateUserByUIDRequest.uid !== null && reactivateUserByUIDRequest.uid !== undefined)
 }
 
 /**
