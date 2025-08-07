@@ -14,7 +14,7 @@ import Vietnamese from "../locales/Vietnamese.js"; // 越南语
 
 const languagePacks = {
 	"zh-Hans-CN": ChineseSimplified,
-	"zh-Hant-TW": ChineseTraditional,
+	"zht": ChineseTraditional,
 	"en": English,
 	"fr": French,
 	"ja": Japanese,
@@ -32,9 +32,11 @@ const languagePacks = {
  */
 export const getI18nLanguagePack = (clientLanguage: string, targetMail: string) => {
 	const languagePack = languagePacks[clientLanguage as keyof typeof languagePacks] ?? English;
-	const messages = languagePack[targetMail as keyof typeof languagePack] as Record<string, string>;
-	if (!messages) return null;
-
+	let messages = languagePack[targetMail as keyof typeof languagePack] as Record<string, string>;
+	if (!messages) {
+		messages = English[targetMail as keyof typeof English] as Record<string, string>;
+		if (!messages) return null;
+	}
 	const { mailTitle } = messages;
 	let mailHtml = EmailTemplate;
 	Object.entries(messages).forEach(([key, value]) => mailHtml = mailHtml.replaceAll(`{{${key}}}`, value.replaceAll("\n", "<br>")));
