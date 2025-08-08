@@ -102,6 +102,9 @@ export type GetVideoCommentByKvidRequestDto = {
 	}
 }
 
+/**
+ * 视频评论 ID 的类型（用作主评论的子评论）
+ */
 type VideoCommentIdDto = {
 	/** 评论的路由 */ /** 如：1.2.3（第一号视频的第二个评论的第三个子回复） */
 	commentRoute: string;
@@ -190,8 +193,8 @@ export type EmitVideoCommentUpvoteRequestDto = {
 }
 
 /**
-* 为视频评论点赞的请求的响应结果
-*/
+ * 为视频评论点赞的请求的响应结果
+ */
 export type EmitVideoCommentUpvoteResponseDto = {
 	/** 是否请求成功 */
 	success: boolean;
@@ -210,8 +213,8 @@ export type CancelVideoCommentUpvoteRequestDto = {
 }
 
 /**
-* 取消视频评论点赞的请求的响应结果
-*/
+ * 取消视频评论点赞的请求的响应结果
+ */
 export type CancelVideoCommentUpvoteResponseDto = {
 	/** 是否请求成功 */
 	success: boolean;
@@ -230,8 +233,8 @@ export type EmitVideoCommentDownvoteRequestDto = {
 }
 
 /**
-* 为视频评论点踩的请求的响应结果
-*/
+ * 为视频评论点踩的请求的响应结果
+ */
 export type EmitVideoCommentDownvoteResponseDto = {
 	/** 是否请求成功 */
 	success: boolean;
@@ -250,8 +253,8 @@ export type CancelVideoCommentDownvoteRequestDto = {
 }
 
 /**
-* 取消视频评论点踩的请求的响应结果
-*/
+ * 取消视频评论点踩的请求的响应结果
+ */
 export type CancelVideoCommentDownvoteResponseDto = {
 	/** 是否请求成功 */
 	success: boolean;

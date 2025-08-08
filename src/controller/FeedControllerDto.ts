@@ -1,8 +1,8 @@
-import { ThumbVideoResponseDto } from "./VideoControllerDto.js";
+import { ThumbVideoResponseDto } from "./VideoControllerDto.js"
 
 // marker.ts
-const ONLY_IN_TS_FILE = Symbol("ONLY_IN_TS_FILE"); // WARN: DO NOT RENAME THIS FILE AS `*.d.ts`
-ONLY_IN_TS_FILE
+const ONLY_IN_TS_FILE = Symbol("ONLY_IN_TS_FILE") // WARN: DO NOT RENAME THIS FILE AS `*.d.ts`
+void ONLY_IN_TS_FILE
 
 /** 关注的类型 */
 export enum FOLLOWING_TYPE {
