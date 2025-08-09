@@ -123,11 +123,8 @@ export const getDanmakuListByKvidService = async (getDanmakuByKvidRequest: GetDa
 				},
 				...blockListFilter.filter,
 				{
-					$unwind: '$uploader_info',
-				},
-				{
 					$sort: {
-						uploadDate: -1, // 按 uploadDate 降序排序
+						editDateTime: 1, // 按 editDateTime 升序排序
 					},
 				},
 				{
