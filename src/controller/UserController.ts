@@ -1,7 +1,76 @@
 import { getCorrectCookieDomain } from '../common/UrlTool.js'
-import { adminClearUserInfoService, adminGetUserInfoService, approveUserInfoService, blockUserByUIDService, changePasswordService, checkInvitationCodeService, checkUsernameService, checkUserTokenService, createInvitationCodeService, getBlockedUserService, getMyInvitationCodeService, getSelfUserInfoService, getUserAvatarUploadSignedUrlService, getUserInfoByUidService, getUserSettingsService, reactivateUserByUIDService, requestSendChangeEmailVerificationCodeService, requestSendChangePasswordVerificationCodeService, RequestSendVerificationCodeService, updateOrCreateUserInfoService, updateOrCreateUserSettingsService, updateUserEmailService, userExistsCheckService, userLoginService, userRegistrationService, getUserInvitationCodeService, getUserUuid } from '../service/UserService.js'
+import { isPassRbacCheck } from '../service/RbacService.js'
+import {
+	adminClearUserInfoService,
+	adminGetUserInfoService,
+	approveUserInfoService,
+	// blockUserByUIDService,
+	changePasswordService,
+	checkInvitationCodeService,
+	checkUsernameService,
+	checkUserTokenService,
+	createInvitationCodeService,
+	getBlockedUserService,
+	getMyInvitationCodeService,
+	getSelfUserInfoService,
+	getUserAvatarUploadSignedUrlService,
+	getUserInfoByUidService,
+	getUserSettingsService,
+	// reactivateUserByUIDService,
+	requestSendChangeEmailVerificationCodeService,
+	requestSendChangePasswordVerificationCodeService,
+	RequestSendVerificationCodeService,
+	updateOrCreateUserInfoService,
+	updateOrCreateUserSettingsService,
+	updateUserEmailService,
+	userLoginService,
+	userRegistrationService,
+	getUserUuid,
+	createUserTotpAuthenticatorService,
+	confirmUserTotpAuthenticatorService,
+	deleteTotpAuthenticatorByTotpVerificationCodeService,
+	checkUserHave2FAByEmailService,
+	checkUserHave2FAByUUIDService,
+	createUserEmailAuthenticatorService,
+	sendUserEmailAuthenticatorService,
+	deleteUserEmailAuthenticatorService,
+	sendDeleteUserEmailAuthenticatorService,
+	checkUserExistsByUIDService,
+	userEmailExistsCheckService,
+	adminEditUserInfoService,
+	adminGetUserByInvitationCodeService,
+} from '../service/UserService.js'
 import { koaCtx, koaNext } from '../type/koaTypes.js'
-import { AdminClearUserInfoRequestDto, AdminGetUserInfoRequestDto, ApproveUserInfoRequestDto, BlockUserByUIDRequestDto, CheckInvitationCodeRequestDto, CheckUsernameRequestDto, GetSelfUserInfoRequestDto, GetUserInfoByUidRequestDto, GetUserSettingsRequestDto, ReactivateUserByUIDRequestDto, RequestSendChangeEmailVerificationCodeRequestDto, RequestSendChangePasswordVerificationCodeRequestDto, RequestSendVerificationCodeRequestDto, UpdateOrCreateUserInfoRequestDto, UpdateOrCreateUserSettingsRequestDto, UpdateUserEmailRequestDto, UpdateUserPasswordRequestDto, UserExistsCheckRequestDto, UserLoginRequestDto, UserLogoutResponseDto, UserRegistrationRequestDto } from './UserControllerDto.js'
+import {
+	AdminClearUserInfoRequestDto,
+	AdminEditUserInfoRequestDto,
+	AdminGetUserInfoRequestDto,
+	ApproveUserInfoRequestDto,
+	CheckInvitationCodeRequestDto,
+	CheckUserHave2FARequestDto,
+	CheckUsernameRequestDto,
+	ConfirmUserTotpAuthenticatorRequestDto,
+	DeleteTotpAuthenticatorByTotpVerificationCodeRequestDto,
+	DeleteUserEmailAuthenticatorRequestDto,
+	GetBlockedUserRequestDto,
+	GetSelfUserInfoRequestDto,
+	GetUserInfoByUidRequestDto,
+	GetUserSettingsRequestDto,
+	RequestSendChangeEmailVerificationCodeRequestDto,
+	RequestSendChangePasswordVerificationCodeRequestDto,
+	RequestSendVerificationCodeRequestDto,
+	SendDeleteUserEmailAuthenticatorVerificationCodeRequestDto,
+	SendUserEmailAuthenticatorVerificationCodeRequestDto,
+	UpdateOrCreateUserInfoRequestDto,
+	UpdateOrCreateUserSettingsRequestDto,
+	UpdateUserEmailRequestDto,
+	UpdateUserPasswordRequestDto,
+	UserEmailExistsCheckRequestDto,
+	UserExistsCheckByUIDRequestDto,
+	UserLoginRequestDto,
+	UserLogoutResponseDto,
+	UserRegistrationRequestDto
+} from './UserControllerDto.js'
 
 /**
  * 用户注册
@@ -45,11 +114,13 @@ export const userRegistrationController = async (ctx: koaCtx, next: koaNext) => 
  */
 export const userLoginController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<UserLoginRequestDto>
-	const userRegistrationData: UserLoginRequestDto = {
+	const userLoginRequest: UserLoginRequestDto = {
 		email: data?.email,
 		passwordHash: data?.passwordHash,
+		clientOtp: data?.clientOtp,
+		verificationCode: data?.verificationCode
 	}
-	const userLoginResult = await userLoginService(userRegistrationData)
+	const userLoginResult = await userLoginService(userLoginRequest)
 
 	const cookieOption = {
 		httpOnly: true, // 仅 HTTP 访问，浏览器中的 js 无法访问。
@@ -67,17 +138,165 @@ export const userLoginController = async (ctx: koaCtx, next: koaNext) => {
 }
 
 /**
+ * 用户创建 TOTP 身份验证器
+ * @param ctx context
+ * @param next context
+ * @return CreateUserTotpAuthenticatorResponseDto 创建结果
+ */
+export const createUserTotpAuthenticatorController = async (ctx: koaCtx, next: koaNext) => {
+	const uuid = ctx.cookies.get('uuid')
+	const token = ctx.cookies.get('token')
+	const result = await createUserTotpAuthenticatorService(uuid, token)
+	ctx.body = result
+	await next()
+}
+
+/**
+ * 用户确认绑定 TOTP 设备
+ * @param ctx context
+ * @param next context
+ * @returns 用户确认绑定 TOTP 设备的请求响应
+ */
+export const confirmUserTotpAuthenticatorController = async (ctx: koaCtx, next: koaNext) => {
+	const data = ctx.request.body as Partial<ConfirmUserTotpAuthenticatorRequestDto>
+	const confirmUserTotpAuthenticatorRequest: ConfirmUserTotpAuthenticatorRequestDto = {
+		clientOtp: data.clientOtp || '',
+		otpAuth: data.otpAuth || '',
+	}
+	const uuid = ctx.cookies.get('uuid')
+	const token = ctx.cookies.get('token')
+	const result = await confirmUserTotpAuthenticatorService(confirmUserTotpAuthenticatorRequest, uuid, token)
+	ctx.body = result
+	await next()
+}
+
+/**
+ * 已登录用户通过密码和 TOTP 验证码删除身份验证器
+ * @param ctx context
+ * @param next context
+ * @returns 已登录用户通过密码和 TOTP 验证码删除身份验证器的请求响应
+ */
+export const deleteTotpAuthenticatorByTotpVerificationCodeController = async (ctx: koaCtx, next: koaNext) => {
+	const data = ctx.request.body as Partial<DeleteTotpAuthenticatorByTotpVerificationCodeRequestDto>
+	const deleteTotpAuthenticatorByTotpVerificationCodeRequest: DeleteTotpAuthenticatorByTotpVerificationCodeRequestDto = {
+		clientOtp: data.clientOtp || '',
+		passwordHash: data.passwordHash || '',
+	}
+	const uuid = ctx.cookies.get('uuid')
+	const token = ctx.cookies.get('token')
+	ctx.body = await deleteTotpAuthenticatorByTotpVerificationCodeService(deleteTotpAuthenticatorByTotpVerificationCodeRequest, uuid, token)
+	await next()
+}
+
+/**
+ * 用户创建 Email 身份验证器
+ * @param ctx context
+ * @param next context
+ * @returns CreateUserEmailAuthenticatorResponseDto 创建结果
+ */
+export const createUserEmailAuthenticatorController = async (ctx: koaCtx, next: koaNext) => {
+	const uuid = ctx.cookies.get('uuid')
+	const token = ctx.cookies.get('token')
+	const result = await createUserEmailAuthenticatorService(uuid, token)
+	ctx.body = result
+	await next()
+}
+
+/**
+ * 请求发送验证码，用于登录时验证身份验证器
+ * @param ctx context
+ * @param next context
+ */
+export const sendUserEmailAuthenticatorController = async (ctx: koaCtx, next: koaNext) => {
+	const data = ctx.request.body as Partial<SendUserEmailAuthenticatorVerificationCodeRequestDto>
+
+	const sendUserEmailAuthenticatorVerificationCodeRequest: SendUserEmailAuthenticatorVerificationCodeRequestDto = {
+		email: data?.email || '',
+		passwordHash: data?.passwordHash || '',
+		clientLanguage: data?.clientLanguage,
+	}
+
+	ctx.body = await sendUserEmailAuthenticatorService(sendUserEmailAuthenticatorVerificationCodeRequest)
+	await next()
+}
+
+/**
+ * 请求发送验证码，用于删除 Email 2FA
+ * @param ctx context
+ * @param next context
+ */
+export const sendDeleteUserEmailAuthenticatorController = async (ctx: koaCtx, next: koaNext) => {
+	const data = ctx.request.body as Partial<SendUserEmailAuthenticatorVerificationCodeRequestDto>
+
+	const sendDeleteUserEmailAuthenticatorVerificationCodeRequest: SendDeleteUserEmailAuthenticatorVerificationCodeRequestDto = {
+		clientLanguage: data?.clientLanguage,
+	}
+
+	const uuid = ctx.cookies.get('uuid')
+	const token = ctx.cookies.get('token')
+	ctx.body = await sendDeleteUserEmailAuthenticatorService(sendDeleteUserEmailAuthenticatorVerificationCodeRequest, uuid, token)
+	await next()
+}
+
+/**
+ * 用户删除 Email 2FA
+ * @param ctx context
+ * @param next context
+ */
+export const deleteUserEmailAuthenticatorController = async (ctx: koaCtx, next: koaNext) => {
+	const data = ctx.request.body as Partial<DeleteUserEmailAuthenticatorRequestDto>
+	const deleteUserEmailAuthenticatorRequest: DeleteUserEmailAuthenticatorRequestDto = {
+		passwordHash: data.passwordHash || '',
+		verificationCode: data.verificationCode || '',
+	}
+	const uuid = ctx.cookies.get('uuid')
+	const token = ctx.cookies.get('token')
+	ctx.body = await deleteUserEmailAuthenticatorService(deleteUserEmailAuthenticatorRequest, uuid, token)
+	await next()
+}
+
+/**
+ * 通过 Email 检查用户是否已开启 2FA 身份验证器
+ * @param ctx context
+ * @param next next
+ * @returns GetUserAuthenticatorResponseDto 检查结果
+ */
+export const checkUserHave2FAByEmailController = async (ctx: koaCtx, next: koaNext) => {
+	const email = ctx.query.email as string
+	const checkUserHave2FARequest: CheckUserHave2FARequestDto = {
+		email,
+	}
+	const result = await checkUserHave2FAByEmailService(checkUserHave2FARequest);
+	ctx.body = result;
+	await next()
+}
+
+/**
+ * 通过 UUID 检查用户是否已开启 2FA 身份验证器
+ * @param ctx context
+ * @param next next
+ * @returns GetUserAuthenticatorResponseDto 检查结果
+ */
+export const checkUserHave2FAByUUIDController = async (ctx: koaCtx, next: koaNext) => {
+	const uuid = ctx.cookies.get('uuid')
+	const token = ctx.cookies.get('token')
+	const result = await checkUserHave2FAByUUIDService(uuid, token);
+	ctx.body = result;
+	await next()
+}
+
+/**
  * 检查一个用户是否存在
  * @param ctx context
  * @param next context
- * @return UserExistsCheckResultDto 检查结果，如果用户邮箱已存在或查询失败则 exists: true
+ * @return UserEmailExistsCheckResultDto 检查结果，如果用户邮箱已存在或查询失败则 exists: true
  */
-export const userExistsCheckController = async (ctx: koaCtx, next: koaNext) => {
+export const userEmailExistsCheckController = async (ctx: koaCtx, next: koaNext) => {
 	const email = ctx.query.email as string
-	const userExistsCheckData: UserExistsCheckRequestDto = {
+	const userEmailExistsCheckData: UserEmailExistsCheckRequestDto = {
 		email: email || '',
 	}
-	ctx.body = await userExistsCheckService(userExistsCheckData)
+	ctx.body = await userEmailExistsCheckService(userEmailExistsCheckData)
 	await next()
 }
 
@@ -123,6 +342,14 @@ export const updateUserEmailController = async (ctx: koaCtx, next: koaNext) => {
  */
 export const updateOrCreateUserInfoController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<UpdateOrCreateUserInfoRequestDto>
+	const uid = parseInt(ctx.cookies.get('uid'), 10)
+	const token = ctx.cookies.get('token')
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
 	const updateOrCreateUserInfoRequest: UpdateOrCreateUserInfoRequestDto = {
 		username: data?.username,
 		userNickname: data?.userNickname,
@@ -133,11 +360,9 @@ export const updateOrCreateUserInfoController = async (ctx: koaCtx, next: koaNex
 		label: data?.label,
 		userBirthday: data?.userBirthday,
 		userProfileMarkdown: data?.userProfileMarkdown,
-		userLinkAccounts: data?.userLinkAccounts,
+		userLinkedAccounts: data?.userLinkedAccounts,
 		userWebsite: data?.userWebsite,
 	}
-	const uid = parseInt(ctx.cookies.get('uid'), 10)
-	const token = ctx.cookies.get('token')
 	ctx.body = await updateOrCreateUserInfoService(updateOrCreateUserInfoRequest, uid, token)
 	await next()
 }
@@ -180,6 +405,8 @@ export const getSelfUserInfoController = async (ctx: koaCtx, next: koaNext) => {
 
 /**
  * 获取用户信息
+ * 该接口还接受可选的 Cookie 中的 uuid 和 token 数据，一旦传递则可以在请求响应中获取发起请求者是否关注该用户。
+ *
  * @param ctx context
  * @param next context
  * @return GetUserInfoByUidResponseDto 通过 uid 获取到的用户信息，如果获取成功则 success: true，不成功则 success: false
@@ -189,7 +416,25 @@ export const getUserInfoByUidController = async (ctx: koaCtx, next: koaNext) => 
 	const getUserInfoByUidRequest: GetUserInfoByUidRequestDto = {
 		uid: uid ? parseInt(uid, 10) : -1, // WARN -1 代表这个 UID 是永远无法查找到结果
 	}
-	ctx.body = await getUserInfoByUidService(getUserInfoByUidRequest)
+	const uuid = ctx.cookies.get('uuid')
+	const token = ctx.cookies.get('token')
+	const result = await getUserInfoByUidService(getUserInfoByUidRequest, uuid, token)
+	ctx.body = result
+	await next()
+}
+
+/**
+ * 获取用户是否存在
+ * @param ctx context
+ * @param next context
+ * @return UserExistsCheckResultDto 检查结果
+ */
+export const userExistsCheckByUIDController = async (ctx: koaCtx, next: koaNext) => {
+	const uid = ctx.query.uid as string
+	const userExistsCheckRequest: UserExistsCheckByUIDRequestDto = {
+		uid: uid ? parseInt(uid, 10) : -1,
+	}
+	ctx.body = await checkUserExistsByUIDService(userExistsCheckRequest)
 	await next()
 }
 
@@ -346,18 +591,6 @@ export const getMyInvitationCodeController = async (ctx: koaCtx, next: koaNext) 
 }
 
 /**
- * 获取用户注册时使用的邀请码
- * @param ctx context
- * @param next context
- */
-export const getUserInvitationCodeController = async (ctx: koaCtx, next: koaNext) => {
-	const uuid = ctx.cookies.get('uuid')
-	const token = ctx.cookies.get('token')
-	ctx.body = await getUserInvitationCodeService(uuid, token)
-	await next()
-}
-
-/**
  * 检查一个邀请码是否可用
  * @param ctx context
  * @param next context
@@ -372,6 +605,24 @@ export const checkInvitationCodeController = async (ctx: koaCtx, next: koaNext) 
 	await next()
 }
 
+/**
+ * 管理员根据邀请码查询用户
+ * @param ctx context
+ * @param next context
+ */
+export const adminGetUserByInvitationCodeController = async (ctx: koaCtx, next: koaNext) => {
+	const adminUUID = ctx.cookies.get('uuid')
+	const adminToken = ctx.cookies.get('token')
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid: adminUUID, apiPath: ctx.path }, ctx)) {
+		return
+	}
+	const invitationCode = ctx.query.invitationCode as string ?? ''
+
+	ctx.body = await adminGetUserByInvitationCodeService(invitationCode, adminUUID, adminToken)
+	await next()
+}
 
 /**
  * 请求发送验证码，用于修改邮箱
@@ -449,54 +700,37 @@ export const checkUsernameController = async (ctx: koaCtx, next: koaNext) => {
 }
 
 /**
- * 根据 UID 封禁一个用户
- * @param ctx context
- * @param next context
- * @return 封禁用户的请求响应
- */
-export const blockUserByUIDController = async (ctx: koaCtx, next: koaNext) => {
-	const data = ctx.request.body as Partial<BlockUserByUIDRequestDto>
-	const blockUserByUIDRequest: BlockUserByUIDRequestDto = {
-		criminalUid: data.criminalUid ?? -1,
-	}
-	const uid = parseInt(ctx.cookies.get('uid'), 10)
-	const token = ctx.cookies.get('token')
-
-	const blockUserByUIDResponse = await blockUserByUIDService(blockUserByUIDRequest, uid, token)
-	ctx.body = blockUserByUIDResponse
-	await next()
-}
-
-/**
- * 根据 UID 重新激活一个用户
- * @param ctx context
- * @param next context
- * @return 重新激活用户的请求响应
- */
-export const reactivateUserByUIDController = async (ctx: koaCtx, next: koaNext) => {
-	const data = ctx.request.body as Partial<ReactivateUserByUIDRequestDto>
-	const reactivateUserByUIDRequest: ReactivateUserByUIDRequestDto = {
-		uid: data.uid ?? -1,
-	}
-	const uid = parseInt(ctx.cookies.get('uid'), 10)
-	const token = ctx.cookies.get('token')
-
-	const reactivateUserByUIDResponse = await reactivateUserByUIDService(reactivateUserByUIDRequest, uid, token)
-	ctx.body = reactivateUserByUIDResponse
-	await next()
-}
-
-/**
  * 获取所有被封禁用户的信息
  * @param ctx context
  * @param next context
  * @return 获取所有被封禁用户的信息的请求响应
  */
 export const getBlockedUserController = async (ctx: koaCtx, next: koaNext) => {
-	const uid = parseInt(ctx.cookies.get('uid'), 10)
-	const token = ctx.cookies.get('token')
+	const adminUUID = ctx.cookies.get('uuid')
+	const adminToken = ctx.cookies.get('token')
 
-	const reactivateUserByUIDResponse = await getBlockedUserService(uid, token)
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid: adminUUID, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
+	const sortBy = ctx.query.sortBy as string
+	const sortOrder = ctx.query.sortOrder as string
+	const uid = parseInt(ctx.query.uid as string, 10)
+	const page = ctx.query.page as string
+	const pageSize = ctx.query.pageSize as string
+
+	const GetBlockedUserRequest: GetBlockedUserRequestDto = {
+		sortBy: sortBy ?? 'uid',
+		sortOrder: sortOrder ?? 'ascend',
+		uid: uid ?? -1,
+		pagination: {
+			page: parseInt(page || '1', 10) ?? 1,
+			pageSize: Number.isFinite(parseInt(pageSize, 10)) ? parseInt(pageSize, 10) : Number.MAX_SAFE_INTEGER,
+		},
+	}
+
+	const reactivateUserByUIDResponse = await getBlockedUserService(adminUUID, adminToken, GetBlockedUserRequest)
 	ctx.body = reactivateUserByUIDResponse
 	await next()
 }
@@ -511,15 +745,26 @@ export const adminGetUserInfoController = async (ctx: koaCtx, next: koaNext) => 
 	const adminUUID = ctx.cookies.get('uuid')
 	const adminToken = ctx.cookies.get('token')
 
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid: adminUUID, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
 	const isOnlyShowUserInfoUpdatedAfterReviewString = ctx.query.isOnlyShowUserInfoUpdatedAfterReview as string
+	const sortBy = ctx.query.sortBy as string
+	const sortOrder = ctx.query.sortOrder as string
+	const uid = parseInt(ctx.query.uid as string || '-1', 10)
 	const page = ctx.query.page as string
 	const pageSize = ctx.query.pageSize as string
 
 	const adminGetUserInfoRequest: AdminGetUserInfoRequestDto = {
 		isOnlyShowUserInfoUpdatedAfterReview: typeof isOnlyShowUserInfoUpdatedAfterReviewString === 'string' && isOnlyShowUserInfoUpdatedAfterReviewString === 'true',
+		sortBy: sortBy ?? 'uid',
+		sortOrder: sortOrder ?? 'ascend',
+		uid: uid ?? -1,
 		pagination: {
-			page: parseInt(page, 10) ?? 0,
-			pageSize: parseInt(pageSize, 10) ?? Infinity,
+			page: parseInt(page || '1', 10) ?? 1,
+			pageSize: parseInt(pageSize, 10) ?? Number.MAX_SAFE_INTEGER,
 		},
 	}
 
@@ -537,6 +782,11 @@ export const adminGetUserInfoController = async (ctx: koaCtx, next: koaNext) => 
 export const approveUserInfoController = async (ctx: koaCtx, next: koaNext) => {
 	const adminUUID = ctx.cookies.get('uuid')
 	const adminToken = ctx.cookies.get('token')
+
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid: adminUUID, apiPath: ctx.path }, ctx)) {
+		return
+	}
 
 	const data = ctx.request.body as Partial<ApproveUserInfoRequestDto>
 
@@ -559,6 +809,11 @@ export const adminClearUserInfoController = async (ctx: koaCtx, next: koaNext) =
 	const adminUUID = ctx.cookies.get('uuid')
 	const adminToken = ctx.cookies.get('token')
 
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid: adminUUID, apiPath: ctx.path }, ctx)) {
+		return
+	}
+
 	const data = ctx.request.body as Partial<AdminClearUserInfoRequestDto>
 
 	const adminClearUserInfoRequest: AdminClearUserInfoRequestDto = {
@@ -570,5 +825,36 @@ export const adminClearUserInfoController = async (ctx: koaCtx, next: koaNext) =
 	await next()
 }
 
+/**
+ * 管理员修改用户信息
+ * @param ctx context
+ * @param next context
+ * @return 管理员修改用户信息的请求响应
+ */
+export const adminEditUserInfoController = async (ctx: koaCtx, next: koaNext) => {
+	const adminUUID = ctx.cookies.get('uuid')
+	const adminToken = ctx.cookies.get('token')
 
+	// RBAC 权限验证
+	if (!await isPassRbacCheck({ uuid: adminUUID, apiPath: ctx.path }, ctx)) {
+		return
+	}
 
+	const data = ctx.request.body as Partial<AdminEditUserInfoRequestDto>
+
+	const editUserInfoRequest: AdminEditUserInfoRequestDto = {
+		uid: data?.uid,
+		userInfo: {
+			username: data?.userInfo.username,
+			userNickname: data?.userInfo.userNickname,
+			avatar: data?.userInfo.avatar,
+			userBannerImage: data?.userInfo.userBannerImage,
+			signature: data?.userInfo.signature,
+			userBirthday: data?.userInfo.userBirthday,
+			gender: data?.userInfo.gender,
+			isUpdatedAfterReview: data?.userInfo.isUpdatedAfterReview,
+		}
+	}
+	ctx.body = await adminEditUserInfoService(editUserInfoRequest, adminUUID, adminToken)
+	await next()
+}

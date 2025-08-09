@@ -1,0 +1,91 @@
+name: Sync Crowdin
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+    paths:
+      - src/locales/English.ts
+
+jobs:
+  Sync:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0  # 获取完整历史记录，以便删除远程分支
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install Crowdin CLI
+      run: npm install -g @crowdin/cli
+
+    - name: Delete remote translations branch (if exists)
+      run: |
+        git fetch origin
+        if git ls-remote --exit-code --heads origin translations; then
+          git push origin --delete translations
+        fi
+
+    - name: Create new translations branch
+      run: |
+        git checkout develop
+        git pull origin develop
+        git checkout -b translations
+
+    - name: Upload source files to Crowdin
+      run: |
+        mv src/locales/English.ts src/locales/English.json
+        crowdin upload sources --token ${{ secrets.CROWDIN_PERSONAL_TOKEN }} --project-id ${{ secrets.CROWDIN_PROJECT_ID }} -c crowdin.yml -b "[KIRAKIRA-DOUGA.KIRAKIRA-Rosales] develop"
+      env:
+        CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
+        CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+
+    - name: Download translations from Crowdin
+      run: crowdin download translations --token ${{ secrets.CROWDIN_PERSONAL_TOKEN }} --project-id ${{ secrets.CROWDIN_PROJECT_ID }} -c crowdin.yml -b "[KIRAKIRA-DOUGA.KIRAKIRA-Rosales] develop"
+      env:
+        CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
+        CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+
+    - name: Process translations
+      run: |
+        for file in src/locales/*.ts; do
+          sed -i '/import type { LocaleIdentifiers } from ".\/types";/d' "$file"
+
+          sed -i 's/} as const satisfies LocaleIdentifiers;/}/' "$file"
+        done
+
+    - name: Generate translated files list
+      run: |
+        # 确保获取最新分支信息
+        git fetch origin develop:develop
+        echo "由 GitHub Actions 自动生成的翻译更新 PR。" > pr_body.txt
+        echo "### 本次更新的翻译文件：" >> pr_body.txt
+        git diff --name-only develop..translations -- src/locales >> pr_body.txt
+        echo "" >> pr_body.txt
+
+    - name: Commit and push translations
+      run: |
+        mv src/locales/English.json src/locales/English.ts
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git commit -m "🌐 更新翻译" || echo "No changes to commit"
+        git add .
+        git push --set-upstream origin translations --force
+
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        branch: translations
+        base: develop
+        commit-message: '🌐 更新翻译'
+        title: "🌐 更新翻译"
+        body-path: pr_body.txt
+        labels: "translation, automated"

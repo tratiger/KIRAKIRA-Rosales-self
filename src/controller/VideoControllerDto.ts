@@ -1,0 +1,318 @@
+import { VideoTag } from './VideoTagControllerDto.js'
+
+/**
+ * 单个视频分 P 数据参数
+ */
+export type VideoPartDto = {
+	/** 分 P ID */
+	id: number;
+	/** 视频分 P 标题 */
+	videoPartTitle: string;
+	/** 视频直链 */
+	link: string;
+}
+
+/**
+ * 上传视频的请求参数
+ */
+export type UploadVideoRequestDto = {
+	/** 每 P 视频的数据 */
+	videoPart: VideoPartDto[];
+	/** 视频标题 */
+	title: string;
+	/** 封面图链接 */
+	image: string;
+	/** 创作者 UID */
+	uploaderId: number;
+	/** 视频时长，单位 ms */
+	duration: number;
+	/** 视频描述 */
+	description?: string;
+	/** 视频分区 */
+	videoCategory: string;
+	/** 视频版权 */
+	copyright: string;
+	/** 原作者 */
+	originalAuthor?: string;
+	/** 原视频链接 */
+	originalLink?: string;
+	/** 是否发布到动态 */
+	pushToFeed: boolean;
+	/** 声明为原创 */
+	ensureOriginal: boolean;
+	/** 视频 TAG */
+	videoTagList: VideoTag[];
+}
+
+/**
+ * 视频上传的返回的参数
+ */
+export type UploadVideoResponseDto = {
+	/** 是否请求成功 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 视频 ID */
+	videoId?: number;
+}
+
+// export type ThumbVideoRequestDto = {
+// 	username: string;
+// }
+
+/**
+ * 展示视频卡片需要的返回参数
+ */
+export type ThumbVideoResponseDto = {
+	/** 是否请求成功 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 获取到的视频数量，如果没获取到则为 0 */
+	videosCount: number;
+	/** 请求到的视频的数据 */
+	videos: {
+		/** 视频 ID (KVID) */
+		videoId: number;
+		/** 视频标题 */
+		title: string;
+		/** 封面图链接 */
+		image?: string;
+		/** 视频上传的日期，时间戳格式 */
+		uploadDate?: number;
+		/** 视频播放量 */
+		watchedCount?: number;
+		/** 视频作者名 */
+		uploader?: string;
+		/** 视频作者昵称 */
+		uploaderNickname?: string;
+		/** 创作者 UID */
+		uploaderId?: number;
+		/** 视频时长，单位 ms */
+		duration?: number;
+		/** 视频描述 */
+		description?: string;
+		/** 是否被屏蔽 */
+		isBlockedByOther?: boolean;
+	}[];
+}
+
+/**
+ * 从视频 ID 获取视频的请求参数
+ */
+export type GetVideoByKvidRequestDto = {
+	/** 视频 ID (KVID) */
+	videoId: number;
+}
+
+/**
+ * 上传视频的用户信息
+ */
+type UploaderInfoDto = {
+	/** 用户 ID */
+	uid: number;
+	/** 用户名 */
+	username: string;
+	/** 用户昵称 */
+	userNickname?: string;
+	/** 用户头像的链接 */
+	avatar?: string;
+	/** 用户背景图片的链接 */
+	userBannerImage?: string;
+	/** 用户的个性签名 */
+	signature?: string;
+	/** 是否正在关注该上传者 */
+	isFollowing: boolean;
+	/** 上传者是否是自己 */
+	isSelf: boolean;
+}
+
+/**
+ * 用户被屏蔽的状态
+ */
+type BlockState = { isBlockedByOther: boolean, isBlocked: boolean; isHidden: boolean }
+
+/**
+ * 视频页面需要的响应
+ */
+export type GetVideoByKvidResponseDto = {
+	/** 是否请求成功 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 请求到的视频的数据 */
+	video?: {
+		/** 视频 ID (KVID) */
+		videoId: number;
+		/** 视频分 P 数据 */
+		videoPart: VideoPartDto[];
+		/** 视频标题 */
+		title: string;
+		/** 封面图链接 */
+		image?: string;
+		/** 视频上传的日期，时间戳格式 */
+		uploadDate?: number;
+		/** 视频播放量 */
+		watchedCount?: number;
+		/** 视频作者 ID */
+		uploader?: string;
+		/** 创作者 UUID */
+		uploaderUUID?: string;
+		/** 创作者 UID */
+		uploaderId?: number;
+		/** 视频作者信息 */
+		uploaderInfo?: UploaderInfoDto;
+		/** 视频时长，单位 ms */
+		duration?: number;
+		/** 视频描述 */
+		description?: string;
+		/** 视频分区 */
+		videoCategory: string;
+		/** 视频版权 */
+		copyright: string;
+		/** 视频 TAG */
+		videoTagList: VideoTag[];
+	};
+} & BlockState
+
+/**
+ * 根据视频 ID (KVID) 检查视频是否存在的请求载荷
+ */
+export type CheckVideoExistRequestDto = {
+	/** 视频 ID (KVID) */
+	videoId: number;
+}
+
+/**
+ * 根据视频 ID (KVID) 检查视频是否存在的请求响应
+ */
+export type CheckVideoExistResponseDto = {
+	/** 是否请求成功 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 视频是否存在 */
+	exist: boolean;
+}
+
+/**
+ * 根据视频 ID (KVID) 检查视频是否被屏蔽的请求响应
+ */
+export type CheckVideoBlockedByKvidResponseDto = {
+	/** 是否请求成功 */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 是否屏蔽用户 */
+	isBlocked?: boolean;
+	/** 是否被其他用户屏蔽 */
+	isBlockedByOther?: boolean;
+	/** 是否被隐藏 */
+	isHidden?: boolean;
+}
+
+/**
+ * 从 UID 获取视频的请求参数
+ */
+export type GetVideoByUidRequestDto = {
+	/** 用户的 UID */
+	uid: number;
+}
+
+/**
+ * 从 UID 获取视频的请求的响应结果
+ */
+export type GetVideoByUidResponseDto = ThumbVideoResponseDto & BlockState
+
+/**
+ * 根据关键字搜索视频的请求参数
+ */
+export type SearchVideoByKeywordRequestDto = {
+	keyword: string;
+}
+
+/**
+ * 根据关键字搜索视频的响应结果
+ */
+export type SearchVideoByKeywordResponseDto = ThumbVideoResponseDto & {}
+
+/**
+ * 获取视频文件 TUS 上传端点请求参数
+ */
+export type GetVideoFileTusEndpointRequestDto = {
+	/** 视频上传分片大小，Cloudflare 只支持 256KiB 的倍数，最小 5242880 子节，最大 209715200 子节，建议 52428800 子节 */
+	uploadLength: number;
+	/** 视频元数据 */
+	uploadMetadata: string;
+}
+
+/**
+ * 获取用于上传视频封面图的预签名 URL 的响应结果
+ */
+export type GetVideoCoverUploadSignedUrlResponseDto = {
+	/** 请求是否成功，成功返回 true，否则返回 false */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+	/** 请求到的视频封面图上传预签名 URL 数据 */
+	result?: {
+		/** 预签名 URL */
+		signedUrl: string;
+		/** 文件名 */
+		fileName: string;
+	};
+}
+
+/**
+ * 根据视频 TAG ID 搜索视频的请求载荷
+ */
+export type SearchVideoByVideoTagIdRequestDto = {
+	/** TAG ID */
+	tagId: UploadVideoRequestDto['videoTagList'][number]['tagId'][];
+}
+
+/**
+ * 通过视频 TAG ID 获取视频的请求响应
+ */
+export type SearchVideoByVideoTagIdResponseDto = ThumbVideoResponseDto & {}
+
+/**
+ * 删除一个视频的请求载荷
+ */
+export type DeleteVideoRequestDto = {
+	/** 视频 ID (KVID) */
+	videoId: number;
+}
+
+/**
+ * 删除一个视频的请求响应
+ */
+export type DeleteVideoResponseDto = {
+	/** 请求是否成功，成功返回 true，否则返回 false */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+}
+
+/**
+ * 等待被审核的视频列表
+ */
+export type PendingReviewVideoResponseDto = {} & ThumbVideoResponseDto
+
+/**
+ * 通过一个待审核视频的请求载荷
+ */
+export type ApprovePendingReviewVideoRequestDto = {
+	/** 视频 ID (KVID) */
+	videoId: number;
+}
+
+/**
+ * 通过一个待审核视频的请求响应
+ */
+export type ApprovePendingReviewVideoResponseDto = {
+	/** 请求是否成功，成功返回 true，否则返回 false */
+	success: boolean;
+	/** 附加的文本消息 */
+	message?: string;
+}

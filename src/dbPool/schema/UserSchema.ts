@@ -19,9 +19,13 @@ class UserAuthSchemaFactory {
 		/** 用户的身分令牌 - 非空 */
 		token: { type: String, required: true },
 		/** 密码提示 */
-		passwordHint: String,
+		passwordHint: String, // TODO: 如何确保密码提示的安全性？
+		// /** 用户的角色 */
+		// role: { type: String, required: true },
 		/** 用户的角色 */
-		role: { type: String, required: true },
+		roles: { type: [String], required: true },
+		/** 用户开启的 2FA 类型 - 非空 */ /* 可以为 email, totp 或 none（表示未开启） */
+		authenticatorType: { type: String, required: true },
 		/** 系统专用字段-创建时间 - 非空 */
 		userCreateDateTime: { type: Number, required: true },
 		/** 系统专用字段-最后编辑时间 - 非空 */
@@ -47,9 +51,9 @@ const UserLabelSchema = {
 /**
  * 用户的关联账户
  */
-const UserLinkAccountsSchema = {
-	/** 关联账户类型 - 非空 - 例："X" */
-	accountType: { type: String, required: true },
+const UserLinkedAccountsSchema = {
+	/** 关联账户的平台 - 非空 - 例："X" */
+	platformId: { type: String, required: true },
 	/** 关联账户唯一标识 - 非空 */
 	accountUniqueId: { type: String, required: true },
 }
@@ -93,11 +97,13 @@ class UserInfoSchemaFactory {
 		/** 用户主页 Markdown */
 		userProfileMarkdown: { type: String },
 		/** 用户的关联账户 */
-		userLinkAccounts: { type: [UserLinkAccountsSchema], required: false },
+		userLinkedAccounts: { type: [UserLinkedAccountsSchema], required: false },
 		/** 用户关联网站 */
 		userWebsite: { type: UserWebsiteSchema },
-		/** 是否在上一次审核通过后修改了用户信息，当第一次创建和用户信息发生更新时需要设为 ture，当管理员通过审核时时将其改为 false */
+		/** 是否在上一次审核通过后修改了用户信息，当第一次创建用户信息以及发生了更新时需要设为 true，当管理员通过审核时时将其改为 false */
 		isUpdatedAfterReview: { type: Boolean, required: true },
+		/** 编辑操作人 */
+		editOperatorUUID: { type: String },
 		/** 系统专用字段-最后编辑时间 - 非空 */
 		editDateTime: { type: Number, required: true },
 		/** 系统专用字段-创建时间 - 非空 */
@@ -111,13 +117,23 @@ class UserInfoSchemaFactory {
 export const UserInfoSchema = new UserInfoSchemaFactory()
 
 /**
- * 用户关联账户的隐私设置
+ * 用户关联平台的隐私可见性设置
  */
-const UserLinkAccountsPrivacySettingSchema = {
-	/** 关联账户类型 - 非空 - 例："X" */
-	accountType: { type: String, required: true },
+const UserLinkedAccountsVisibilitiesSettingSchema = {
+	/** 关联平台的 ID - 非空 - 例：'X', 'wechat', 'bilibili' */
+	platformId: { type: String, required: true },
 	/** 显示方式 - 非空 - 允许的值有：{public: 公开, following: 仅关注, private: 隐藏} */
-	privacyType: { type: String, required: true },
+	visibilitiesType: { type: String, required: true },
+}
+
+/**
+ * 用户隐私数据可见性设置
+ */
+const UserPrivaryVisibilitiesSettingSchema = {
+	/** 用户隐私数据项的 ID - 非空 - 例：'birthday', 'follow', 'fans' */
+	privaryId: { type: String, required: true },
+	/** 显示方式 - 非空 - 允许的值有：{public: 公开, following: 仅关注, private: 隐藏} */
+	visibilitiesType: { type: String, required: true },
 }
 
 /**
@@ -170,8 +186,10 @@ class UserSettingsSchemaFactory {
 		flatAppearanceMode: { type: Boolean },
 		/** 用户关联网站的隐私设置 */
 		userWebsitePrivacySetting: { type: String },
-		/** 用户关联账户的隐私设置 */
-		userLinkAccountsPrivacySetting: { type: [UserLinkAccountsPrivacySettingSchema] },
+		/** 用户隐私数据可见性设置 */
+		userPrivaryVisibilitiesSetting: { type: [UserPrivaryVisibilitiesSettingSchema] },
+		/** 用户关联平台的隐私可见性设置 */
+		userLinkedAccountsVisibilitiesSetting: { type: [UserLinkedAccountsVisibilitiesSettingSchema] },
 		/** 系统专用字段-最后编辑时间 - 非空 */
 		editDateTime: { type: Number, required: true },
 		/** 系统专用字段-创建时间 - 非空 */
@@ -272,7 +290,6 @@ class UserChangeEmailVerificationCodeSchemaFactory {
 }
 export const UserChangeEmailVerificationCodeSchema = new UserChangeEmailVerificationCodeSchemaFactory()
 
-
 /**
  * 用户更改密码的邮箱验证码
  */
@@ -302,3 +319,103 @@ class UserChangePasswordVerificationCodeSchemaFactory {
 	schemaInstance = new Schema(this.schema)
 }
 export const UserChangePasswordVerificationCodeSchema = new UserChangePasswordVerificationCodeSchemaFactory()
+
+/**
+ * 用户 TOTP 身份验证器
+ */
+class UserTotpAuthenticatorSchemaFactory {
+	/** MongoDB Schema */
+	schema = {
+		/** 用户的 UUID，关联用户安全集合的 UUID - 非空 */
+		UUID: { type: String, required: true },
+		/** 是否启用 TOTP 身份验证器 - 非空 - 默认值：false */
+		enabled: { type: Boolean, required: true, default: false },
+		/** 验证器密钥 */
+		secret: { type: String },
+		/** 恢复码 */
+		recoveryCodeHash: { type: String },
+		/** 备份码 */
+		backupCodeHash: { type: [String] },
+		/** QRcode */
+		otpAuth: { type: String, unique: true },
+		/** 尝试次数 */
+		attempts: { type: Number },
+		/** 上次尝试登录时间 */
+		lastAttemptTime: { type: Number },
+		/** 系统专用字段-创建时间 - 非空 */
+		createDateTime: { type: Number, required: true },
+		/** 系统专用字段-最后编辑时间 - 非空 */
+		editDateTime: { type: Number, required: true },
+	}
+	/** MongoDB 集合名 */
+	collectionName = 'user-totp-authenticator'
+	/** Mongoose Schema 实例 */
+	schemaInstance = new Schema(this.schema)
+
+	// 构造器
+	constructor() {
+		// 添加 UUID 和 secret 组合的唯一索引
+		this.schemaInstance.index({ UUID: 1, secret: 1 }, { unique: true });
+	}
+}
+export const UserTotpAuthenticatorSchema = new UserTotpAuthenticatorSchemaFactory()
+
+/**
+ * 用户 Email 身份验证器
+ */
+class UserEmailAuthenticatorSchemaFactory {
+	/** MongoDB Schema */
+	schema = {
+		/** 用户的 UUID，关联用户安全集合的 UUID - 非空 */
+		UUID: { type: String, required: true },
+		/** 用户的 Email */
+		emailLowerCase: { type: String, required: true },
+		/** 是否启用 Email 身份验证器 - 非空 - 默认值：false */
+		enabled: { type: Boolean, required: true, default: false },
+		/** 系统专用字段-创建时间 - 非空 */
+		createDateTime: { type: Number, required: true },
+		/** 系统专用字段-最后编辑时间 - 非空 */
+		editDateTime: { type: Number, required: true },
+	}
+	/** MongoDB 集合名 */
+	collectionName = 'user-email-authenticator'
+	/** Mongoose Schema 实例 */
+	schemaInstance = new Schema(this.schema)
+
+	// 构造器
+	constructor() {
+		// 添加 UUID 和 secret 组合的唯一索引
+		this.schemaInstance.index({ UUID: 1, email: 1 }, { unique: true });
+	}
+}
+export const UserEmailAuthenticatorSchema = new UserEmailAuthenticatorSchemaFactory()
+
+/**
+ * 用户验证 Email 身份验证器的邮箱验证码
+ */
+class UserEmailAuthenticatorVerificationCodeSchemaFactory {
+	/** MongoDB Schema */
+	schema = {
+		/** 用户的 UUID，关联用户安全集合的 UUID - 非空 */
+		UUID: { type: String, required: true },
+		/** 用户 ID - 非空 */
+		uid: { type: Number, required: true },
+		/** 用户的邮箱 - 非空 - 唯一 */
+		emailLowerCase: { type: String, required: true, unique: true },
+		/** 用户的验证码 - 非空 */
+		verificationCode: { type: String, required: true },
+		/** 用户的验证码过期时间 - 非空 */
+		overtimeAt: { type: Number, required: true, unique: true },
+		/** 用户今日请求的次数，用于防止滥用 - 非空 */
+		attemptsTimes: { type: Number, required: true },
+		/** 用户上一次请求验证码的时间，用于防止滥用 - 非空 */
+		lastRequestDateTime: { type: Number, required: true },
+		/** 系统专用字段-最后编辑时间 - 非空 */
+		editDateTime: { type: Number, required: true },
+	}
+	/** MongoDB 集合名 */
+	collectionName = 'user-email-authenticator-verification-code'
+	/** Mongoose Schema 实例 */
+	schemaInstance = new Schema(this.schema)
+}
+export const UserEmailAuthenticatorVerificationCodeSchema = new UserEmailAuthenticatorVerificationCodeSchemaFactory()

@@ -1,4 +1,5 @@
 import { SMTPClient } from 'emailjs'
+import { resolve } from 'path'
 
 /**
  * 邮件正文数据， text 和 html 二者至少一个不能为空
@@ -87,6 +88,19 @@ export const sendMail = async (to: string, title: string, body: EmailBodyType) =
 				data: body.html,
 				alternative: true,
 			},
+			// #region 内嵌附件图片
+			/* {
+				path: resolve(import.meta.dirname, "../assets/images", "background.png"),
+				type: "image/png",
+				headers: { "Content-ID": "<background>" },
+			}, */
+			// 糟糕，许多邮箱不支持 CSS background-image 的内嵌图片显示！
+			{
+				path: resolve(import.meta.dirname, "../assets/images", "banner.png"),
+				type: "image/png",
+				headers: { "Content-ID": "<banner>" },
+			},
+			// #endregion
 		],
 	}
 

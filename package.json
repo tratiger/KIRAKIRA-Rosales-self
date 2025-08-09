@@ -1,23 +1,29 @@
 {
 	"name": "kirakira-rosales",
 	"version": "1.0.0",
-	"description": "",
+	"description": "KIRAKIRA-Rosales, The RESTful Back-end API Created by koa.",
 	"main": "src/app.ts",
 	"type": "module",
-	"author": "",
+	"author": "KIRAKIRA Project Team",
+	"private": true,
 	"scripts": {
-		"start": "tsc --noEmitOnError --sourceMap --outDir .kirakira && node ./.kirakira/app.js",
+		"start": "tsc --noEmitOnError --sourceMap --outDir .kirakira && npm run copy-assets-dev && node ./.kirakira/app.js",
 		"dev": "npm start",
 		"serve": "npm start",
 		"dev-hot": "nodemon --watch src/**/* --delay 1500ms -e ts --exec npm start",
-		"build": "tsc --removeComments --declaration"
+		"build": "tsc --removeComments --declaration && npm run copy-assets-build",
+		"copy-assets-dev": "copyfiles -u 1 src/assets/**/* .kirakira/",
+		"copy-assets-build": "copyfiles -u 1 src/assets/**/* dist/"
 	},
 	"devDependencies": {
+		"@eslint/js": "^9.31.0",
 		"@types/koa": "^2.13.5",
 		"@types/koa-route": "^3.2.5",
 		"@types/koa-router": "^7.4.4",
-		"@typescript-eslint/eslint-plugin": "^8.0.1",
-		"@typescript-eslint/parser": "^8.0.1",
+		"@types/safe-regex": "^1.1.6",
+		"@typescript-eslint/eslint-plugin": "^8.38.0",
+		"@typescript-eslint/parser": "^8.38.0",
+		"copyfiles": "^2.4.1",
 		"esbuild-register": "^3.4.1",
 		"eslint": "^9.9.0",
 		"nodemon": "^3.1.4",
@@ -25,6 +31,7 @@
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.456.0",
+		"@aws-sdk/client-secrets-manager": "^3.758.0",
 		"@aws-sdk/s3-request-presigner": "^3.456.0",
 		"@elastic/elasticsearch": "^8.11.0",
 		"@koa/cors": "^5.0.0",
@@ -37,6 +44,9 @@
 		"koa": "^2.14.1",
 		"koa-bodyparser": "^4.4.0",
 		"koa-router": "^12.0.0",
-		"mongoose": "^8.5.2"
+		"mongoose": "^8.5.2",
+		"otplib": "^12.0.1",
+		"safe-regex": "^2.1.1",
+		"uuid": "^11.0.5"
 	}
 }
