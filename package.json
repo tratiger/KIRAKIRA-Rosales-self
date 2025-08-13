@@ -43,7 +43,7 @@
 		"js-base64": "^3.7.5",
 		"koa": "^2.14.1",
 		"koa-bodyparser": "^4.4.0",
-		"koa-router": "^12.0.0",
+		"koa-router": "^14.0.0",
 		"mongoose": "^8.5.2",
 		"otplib": "^12.0.1",
 		"safe-regex": "^2.1.1",
