@@ -161,7 +161,7 @@ router.post('/user/update/info', updateOrCreateUserInfoController) // 更新或�
 // 					"labelName": "bbbbbb"
 // 			}
 // 	],
-// 	"userBirthday": 1705327908351,
+// 	"userBirthday": '',
 // 	"userProfileMarkdown": "### 小作文时间！",
 // 	"userLinkAccounts": [
 // 			{
