@@ -197,7 +197,7 @@ export type UpdateOrCreateUserInfoRequestDto = {
 	/** 用户的个人标签 */
 	label?: UserLabel[];
 	/** 用户生日 */
-	userBirthday?: number;
+	userBirthday?: string;
 	/** 用户主页 Markdown */
 	userProfileMarkdown?: string;
 	/** 用户的关联账户 */
@@ -827,7 +827,7 @@ export type AdminEditUserInfoRequestDto = {
 		/** 用户的性别，男、女和自定义（字符串） */
 		gender?: string;
 		/** 用户生日 */
-		userBirthday?: number;
+		userBirthday?: string;
 		/** 用户主页 Markdown */
 		userProfileMarkdown?: string;
 		/** 审核状态 */

@@ -2802,7 +2802,7 @@ export const adminClearUserInfoService = async (adminClearUserInfoRequest: Admin
 			signature: '',
 			gender: '',
 			label: [] as UserInfo['label'], // TODO: Mongoose issue: #12420
-			userBirthday: -1,
+			userBirthday: '',
 			userProfileMarkdown: '',
 			userLinkedAccounts: [] as UserInfo['userLinkedAccounts'], // TODO: Mongoose issue: #12420
 			userWebsite: { websiteName: '', websiteUrl: '' },

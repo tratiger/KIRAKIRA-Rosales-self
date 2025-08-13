@@ -93,7 +93,7 @@ class UserInfoSchemaFactory {
 		/** 用户的个人标签 */
 		label: { type: [UserLabelSchema], required: false },
 		/** 用户生日 */
-		userBirthday: { type: Number },
+		userBirthday: { type: String },
 		/** 用户主页 Markdown */
 		userProfileMarkdown: { type: String },
 		/** 用户的关联账户 */
