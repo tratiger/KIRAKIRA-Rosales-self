@@ -37,7 +37,7 @@
 		"@koa/cors": "^5.0.0",
 		"@types/bcrypt": "^5.0.2",
 		"@types/koa-bodyparser": "^4.3.10",
-		"axios": "^1.4.0",
+		"axios": "^1.8.2",
 		"bcrypt": "^5.1.1",
 		"emailjs": "^4.0.3",
 		"js-base64": "^3.7.5",
