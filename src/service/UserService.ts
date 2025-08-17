@@ -103,6 +103,7 @@ export const userRegistrationService = async (userRegistrationRequest: UserRegis
 			}
 			const { email, passwordHash, passwordHint, verificationCode, username, userNickname } = userRegistrationRequest
 			const emailLowerCase = email.toLowerCase()
+			const usernameStandardized = username.trim().normalize();
 
 			if (email && emailLowerCase && verificationCode) {
 				// 启动事务
@@ -115,7 +116,6 @@ export const userRegistrationService = async (userRegistrationRequest: UserRegis
 
 				const userAuthWhere: QueryType<UserAuth> = {
 					emailLowerCase,
-					username: { $regex: new RegExp(`\\b${username}\\b`, 'iu') },
 				}
 				const userAuthSelect: SelectType<UserAuth> = { emailLowerCase: 1 }
 				try {
@@ -192,7 +192,7 @@ export const userRegistrationService = async (userRegistrationRequest: UserRegis
 				const userInfoData: UserInfo = {
 					UUID: uuid,
 					uid,
-					username,
+					username: usernameStandardized,
 					userNickname,
 					label: [] as UserInfo['label'], // TODO: Mongoose issue: #12420
 					userLinkedAccounts: [] as UserInfo['userLinkedAccounts'], // TODO: Mongoose issue: #12420
@@ -200,7 +200,6 @@ export const userRegistrationService = async (userRegistrationRequest: UserRegis
 					editDateTime: now,
 					createDateTime: now,
 				}
-
 
 				const { collectionName: userSettingsCollectionName, schemaInstance: userSettingsSchemaInstance } = UserSettingsSchema
 				type UserSettings = InferSchemaType<typeof userSettingsSchemaInstance>
@@ -709,39 +708,21 @@ export const updateOrCreateUserInfoService = async (updateOrCreateUserInfoReques
 			if (checkUpdateOrCreateUserInfoRequest(updateOrCreateUserInfoRequest)) {
 				const { collectionName, schemaInstance } = UserInfoSchema
 				type UserInfo = InferSchemaType<typeof schemaInstance>
-				const username = updateOrCreateUserInfoRequest.username
+				const { username, userNickname } = updateOrCreateUserInfoRequest
 
-				if (username) {
-					if (!validateNameField(username) || !validateNameField(updateOrCreateUserInfoRequest.userNickname)) {
-						console.error('ERROR', '更新用户信息失败，用户名或昵称不合法，用户 UID:', uid)
-						return { success: false, message: '更新用户信息失败，用户名或昵称不合法' }
-					}
+				const usernameStandardized = username.trim().normalize();
 
-					const getUserInfoWhere: QueryType<UserInfo> = {
-						username: { $regex: new RegExp(`\\b${updateOrCreateUserInfoRequest.username}\\b`, 'iu') },
-					}
-					const getUserInfoSelect: SelectType<UserInfo> = {
-						uid: 1,
-						username: 1,
-					}
-					const checkUsernameResult = await selectDataFromMongoDB<UserInfo>(getUserInfoWhere, getUserInfoSelect, schemaInstance, collectionName)
-
-					let isSafeUsername = false
-					if (checkUsernameResult.success) {
-						if (checkUsernameResult.result.length === 0) {
-							isSafeUsername = true
-						}
-						if (checkUsernameResult.result.length === 1) {
-							if (checkUsernameResult.result[0].uid === uid) {
-								isSafeUsername = true
-							}
-						}
-					}
-
-					if (!isSafeUsername) {
+				if (usernameStandardized) {
+					const checkUserNameResult = await checkUsernameService({ username: usernameStandardized })
+					if (!checkUserNameResult.success || !checkUserNameResult.isAvailableUsername) {
 						console.error('ERROR', '更新用户信息失败，用户重名', { updateOrCreateUserInfoRequest, uid })
 						return { success: false, message: '更新用户信息失败，用户重名' }
 					}
+				}
+
+				if (userNickname && !validateNameField(userNickname)) {
+					console.error('ERROR', '更新用户信息失败，用户昵称不合法，用户 UID:', uid)
+					return { success: false, message: '更新用户信息失败，用户昵称不合法' }
 				}
 
 				const editOperatorUUID = await getUserUuid(uid)
@@ -2356,16 +2337,23 @@ export const changePasswordService = async (updateUserPasswordRequest: UpdateUse
 /**
  * 检查用户名是否可用
  * @param checkUsernameRequest 检查用户名是否可用的请求载荷
- * @returns 检查用户名是否可用的请求响应
+ * @returns 检查用户名是否可用的请求响应，可用返回 true，否则返回 false
  */
 export const checkUsernameService = async (checkUsernameRequest: CheckUsernameRequestDto): Promise<CheckUsernameResponseDto> => {
 	try {
 		if (checkCheckUsernameRequest(checkUsernameRequest)) {
 			const { username } = checkUsernameRequest
+			const usernameStandardized = username.trim().normalize()
+
+			if (!validateNameField(usernameStandardized)) {
+				console.error('ERROR', '用户名不合法')
+				return { success: false, message: '用户名不合法', isAvailableUsername: true }
+			}
+
 			const { collectionName, schemaInstance } = UserInfoSchema
 			type UserInfo = InferSchemaType<typeof schemaInstance>
 			const checkUsernameWhere: QueryType<UserInfo> = {
-				username: { $regex: new RegExp(`\\b${username}\\b`, 'iu') },
+				username: { $regex: new RegExp(`\\b${usernameStandardized}\\b`, 'iu') },
 			}
 			const checkUsernameSelete: SelectType<UserInfo> = {
 				uid: 1,
@@ -2844,33 +2832,15 @@ export const adminEditUserInfoService = async (adminEditUserInfoRequest: AdminEd
 
 		const { uid } = adminEditUserInfoRequest
 		const { username } = adminEditUserInfoRequest.userInfo
+		const usernameStandardized = username.trim().normalize()
 		const { collectionName: userInfoCollectionName, schemaInstance: userInfoSchemaInstance } = UserInfoSchema
 
 		if (username) {
-			const getUserInfoWhere: QueryType<UserInfo> = {
-				username: { $regex: new RegExp(`\\b${username}\\b`, 'iu') },
-			}
-			const getUserInfoSelect: SelectType<UserInfo> = {
-				uid: 1,
-				username: 1,
-			}
-			const checkUsernameResult = await selectDataFromMongoDB<UserInfo>(getUserInfoWhere, getUserInfoSelect, userInfoSchemaInstance, userInfoCollectionName)
+			const checkResult = await checkUsernameService({ username: usernameStandardized })
 
-			let isSafeUsername = false
-			if (checkUsernameResult.success) {
-				if (checkUsernameResult.result.length === 0) {
-					isSafeUsername = true
-				}
-				if (checkUsernameResult.result.length === 1) {
-					if (checkUsernameResult.result[0].uid === uid) {
-						isSafeUsername = true
-					}
-				}
-			}
-
-			if (!isSafeUsername) {
-				console.error('ERROR', '更新用户信息失败，用户重名', { adminEditUserInfoRequest, uid })
-				return { success: false, message: '更新用户信息失败，用户重名' }
+			if (!checkResult.success || !checkResult.isAvailableUsername) {
+				console.error('ERROR', '管理员编辑用户信息失败，用户名不可用', { adminEditUserInfoRequest, uid })
+				return { success: false, message: '管理员编辑用户信息失败，用户名不可用' }
 			}
 		}
 
