@@ -75,7 +75,9 @@ import {
 	GetBlockedUserRequestDto,
 	AdminGetUserByInvitationCodeResponseDto,
 	ForgotPasswordRequestDto,
-	RequestSendForgotPasswordVerificationCodeRequestDto
+	RequestSendForgotPasswordVerificationCodeRequestDto,
+	ForgotPasswordResponseDto,
+	RequestSendForgotPasswordVerificationCodeResponseDto
 } from '../controller/UserControllerDto.js'
 import { findOneAndUpdateData4MongoDB, insertData2MongoDB, selectDataFromMongoDB, updateData4MongoDB, selectDataByAggregateFromMongoDB, deleteDataFromMongoDB } from '../dbPool/DbClusterPool.js'
 import { DbPoolResultsType, QueryType, SelectType, UpdateType } from '../dbPool/DbClusterPoolTypes.js'
@@ -2224,7 +2226,7 @@ export const changePasswordService = async (updateUserPasswordRequest: UpdateUse
  * @param requestSendForgotPasswordVerificationCodeRequest 请求发送忘记密码的邮箱验证码的请求载荷
  * @returns 请求发送忘记密码的邮箱验证码的请求响应
  */
-export const requestSendForgotPasswordVerificationCodeService = async (requestSendForgotPasswordVerificationCodeRequest: RequestSendForgotPasswordVerificationCodeRequestDto): Promise<RequestSendChangePasswordVerificationCodeResponseDto> => {
+export const requestSendForgotPasswordVerificationCodeService = async (requestSendForgotPasswordVerificationCodeRequest: RequestSendForgotPasswordVerificationCodeRequestDto): Promise<RequestSendForgotPasswordVerificationCodeResponseDto> => {
 	try {
 		if (!checkRequestSendForgotPasswordVerificationCodeRequest(requestSendForgotPasswordVerificationCodeRequest)) {
 			const message = '请求发送忘记密码的验证码失败，参数不合法！'
@@ -2345,7 +2347,7 @@ export const requestSendForgotPasswordVerificationCodeService = async (requestSe
  * @param forgotPasswordRequest 忘记密码（更新密码）的请求载荷
  * @returns 忘记密码（更新密码）的请求响应
  */
-export const forgotPasswordService = async (forgotPasswordRequest: ForgotPasswordRequestDto): Promise<UpdateUserPasswordResponseDto> => {
+export const forgotPasswordService = async (forgotPasswordRequest: ForgotPasswordRequestDto): Promise<ForgotPasswordResponseDto> => {
 	try {
 		if (!checkForgotPasswordRequest(forgotPasswordRequest)) {
 			const message = '找回密码失败，参数不合法！'
