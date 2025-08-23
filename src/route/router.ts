@@ -40,6 +40,8 @@ import {
 	userExistsCheckByUIDController,
 	adminEditUserInfoController,
 	adminGetUserByInvitationCodeController,
+	forgotPasswordController,
+	requestSendForgotPasswordVerificationCodeController,
 } from '../controller/UserController.js'
 import { adminDeleteVideoCommentController, cancelVideoCommentDownvoteController, cancelVideoCommentUpvoteController, deleteSelfVideoCommentController, emitVideoCommentController, emitVideoCommentDownvoteController, emitVideoCommentUpvoteController, getVideoCommentListByKvidController } from '../controller/VideoCommentController.js'
 import { approvePendingReviewVideoController, checkVideoExistController, deleteVideoByKvidController, getPendingReviewVideoController, getThumbVideoController, getVideoByKvidController, getVideoByUidController, getVideoCoverUploadSignedUrlController, getVideoFileTusEndpointController, searchVideoByKeywordController, searchVideoByVideoTagIdController, updateVideoController } from '../controller/VideoController.js'
@@ -267,6 +269,21 @@ router.post('/user/update/password', updateUserPasswordController) // 更新用�
 // cookie: uid, token
 // {
 // 	"oldPasswordHash": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+// 	"newPasswordHash": "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY",
+// 	"verificationCode": "XXXXXX"
+// }
+
+router.post('/user/requestSendForgotPasswordVerificationCode', requestSendForgotPasswordVerificationCodeController) // 请求发送忘记密码的邮箱验证码
+// https://localhost:9999/user/requestSendForgotPasswordVerificationCode
+// {
+// 	"clientLanguage": "zh-Hans-CN",
+// 	"email": "your-email@website.com"
+// }
+
+router.post('/user/forgot/password', forgotPasswordController) // 找回密码（更新密码）
+// https://localhost:9999/user/forgot/password
+// {
+// 	"email": "your-email@website.com",
 // 	"newPasswordHash": "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY",
 // 	"verificationCode": "XXXXXX"
 // }
