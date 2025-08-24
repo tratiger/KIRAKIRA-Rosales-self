@@ -707,53 +707,55 @@ export const updateUserEmailService = async (updateUserEmailRequest: UpdateUserE
  */
 export const updateOrCreateUserInfoService = async (updateOrCreateUserInfoRequest: UpdateOrCreateUserInfoRequestDto, uuid: string, token: string): Promise<UpdateOrCreateUserInfoResponseDto> => {
 	try {
-		if (await checkUserTokenByUUID(uuid, token)) {
-			if (checkUpdateOrCreateUserInfoRequest(updateOrCreateUserInfoRequest)) {
-				const { collectionName, schemaInstance } = UserInfoSchema
-				type UserInfo = InferSchemaType<typeof schemaInstance>
-				const { username, userNickname } = updateOrCreateUserInfoRequest
+		if (!checkUpdateOrCreateUserInfoRequest(updateOrCreateUserInfoRequest)) {
+			console.error('ERROR', '更新用户信息时失败，参数校验未通过', { updateOrCreateUserInfoRequest, uuid })
+			return { success: false, message: '更新用户数据时失败，参数校验未通过' }
+		}
 
-				const usernameStandardized = username.trim().normalize();
-
-				if (usernameStandardized) {
-					const checkUserNameResult = await checkUsernameService({ username: usernameStandardized }, [uuid])
-					if (!checkUserNameResult.success || !checkUserNameResult.isAvailableUsername) {
-						console.error('ERROR', '更新用户信息失败，用户重名', { updateOrCreateUserInfoRequest, uuid })
-						return { success: false, message: '更新用户信息失败，用户重名' }
-					}
-				}
-
-				if (userNickname && !validateNameField(userNickname)) {
-					console.error('ERROR', '更新用户信息失败，用户昵称不合法，用户 UUID:', uuid)
-					return { success: false, message: '更新用户信息失败，用户昵称不合法' }
-				}
-
-				const updateUserInfoWhere: QueryType<UserInfo> = {
-					UUID: uuid,
-				}
-				const updateUserInfoUpdate: UpdateType<UserInfo> = {
-					...updateOrCreateUserInfoRequest,
-					label: updateOrCreateUserInfoRequest.label as UserInfo['label'], // TODO: Mongoose issue: #12420
-					userLinkedAccounts: updateOrCreateUserInfoRequest.userLinkedAccounts as UserInfo['userLinkedAccounts'], // TODO: Mongoose issue: #12420
-					isUpdatedAfterReview: true,
-					editOperatorUUID: uuid,
-					editDateTime: new Date().getTime(),
-				}
-				const updateResult = await findOneAndUpdateData4MongoDB(updateUserInfoWhere, updateUserInfoUpdate, schemaInstance, collectionName)
-				if (updateResult && updateResult.success && updateResult.result) {
-					return { success: true, message: '更新用户信息成功', result: updateResult.result }
-				} else {
-					console.error('ERROR', '更新用户信息失败，没有返回用户数据', { updateOrCreateUserInfoRequest, uuid })
-					return { success: false, message: '更新用户信息失败，没有返回用户数据' }
-				}
-			} else {
-				console.error('ERROR', '更新用户信息时失败，未找到必要的数据，或者关联账户平台类型不合法：', { updateOrCreateUserInfoRequest, uuid })
-				return { success: false, message: '更新用户数据时失败，必要的数据为空或关联平台信息出错' }
-			}
-		} else {
-			console.error('ERROR', '更新用户数据时失败，token 校验失败，非法用户！', { updateOrCreateUserInfoRequest, uuid })
+		if (!await checkUserTokenByUUID(uuid, token)) {
+			console.error('ERROR', '更新用户信息时失败，token 校验失败，非法用户！', { updateOrCreateUserInfoRequest, uuid })
 			return { success: false, message: '更新用户数据时失败，非法用户！' }
 		}
+
+		const { collectionName, schemaInstance } = UserInfoSchema
+		type UserInfo = InferSchemaType<typeof schemaInstance>
+		const { username, userNickname } = updateOrCreateUserInfoRequest
+
+		const usernameStandardized = username.trim().normalize();
+
+		if (usernameStandardized) {
+			const checkUserNameResult = await checkUsernameService({ username: usernameStandardized }, [uuid]) // exclude self when check duplicate username
+			if (!checkUserNameResult.success || !checkUserNameResult.isAvailableUsername) {
+				console.error('ERROR', '更新用户信息失败，用户重名', { updateOrCreateUserInfoRequest, uuid })
+				return { success: false, message: '更新用户信息失败，用户重名' }
+			}
+		}
+
+		if (userNickname && !validateNameField(userNickname)) {
+			console.error('ERROR', '更新用户信息失败，用户昵称不合法，用户 UUID:', uuid)
+			return { success: false, message: '更新用户信息失败，用户昵称不合法' }
+		}
+
+		const updateUserInfoWhere: QueryType<UserInfo> = {
+			UUID: uuid,
+		}
+		const updateUserInfoUpdate: UpdateType<UserInfo> = {
+			...updateOrCreateUserInfoRequest,
+			username: usernameStandardized, // username 经过了特殊处理，所以需要覆盖前面展开的 updateOrCreateUserInfoRequest
+			label: updateOrCreateUserInfoRequest.label as UserInfo['label'], // TODO: Mongoose issue: #12420
+			userLinkedAccounts: updateOrCreateUserInfoRequest.userLinkedAccounts as UserInfo['userLinkedAccounts'], // TODO: Mongoose issue: #12420
+			isUpdatedAfterReview: true,
+			editOperatorUUID: uuid,
+			editDateTime: new Date().getTime(),
+		}
+		const updateResult = await findOneAndUpdateData4MongoDB(updateUserInfoWhere, updateUserInfoUpdate, schemaInstance, collectionName)
+
+		if (!updateResult || !updateResult.success || !updateResult.result) {
+			console.error('ERROR', '更新用户信息失败，没有返回用户数据', { updateOrCreateUserInfoRequest, uuid })
+			return { success: false, message: '更新用户信息失败，没有返回用户数据' }
+		}
+
+		return { success: true, message: '更新用户信息成功', result: updateResult.result }
 	} catch (error) {
 		console.error('ERROR', '更新用户信息时失败，未知异常', error)
 		return { success: false, message: '更新用户数据时失败，未知异常' }
