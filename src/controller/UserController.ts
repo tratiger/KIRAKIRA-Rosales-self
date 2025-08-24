@@ -344,11 +344,11 @@ export const updateUserEmailController = async (ctx: koaCtx, next: koaNext) => {
  */
 export const updateOrCreateUserInfoController = async (ctx: koaCtx, next: koaNext) => {
 	const data = ctx.request.body as Partial<UpdateOrCreateUserInfoRequestDto>
-	const uid = parseInt(ctx.cookies.get('uid'), 10)
+	const uuid = ctx.cookies.get('uuid')
 	const token = ctx.cookies.get('token')
 
 	// RBAC 权限验证
-	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
+	if (!await isPassRbacCheck({ uuid, apiPath: ctx.path }, ctx)) {
 		return
 	}
 
@@ -365,7 +365,7 @@ export const updateOrCreateUserInfoController = async (ctx: koaCtx, next: koaNex
 		userLinkedAccounts: data?.userLinkedAccounts,
 		userWebsite: data?.userWebsite,
 	}
-	ctx.body = await updateOrCreateUserInfoService(updateOrCreateUserInfoRequest, uid, token)
+	ctx.body = await updateOrCreateUserInfoService(updateOrCreateUserInfoRequest, uuid, token)
 	await next()
 }
 
