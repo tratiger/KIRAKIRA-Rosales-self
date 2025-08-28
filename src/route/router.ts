@@ -1,4 +1,5 @@
 import Router from '@koa/router'
+import { UploadController } from '../controller/UploadController.js'
 import { createOrUpdateUserBrowsingHistoryController, getUserBrowsingHistoryWithFilterController } from '../controller/BrowsingHistoryController.js'
 import { emitDanmakuController, getDanmakuListByKvidController } from '../controller/DanmakuController.js'
 import { createFavoritesController, getFavoritesController } from '../controller/FavoritesController.js'
@@ -54,6 +55,8 @@ import { addRegexController, blockKeywordController, blockTagController, blockUs
 const router = new Router()
 
 // router-begin
+
+router.post('/upload/:fileName', UploadController.uploadImage)
 
 router.get('/', helloWorld) // 测试 // DELETE ME
 router.get('/02/koa/hello', helloWorld) // 测试 // DELETE ME

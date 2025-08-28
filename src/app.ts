@@ -2,20 +2,23 @@ import cors from '@koa/cors'
 import fs from 'fs'
 import https from 'https'
 import Koa from 'koa'
-import bodyParser from 'koa-bodyparser'
+import serve from 'koa-static'
+import { koaBody } from 'koa-body'
 import { connectMongoDBCluster } from './dbPool/DbClusterPool.js'
 import elasticsearchMiddleware from './middleware/elasticsearchMiddleware.js'
 import router from './route/router.js'
+import path from 'path'
 
-const SERVER_PORT = process.env.SERVER_PORT ? parseInt(process.env.SERVER_PORT, 10) : 9999 // 从环境变量中获取端口号，如果没获取到，则使用 9999
+const SERVER_PORT = process.env.SERVER_PORT ? parseInt(process.env.SERVER_PORT, 10) : 9997 // 从环境变量中获取端口号，如果没获取到，则使用 9997
 const SERVER_ENV = process.env.SERVER_ENV
 
 const app = new Koa()
 
 // 配置程序 // WARN 注意：顺序很重要
 app
+	.use(serve(path.join(process.cwd(), 'uploads')))
 	.use(elasticsearchMiddleware) // 为 ctx 附加 elasticsearchClient（elasticsearch 集群连接客户端）属性
-	.use(bodyParser())
+	.use(koaBody({ multipart: true }))
 	.use(router.routes()) // 使用 koa-router
 	.use(router.allowedMethods()) // 所有路由中间件调用完成，ctx.status 仍为空或 404，程序自动丰富请求的响应头，方便 debug 或 handle
 	.use(cors({

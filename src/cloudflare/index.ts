@@ -81,57 +81,71 @@ export const createCloudflareR2PutSignedUrl = async (bucketName: string, fileNam
  * @returns 预签名 URL，该 URL 可以用于向 Cloudflare Images 上传图片
  */
 export const createCloudflareImageUploadSignedUrl = async (fileName?: string, expiresIn: number = 660, metaData?: Record<string, string>): Promise<string | undefined> => {
-	try {
-		const imagesEndpointUrl = process.env.CF_IMAGES_ENDPOINT_URL
-		const imagesToken = process.env.CF_IMAGES_TOKEN
+	const serverEnv = process.env.SERVER_ENV
+	const serverPort = process.env.SERVER_PORT || 9999
 
-		if (expiresIn < 600) {
-			console.error('ERROR', '无法创建 Cloudflare Images 预签名 URL, 过期时间必须大于等于 120 秒 （2 分钟）', { fileName, expiresIn, metaData })
-			return undefined
-		}
-
-		if (expiresIn > 21600) {
-			console.error('ERROR', '无法创建 Cloudflare Images 预签名 URL, 过期时间必须大于等于 21600 秒（360 分钟，6 小时）', { fileName, expiresIn, metaData })
-			return undefined
-		}
-
-		if (!imagesEndpointUrl && !imagesToken) {
-			console.error('ERROR', '无法创建 Cloudflare Images 预签名 URL： imagesEndpointUrl 和 imagesToken 可能为空。请检查环境变量设置（CF_IMAGES_ENDPOINT_URL, CF_IMAGES_TOKEN）', { fileName, expiresIn, metaData })
-			return undefined
-		}
-
-		const formData = new FormData();
-		formData.append('expiry', getCloudflareRFC3339ExpiryDateTime(expiresIn)); // 生成的日期格式为：2024-03-17T13:47:28Z
-		if (fileName) formData.append('id', fileName);
-		if (metaData) formData.append('metaData', JSON.stringify(metaData));
-
+	if (serverEnv && serverEnv !== 'dev') {
+		// Production environment
 		try {
-			const imageUploadSignedUrlResponse = await fetch(imagesEndpointUrl, {
-				method: 'POST',
-				body: formData,
-				headers: {
-					Authorization: `Bearer ${imagesToken}`,
-				},
-			})
-			if (!imageUploadSignedUrlResponse.ok) {
-				console.error('ERROR', `无法创建 Cloudflare Images 预签名 URL, HTTP error! status: ${imageUploadSignedUrlResponse.status}`)
+			const imagesEndpointUrl = process.env.CF_IMAGES_ENDPOINT_URL
+			const imagesToken = process.env.CF_IMAGES_TOKEN
+
+			if (expiresIn < 600) {
+				console.error('ERROR', '无法创建 Cloudflare Images 预签名 URL, 过期时间必须大于等于 120 秒 （2 分钟）', { fileName, expiresIn, metaData })
 				return undefined
 			}
 
-			const imageUploadSignedUrlResult = await imageUploadSignedUrlResponse.json()
-			
-			const imageUploadSignedUrl = imageUploadSignedUrlResult?.result?.uploadURL
-			if (imageUploadSignedUrlResult.success && imageUploadSignedUrl) {
-				return imageUploadSignedUrl
-			} else {
-				console.error('ERROR', '无法创建 Cloudflare Images 预签名 URL：未能创建 URL！', { fileName, expiresIn, metaData })
+			if (expiresIn > 21600) {
+				console.error('ERROR', '无法创建 Cloudflare Images 预签名 URL, 过期时间必须大于等于 21600 秒（360 分钟，6 小时）', { fileName, expiresIn, metaData })
+				return undefined
+			}
+
+			if (!imagesEndpointUrl && !imagesToken) {
+				console.error('ERROR', '无法创建 Cloudflare Images 预签名 URL： imagesEndpointUrl 和 imagesToken 可能为空。请检查环境变量设置（CF_IMAGES_ENDPOINT_URL, CF_IMAGES_TOKEN）', { fileName, expiresIn, metaData })
+				return undefined
+			}
+
+			const formData = new FormData();
+			formData.append('expiry', getCloudflareRFC3339ExpiryDateTime(expiresIn)); // 生成的日期格式为：2024-03-17T13:47:28Z
+			if (fileName) formData.append('id', fileName);
+			if (metaData) formData.append('metaData', JSON.stringify(metaData));
+
+			try {
+				const imageUploadSignedUrlResponse = await fetch(imagesEndpointUrl, {
+					method: 'POST',
+					body: formData,
+					headers: {
+						Authorization: `Bearer ${imagesToken}`,
+					},
+				})
+				if (!imageUploadSignedUrlResponse.ok) {
+					console.error('ERROR', `无法创建 Cloudflare Images 预签名 URL, HTTP error! status: ${imageUploadSignedUrlResponse.status}`)
+					return undefined
+				}
+
+				const imageUploadSignedUrlResult = await imageUploadSignedUrlResponse.json()
+
+				const imageUploadSignedUrl = imageUploadSignedUrlResult?.result?.uploadURL
+				if (imageUploadSignedUrlResult.success && imageUploadSignedUrl) {
+					return imageUploadSignedUrl
+				} else {
+					console.error('ERROR', '无法创建 Cloudflare Images 预签名 URL：未能创建 URL！', { fileName, expiresIn, metaData })
+					return undefined
+				}
+			} catch (error) {
+				console.error('ERROR', '无法创建 Cloudflare Images 预签名 URL：网络请求失败！', { error, errorDetail: error?.response?.data?.errors }, { fileName, expiresIn, metaData })
 				return undefined
 			}
 		} catch (error) {
-			console.error('ERROR', '无法创建 Cloudflare Images 预签名 URL：网络请求失败！', { error, errorDetail: error?.response?.data?.errors }, { fileName, expiresIn, metaData })
+			console.error('ERROR', '创建 Cloudflare Images 上传预签名 URL 失败：', error)
 			return undefined
 		}
-	} catch (error) {
-		console.error('ERROR', '创建 Cloudflare Images 上传预签名 URL 失败：', error)
+	} else {
+		// Development environment
+		if (!fileName) {
+			console.error('ERROR', '无法创建本地上传 URL, fileName 不能为空');
+			return undefined;
+		}
+		return `https://localhost:${serverPort}/upload/${fileName}`;
 	}
 }

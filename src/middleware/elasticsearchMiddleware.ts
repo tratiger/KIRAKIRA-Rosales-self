@@ -13,9 +13,6 @@ try {
 export default async function elasticsearchMiddleware(ctx: koaCtx, next: koaNext) {
 	if (client) {
 		ctx.elasticsearchClient = client
-	} else {
-		console.error('ERROR', '创建 Elasticsearch 客户端失败：client 为空')
-		process.exit()
 	}
 	await next()
 }
