@@ -44,12 +44,41 @@ import {
 	requestSendForgotPasswordVerificationCodeController,
 } from '../controller/UserController.js'
 import { adminDeleteVideoCommentController, cancelVideoCommentDownvoteController, cancelVideoCommentUpvoteController, deleteSelfVideoCommentController, emitVideoCommentController, emitVideoCommentDownvoteController, emitVideoCommentUpvoteController, getVideoCommentListByKvidController } from '../controller/VideoCommentController.js'
-import { approvePendingReviewVideoController, checkVideoExistController, deleteVideoByKvidController, getPendingReviewVideoController, getThumbVideoController, getVideoByKvidController, getVideoByUidController, getVideoCoverUploadSignedUrlController, getVideoFileTusEndpointController, searchVideoByKeywordController, searchVideoByVideoTagIdController, updateVideoController } from '../controller/VideoController.js'
+import { approvePendingReviewVideoController, checkVideoExistController, deleteVideoByKvidController, getPendingReviewVideoController, getThumbVideoController, getVideoByKvidController, getVideoByUidController, getVideoCoverUploadSignedUrlController, searchVideoByKeywordController, searchVideoByVideoTagIdController, updateVideoController } from '../controller/VideoController.js'
 import { createVideoTagController, getVideoTagByTagIdController, searchVideoTagController } from '../controller/VideoTagController.js'
 import { adminGetUserRolesByUidController, adminUpdateUserRoleController, createRbacApiPathController, createRbacRoleController, deleteRbacApiPathController, deleteRbacRoleController, getRbacApiPathController, getRbacRoleController, updateApiPathPermissionsForRoleController } from '../controller/RbacController.js'
 import { getStgEnvBackEndSecretController } from '../controller/ConsoleSecretController.js'
 import { addNewUid2FeedGroupController, administratorApproveFeedGroupInfoChangeController, administratorDeleteFeedGroupController, createFeedGroupController, createOrEditFeedGroupInfoController, deleteFeedGroupController, followingUploaderController, getFeedContentController, getFeedGroupCoverUploadSignedUrlController, getFeedGroupListController, removeUidFromFeedGroupController, unfollowingUploaderController } from '../controller/FeedController.js'
 import { addRegexController, blockKeywordController, blockTagController, blockUserByUidController, getBlockListController, hideUserByUidController, removeRegexController, showUserByUidController, unblockKeywordController, unblockTagController, unblockUserByUidController } from '../controller/BlockController.js'
+import multer from '@koa/multer'
+import { v4 as uuidv4 } from 'uuid'
+import path from 'path'
+import fs from 'fs'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const createMulter = (subpath) => {
+    const storage = multer.diskStorage({
+        destination: (req, file, cb) => {
+            const uploadPath = path.join(__dirname, `../../uploads/${subpath}`)
+            if (!fs.existsSync(uploadPath)) {
+                fs.mkdirSync(uploadPath, { recursive: true })
+            }
+            cb(null, uploadPath)
+        },
+        filename: (req, file, cb) => {
+            const ext = path.extname(file.originalname)
+            cb(null, `${uuidv4()}${ext}`)
+        },
+    })
+    return multer({ storage })
+}
+
+const avatarUpload = createMulter('images/avatars')
+const videoCoverUpload = createMulter('images/posters')
+const feedCoverUpload = createMulter('images/feeds')
 
 const router = new Router()
 
@@ -205,7 +234,7 @@ router.get('/user/check', checkUserTokenController) // 根据 uid, token 校验�
 router.get('/user/logout', userLogoutController) // 清除浏览器中的 cookie（用户登出）
 // https://localhost:9999/user/logout
 
-router.get('/user/avatar/preUpload', getUserAvatarUploadSignedUrlController) // 获取用于上传头像的预签名 URL, 上传限时 60 秒
+router.post('/user/avatar/preUpload', avatarUpload.single('avatar'), getUserAvatarUploadSignedUrlController) // 获取用于上传头像的预签名 URL, 上传限时 60 秒
 // https://localhost:9999/user/avatar/preUpload
 // cookie: uid, token
 
@@ -452,11 +481,7 @@ router.post('/video/search/tag', searchVideoByVideoTagIdController) // 根据 TA
 // 	"tagId": [1, 2]
 // }
 
-router.post('/video/tus', getVideoFileTusEndpointController) // 获取 TUS 上传 Endpoint
-// https://localhost:9999/video/tus
-// cookie: uid, token
-
-router.get('/video/cover/preUpload', getVideoCoverUploadSignedUrlController) // 获取用于上传视频封面图的预签名 URL
+router.post('/video/cover/preUpload', videoCoverUpload.single('cover'), getVideoCoverUploadSignedUrlController) // 获取用于上传视频封面图的预签名 URL
 // https://localhost:9999/video/cover/preUpload
 // cookie: uid, token
 
@@ -707,7 +732,7 @@ router.delete('/feed/deleteFeedGroup', deleteFeedGroupController) // 删除动�
 // 	"feedGroupUuid": "xxxxxxxxxxxxxxxxxxxxx"
 // }
 
-router.get('/feed/getFeedGroupCoverUploadSignedUrl', getFeedGroupCoverUploadSignedUrlController) // 获取用于用户上传头像的预签名 URL, 上传限时 60 秒
+router.post('/feed/getFeedGroupCoverUploadSignedUrl', feedCoverUpload.single('feed-cover'), getFeedGroupCoverUploadSignedUrlController) // 获取用于用户上传头像的预签名 URL, 上传限时 60 秒
 // https://localhost:9999/feed/getFeedGroupCoverUploadSignedUrl
 // cookie: uuid, token
 
@@ -865,7 +890,6 @@ router.get('/rbac/adminGetUserRolesByUid', adminGetUserRolesByUidController) // 
 router.get('/secret/getStgEnvBackEndSecret', getStgEnvBackEndSecretController) // 获取预生产环境后端环境变量机密
 // https://localhost:9999/secret/getStgEnvBackEndSecret
 // cookie: uuid, token
-
 
 
 

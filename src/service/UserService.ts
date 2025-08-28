@@ -1,5 +1,4 @@
 import mongoose, { InferSchemaType, PipelineStage, ClientSession, startSession } from 'mongoose'
-import { createCloudflareImageUploadSignedUrl } from '../cloudflare/index.js'
 import { isInvalidEmail, sendMail } from '../common/EmailTool.js'
 import { comparePasswordSync, hashPasswordSync } from '../common/HashTool.js'
 import { isEmptyObject } from '../common/ObjectTool.js'
@@ -86,7 +85,6 @@ import { getNextSequenceValueService } from './SequenceValueService.js'
 import { authenticator } from 'otplib'
 import { getI18nLanguagePack } from '../common/i18n.js'
 import { abortAndEndSession, commitAndEndSession, createAndStartSession } from '../common/MongoDBSessionTool.js'
-import { StorageClassAnalysisSchemaVersion } from '@aws-sdk/client-s3'
 import { FollowingSchema } from '../dbPool/schema/FeedSchema.js'
 import { checkBlockUserService, checkIsBlockedByOtherUserService } from './BlockService.js'
 
@@ -1143,7 +1141,7 @@ export const getUserAvatarUploadSignedUrlService = async (uid: number, token: st
 		if (await checkUserToken(uid, token)) {
 			const now = new Date().getTime()
 			const fileName = `avatar-${uid}-${generateSecureRandomString(32)}-${now}`
-			const signedUrl = await createCloudflareImageUploadSignedUrl(fileName, 660)
+			const signedUrl = `/upload/images/avatars`
 			if (signedUrl && fileName) {
 				return { success: true, message: '准备开始上传头像', userAvatarUploadSignedUrl: signedUrl, userAvatarFilename: fileName }
 			} else {

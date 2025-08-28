@@ -1,6 +1,5 @@
 import { Client } from '@elastic/elasticsearch'
 import mongoose, { InferSchemaType, PipelineStage } from 'mongoose'
-import { createCloudflareImageUploadSignedUrl } from '../cloudflare/index.js'
 import { isEmptyObject } from '../common/ObjectTool.js'
 import { generateSecureRandomString } from '../common/RandomTool.js'
 import { CreateOrUpdateBrowsingHistoryRequestDto } from '../controller/BrowsingHistoryControllerDto.js'
@@ -673,65 +672,7 @@ export const searchVideoByKeywordService = async (searchVideoByKeywordRequest: S
 }
 
 /**
- * 获取视频文件 TUS 上传端点
- * @param uid 用户 UID
- * @param token 用户 token
- * @param getVideoFileTusEndpointRequest 获取视频文件 TUS 上传端点的请求载荷
- * @returns 获取视频文件 TUS 上传端点地址
- */
-export const getVideoFileTusEndpointService = async (uid: number, token: string, getVideoFileTusEndpointRequest: GetVideoFileTusEndpointRequestDto): Promise<string | undefined> => {
-	try {
-		if ((await checkUserTokenService(uid, token)).success) {
-			const streamTusEndpointUrl = process.env.CF_STREAM_TUS_ENDPOINT_URL
-			const streamToken = process.env.CF_STREAM_TOKEN
-
-			const uploadLength = getVideoFileTusEndpointRequest.uploadLength
-			const uploadMetadata = getVideoFileTusEndpointRequest.uploadMetadata
-
-			if (!streamTusEndpointUrl && !streamToken) {
-				console.error('ERROR', '无法创建 Cloudflare Stream TUS Endpoint, streamTusEndpointUrl 和 streamToken 可能为空。请检查环境变量设置（CF_STREAM_TUS_ENDPOINT_URL, CF_STREAM_TOKEN）')
-				return undefined
-			}
-
-			try {
-				const videoTusEndpointResponse = await fetch(streamTusEndpointUrl, {
-					method: 'POST',
-					headers: {
-						Authorization: `Bearer ${streamToken}`,
-						'Tus-Resumable': '1.0.0',
-						'Upload-Length': `${uploadLength}`,
-						'Upload-Metadata': uploadMetadata,
-					},
-				})
-
-				if (!videoTusEndpointResponse.ok) {
-					console.error('ERROR', `无法创建 Cloudflare Stream TUS Endpoint, HTTP error! status: ${videoTusEndpointResponse.status}`)
-					return undefined
-				}
-
-				const videoTusEndpoint = videoTusEndpointResponse.headers.get('location')
-
-				if (videoTusEndpoint) {
-					return videoTusEndpoint
-				} else {
-					console.error('ERROR', '无法创建 Cloudflare Stream TUS Endpoint, 请求结果为空')
-					return undefined
-				}
-			} catch (error) {
-				console.error('ERROR', '无法创建 Cloudflare Stream TUS Endpoint, 发送请求失败', error?.response?.data)
-				return undefined
-			}
-		} else {
-			console.error('ERROR', '无法创建 Cloudflare Stream TUS Endpoint, 用户校验未通过', { uid })
-			return undefined
-		}
-	} catch (error) {
-		console.error('ERROR', '无法创建 Cloudflare Stream TUS Endpoint, 未知错误：', error)
-		return undefined
-	}
-}
-
-/**
+ * @deprecated
  * 获取用于上传视频封面图的预签名 URL
  * @param uid 用户 UID
  * @param token 用户 token
@@ -742,15 +683,8 @@ export const getVideoCoverUploadSignedUrlService = async (uid: number, token: st
 		if ((await checkUserTokenService(uid, token)).success) {
 			const now = new Date().getTime()
 			const fileName = `video-cover-${uid}-${generateSecureRandomString(32)}-${now}`
-			try {
-				const signedUrl = await createCloudflareImageUploadSignedUrl(fileName, 660)
-				if (signedUrl) {
-					return { success: true, message: '获取视频封面图上传预签名 URL 成功', result: { fileName, signedUrl } }
-				}
-			} catch (error) {
-				console.error('ERROR', '获取视频封面图上传预签名 URL 失败，请求失败', error)
-				return { success: false, message: '获取视频封面图上传预签名 URL 失败，请求失败' }
-			}
+			const signedUrl = `/upload/images/posters`
+			return { success: true, message: '获取视频封面图上传预签名 URL 成功', result: { fileName, signedUrl } }
 		} else {
 			console.error('ERROR', '获取视频封面图上传预签名 URL 失败，用户校验未通过')
 			return { success: false, message: '获取视频封面图上传预签名 URL 失败，用户校验未通过' }

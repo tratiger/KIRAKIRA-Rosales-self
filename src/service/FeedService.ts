@@ -8,7 +8,6 @@ import { abortAndEndSession, commitAndEndSession, createAndStartSession } from "
 import { CheckUserExistsByUuidRequestDto } from "../controller/UserControllerDto.js";
 import { v4 as uuidV4 } from 'uuid'
 import { generateSecureRandomString } from "../common/RandomTool.js";
-import { createCloudflareImageUploadSignedUrl } from "../cloudflare/index.js";
 import { VideoSchema } from "../dbPool/schema/VideoSchema.js";
 
 /**
@@ -525,15 +524,8 @@ export const getFeedGroupCoverUploadSignedUrlService = async (uuid: string, toke
 		}
 		const now = new Date().getTime()
 		const fileName = `feed-group-cover-${uuid}-${generateSecureRandomString(32)}-${now}`
-		try {
-			const signedUrl = await createCloudflareImageUploadSignedUrl(fileName, 660)
-			if (signedUrl) {
-				return { success: true, message: '获取用于上传动态分组封面图的预签名 URL 成功', result: { fileName, signedUrl } }
-			}
-		} catch (error) {
-			console.error('ERROR', '获取用于上传动态分组封面图的预签名 URL 失败，请求失败', error)
-			return { success: false, message: '获取用于上传动态分组封面图的预签名 URL 失败，请求失败' }
-		}
+		const signedUrl = `/upload/images/feeds`
+		return { success: true, message: '获取用于上传动态分组封面图的预签名 URL 成功', result: { fileName, signedUrl } }
 	} catch (error) {
 		console.error('ERROR', '获取用于上传动态分组封面图的预签名 URL 时出错：', error)
 		return { success: false, message: '获取用于上传动态分组封面图的预签名 URL 时出错，未知原因' }
