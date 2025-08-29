@@ -1,5 +1,5 @@
 import { isPassRbacCheck } from '../service/RbacService.js'
-import { approvePendingReviewVideoService, checkVideoExistByKvidService, deleteVideoByKvidService, getPendingReviewVideoService, getThumbVideoService, getVideoByKvidService, getVideoByUidRequestService, getVideoCoverUploadSignedUrlService, getVideoFileTusEndpointService, searchVideoByKeywordService, searchVideoByVideoTagIdService, updateVideoService } from '../service/VideoService.js'
+import { approvePendingReviewVideoService, checkVideoExistByKvidService, deleteVideoByKvidService, getPendingReviewVideoService, getThumbVideoService, getVideoByKvidService, getVideoByUidRequestService, getVideoCoverUploadSignedUrlService, getVideoFileTusEndpointService, searchVideoByKeywordService, searchVideoByVideoTagIdService, uploadVideoService } from '../service/VideoService.js'
 import { koaCtx, koaNext } from '../type/koaTypes.js'
 import { ApprovePendingReviewVideoRequestDto, CheckVideoExistRequestDto, DeleteVideoRequestDto, GetVideoByKvidRequestDto, GetVideoByUidRequestDto, GetVideoFileTusEndpointRequestDto, SearchVideoByKeywordRequestDto, SearchVideoByVideoTagIdRequestDto, UploadVideoRequestDto } from './VideoControllerDto.js'
 
@@ -9,14 +9,10 @@ import { ApprovePendingReviewVideoRequestDto, CheckVideoExistRequestDto, DeleteV
  * @param next context
  * @returns 上传视频的结果
  */
-export const updateVideoController = async (ctx: koaCtx, next: koaNext) => {
+export const uploadVideoController = async (ctx: koaCtx, next: koaNext) => {
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
 
-	// RBAC 权限验证
-	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
-		return
-	}
 
 	const data = ctx.request.body as Partial<UploadVideoRequestDto>
 	const uploadVideoRequest: UploadVideoRequestDto = {
@@ -35,7 +31,7 @@ export const updateVideoController = async (ctx: koaCtx, next: koaNext) => {
 		videoTagList: data.videoTagList || [],
 	}
 	const esClient = ctx.elasticsearchClient
-	const uploadVideoResponse = await updateVideoService(uploadVideoRequest, uid, token, esClient)
+	const uploadVideoResponse = await uploadVideoService(uploadVideoRequest, uid, token, esClient)
 	ctx.body = uploadVideoResponse
 	await next()
 }
@@ -134,10 +130,6 @@ export const getVideoFileTusEndpointController = async (ctx: koaCtx, next: koaNe
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
 
-	// RBAC 权限验证
-	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
-		return
-	}
 
 	const getVideoFileTusEndpointRequest: GetVideoFileTusEndpointRequestDto = {
 		uploadLength: parseInt(ctx.get('Upload-Length'), 10),

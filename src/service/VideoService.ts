@@ -24,7 +24,7 @@ import { buildBlockListMongooseFilter, checkBlockUserService, checkIsBlockedByOt
  * @param esClient Elasticsearch 客户端连接
  * @returns 上传视频的结果
  */
-export const updateVideoService = async (uploadVideoRequest: UploadVideoRequestDto, uid: number, token: string, esClient?: Client): Promise<UploadVideoResponseDto> => {
+export const uploadVideoService = async (uploadVideoRequest: UploadVideoRequestDto, uid: number, token: string, esClient?: Client): Promise<UploadVideoResponseDto> => {
 	try {
 		if (checkUploadVideoRequest(uploadVideoRequest) && esClient && !isEmptyObject(esClient)) {
 			if (!(await checkUserTokenService(uid, token)).success) {
