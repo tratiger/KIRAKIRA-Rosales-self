@@ -20,7 +20,7 @@ KIRAKIRA-Rosales 由 TypeScript 编写。因为 TypeScript 的类型检查能够
 后端的生产环境部署在 AWS 的 EKS 集群中。
 后端依赖于一个 MongoDB 数据库集群和一个 Elasticsearch 搜索引擎集群，它们同样部署在 AWS EKS 中。
 
-对于存储，MongoDB 和 Elasticsearch 产生的数据被存储在挂载在 AWS EKS 上的 AWS EBS(Elastic Block Store) 块存储中，图片和视频文件则由 Cloudflare 的 R2、Images 和 Stream 存储。
+对于存储，MongoDB 和 Elasticsearch 产生的数据被存储在挂载在 AWS EKS 上的 AWS EBS(Elastic Block Store) 块存储中，图片和视频文件则由 MinIO 存储。
 
 [![](https://img.shields.io/badge/-JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)](https://tc39.es)
 [![](https://img.shields.io/badge/-TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -29,7 +29,7 @@ KIRAKIRA-Rosales 由 TypeScript 编写。因为 TypeScript 的类型检查能够
 [![](https://img.shields.io/badge/-MongoDB-EEEEEE?style=flat-square&logo=MongoDB&logoColor=00ed64)](https://www.mongodb.com)
 [![](https://img.shields.io/badge/-Elasticsearch-07a0d7?style=flat-square&logo=Elasticsearch&logoColor=333333)](https://www.elastic.co/elasticsearch)
 [![](https://img.shields.io/badge/-Kubernetes-0075e4?style=flat-square&logo=Kubernetes&logoColor=white)](https://kubernetes.io/)
-[![](https://img.shields.io/badge/-Cloudflare-f6821f?style=flat-square&logo=Cloudflare&logoColor=white)](https://www.cloudflare.com)
+[![](https://img.shields.io/badge/-MinIO-c7c7c7?style=flat-square&logo=minio&logoColor=black)](https://min.io/)
 
 ## 二、安装和启动
 ### 1. 克隆存储库。
@@ -93,7 +93,7 @@ npm run dev-hot
 ├ docs - 存放说明文档（本文档就存放于该目录下）
 ├ old - 存放不舍得删除的旧代码
 ├ src - 存放源代码
-│  ├ cloudflare - 存放了 Cloudflare 相关的共通代码
+│  ├ minio - 存放了 MinIO 相关的共通代码
 │  ├ common - 存放了共通函数
 │  ├ controller - controller 层，用于处理接受的请求载荷数据和丰富请求响应数据
 │  ├ dbPool - 存放了 MongoDB 相关的共通代码
