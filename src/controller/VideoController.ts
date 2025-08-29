@@ -13,10 +13,6 @@ export const updateVideoController = async (ctx: koaCtx, next: koaNext) => {
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
 
-	// RBAC 权限验证
-	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
-		return
-	}
 
 	const data = ctx.request.body as Partial<UploadVideoRequestDto>
 	const uploadVideoRequest: UploadVideoRequestDto = {
@@ -134,10 +130,7 @@ export const getVideoFileTusEndpointController = async (ctx: koaCtx, next: koaNe
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
 
-	// RBAC 权限验证
-	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
-		return
-	}
+
 
 	const getVideoFileTusEndpointRequest: GetVideoFileTusEndpointRequestDto = {
 		uploadLength: parseInt(ctx.get('Upload-Length'), 10),
@@ -196,10 +189,7 @@ export const deleteVideoByKvidController = async (ctx: koaCtx, next: koaNext) =>
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
 
-	// RBAC 权限验证
-	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
-		return
-	}
+
 
 	const data = ctx.request.body as Partial<DeleteVideoRequestDto>
 	const deleteVideoRequest: DeleteVideoRequestDto = {
@@ -221,10 +211,7 @@ export const getPendingReviewVideoController = async (ctx: koaCtx, next: koaNext
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
 
-	// RBAC 权限验证
-	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
-		return
-	}
+
 
 	ctx.body = await getPendingReviewVideoService(uid, token)
 	await next()
@@ -240,10 +227,6 @@ export const approvePendingReviewVideoController = async (ctx: koaCtx, next: koa
 	const uid = parseInt(ctx.cookies.get('uid'), 10)
 	const token = ctx.cookies.get('token')
 
-	// RBAC 权限验证
-	if (!await isPassRbacCheck({ uid, apiPath: ctx.path }, ctx)) {
-		return
-	}
 
 	const data = ctx.request.body as Partial<ApprovePendingReviewVideoRequestDto>
 	const approvePendingReviewVideoRequest: ApprovePendingReviewVideoRequestDto = {

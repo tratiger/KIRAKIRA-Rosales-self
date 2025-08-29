@@ -81,7 +81,7 @@ export const updateVideoService = async (uploadVideoRequest: UploadVideoRequestD
 					pushToFeed: uploadVideoRequest.pushToFeed,
 					ensureOriginal: uploadVideoRequest.ensureOriginal,
 					videoTagList: videoTagList as Video['videoTagList'], // TODO: Mongoose issue: #12420
-					pendingReview: true,
+					pendingReview: false,
 					editDateTime: nowDate,
 				}
 
