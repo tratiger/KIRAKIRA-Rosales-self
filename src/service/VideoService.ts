@@ -1,6 +1,6 @@
 import { Client } from '@elastic/elasticsearch'
 import mongoose, { InferSchemaType, PipelineStage } from 'mongoose'
-import { createCloudflareImageUploadSignedUrl } from '../cloudflare/index.js'
+import { createMinioPutSignedUrl, getMinioTusEndpoint } from '../minio/index.js'
 import { isEmptyObject } from '../common/ObjectTool.js'
 import { generateSecureRandomString } from '../common/RandomTool.js'
 import { CreateOrUpdateBrowsingHistoryRequestDto } from '../controller/BrowsingHistoryControllerDto.js'
@@ -681,53 +681,26 @@ export const searchVideoByKeywordService = async (searchVideoByKeywordRequest: S
  */
 export const getVideoFileTusEndpointService = async (uid: number, token: string, getVideoFileTusEndpointRequest: GetVideoFileTusEndpointRequestDto): Promise<string | undefined> => {
 	try {
-		if ((await checkUserTokenService(uid, token)).success) {
-			const streamTusEndpointUrl = process.env.CF_STREAM_TUS_ENDPOINT_URL
-			const streamToken = process.env.CF_STREAM_TOKEN
+		if (!(await checkUserTokenService(uid, token)).success) {
+			console.error('ERROR', '无法获取 TUS 上传端点, 用户校验未通过', { uid });
+			return undefined;
+		}
 
-			const uploadLength = getVideoFileTusEndpointRequest.uploadLength
-			const uploadMetadata = getVideoFileTusEndpointRequest.uploadMetadata
+		// We don't need to process getVideoFileTusEndpointRequest here because for MinIO,
+		// the TUS endpoint is a fixed URL per bucket. The client will handle the TUS protocol,
+		// including sending metadata and upload length. This service just provides the endpoint.
 
-			if (!streamTusEndpointUrl && !streamToken) {
-				console.error('ERROR', '无法创建 Cloudflare Stream TUS Endpoint, streamTusEndpointUrl 和 streamToken 可能为空。请检查环境变量设置（CF_STREAM_TUS_ENDPOINT_URL, CF_STREAM_TOKEN）')
-				return undefined
-			}
+		const tusEndpoint = getMinioTusEndpoint();
 
-			try {
-				const videoTusEndpointResponse = await fetch(streamTusEndpointUrl, {
-					method: 'POST',
-					headers: {
-						Authorization: `Bearer ${streamToken}`,
-						'Tus-Resumable': '1.0.0',
-						'Upload-Length': `${uploadLength}`,
-						'Upload-Metadata': uploadMetadata,
-					},
-				})
-
-				if (!videoTusEndpointResponse.ok) {
-					console.error('ERROR', `无法创建 Cloudflare Stream TUS Endpoint, HTTP error! status: ${videoTusEndpointResponse.status}`)
-					return undefined
-				}
-
-				const videoTusEndpoint = videoTusEndpointResponse.headers.get('location')
-
-				if (videoTusEndpoint) {
-					return videoTusEndpoint
-				} else {
-					console.error('ERROR', '无法创建 Cloudflare Stream TUS Endpoint, 请求结果为空')
-					return undefined
-				}
-			} catch (error) {
-				console.error('ERROR', '无法创建 Cloudflare Stream TUS Endpoint, 发送请求失败', error?.response?.data)
-				return undefined
-			}
+		if (tusEndpoint) {
+			return tusEndpoint;
 		} else {
-			console.error('ERROR', '无法创建 Cloudflare Stream TUS Endpoint, 用户校验未通过', { uid })
-			return undefined
+			console.error('ERROR', '无法获取 MinIO TUS 上传端点, 端点为空');
+			return undefined;
 		}
 	} catch (error) {
-		console.error('ERROR', '无法创建 Cloudflare Stream TUS Endpoint, 未知错误：', error)
-		return undefined
+		console.error('ERROR', '获取 MinIO TUS 上传端点时出错, 未知错误：', error);
+		return undefined;
 	}
 }
 
@@ -743,7 +716,7 @@ export const getVideoCoverUploadSignedUrlService = async (uid: number, token: st
 			const now = new Date().getTime()
 			const fileName = `video-cover-${uid}-${generateSecureRandomString(32)}-${now}`
 			try {
-				const signedUrl = await createCloudflareImageUploadSignedUrl(fileName, 660)
+				const signedUrl = await createMinioPutSignedUrl('videos', fileName, 660)
 				if (signedUrl) {
 					return { success: true, message: '获取视频封面图上传预签名 URL 成功', result: { fileName, signedUrl } }
 				}
