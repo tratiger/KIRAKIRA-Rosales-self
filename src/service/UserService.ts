@@ -100,10 +100,10 @@ authenticator.options = { window: 1 } // 设置 TOTP 宽裕一个窗口
 export const userRegistrationService = async (userRegistrationRequest: UserRegistrationRequestDto): Promise<UserRegistrationResponseDto> => {
 	try {
 		if (checkUserRegistrationData(userRegistrationRequest)) {
-			if (!(await checkInvitationCodeService({ invitationCode: userRegistrationRequest.invitationCode })).isAvailableInvitationCode) { // DELETEME 仅在 beta 测试中使用
+			/* if (!(await checkInvitationCodeService({ invitationCode: userRegistrationRequest.invitationCode })).isAvailableInvitationCode) { // DELETEME 仅在 beta 测试中使用
 				console.error('ERROR', '用户注册失败：邀请码无效')
 				return { success: false, message: '用户注册失败：邀请码无效' }
-			}
+			} */
 			const { email, passwordHash, passwordHint, verificationCode, username, userNickname } = userRegistrationRequest
 			const emailLowerCase = email.toLowerCase()
 			const usernameStandardized = username.trim().normalize();
